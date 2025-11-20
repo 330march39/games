@@ -14,7 +14,6 @@
             color: #ffffff;
             overflow: hidden;
             touch-action: none;
-            /* 背景に微かなグラデーションを追加 */
             background: radial-gradient(circle at 50% 10%, #1a1a2e 0%, #000000 100%);
         }
 
@@ -55,7 +54,6 @@
             opacity: 1;
         }
         
-        /* ネオンテキスト */
         .neon-text {
             text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(41, 151, 255, 0.3);
         }
@@ -74,11 +72,9 @@
         </div>
         <div class="flex flex-col gap-2 items-end">
             <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">NEXT</div>
-            <!-- Next Piece Preview Container -->
             <div class="relative">
                 <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
                 <div id="nextPieceDisplay" class="relative w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-bold text-white shadow-2xl backdrop-blur-md">
-                    <!-- JS Populated -->
                 </div>
             </div>
         </div>
@@ -109,7 +105,7 @@
                     </li>
                     <li class="flex items-start gap-2">
                         <span class="text-blue-500 mt-0.5">●</span>
-                        <span>連鎖で高得点を狙え</span>
+                        <span>1・1・2・6のように複数でもOK</span>
                     </li>
                 </ul>
             </div>
@@ -136,28 +132,19 @@
 
     <script>
         /**
-         * MAKE 10: NEON DROP (High-Res Edition)
+         * MAKE 10: NEON DROP (v2.0 - Dynamic Gravity & Multi-Match)
          */
 
         const COLS = 6;
         const ROWS = 10;
-        // Colors updated for a more sophisticated look
         const COLORS = {
             bg: '#050505',
             grid: 'rgba(255, 255, 255, 0.03)',
             gridBorder: 'rgba(255, 255, 255, 0.05)',
             text: '#ffffff',
-            // Palette: Red, Orange, Yellow, Green, Cyan, Blue, Purple, Magenta, Pink
             palette: [
-                '#ff3b30', // 1 Red
-                '#ff9500', // 2 Orange
-                '#ffcc00', // 3 Yellow
-                '#30d158', // 4 Green
-                '#64d2ff', // 5 Cyan
-                '#0a84ff', // 6 Blue
-                '#5e5ce6', // 7 Indigo
-                '#bf5af2', // 8 Purple
-                '#ff375f', // 9 Pink
+                '#ff3b30', '#ff9500', '#ffcc00', '#30d158', '#64d2ff', 
+                '#0a84ff', '#5e5ce6', '#bf5af2', '#ff375f'
             ]
         };
 
@@ -165,7 +152,7 @@
             constructor() {
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 this.masterGain = this.ctx.createGain();
-                this.masterGain.gain.value = 0.2; // Slightly quieter
+                this.masterGain.gain.value = 0.2;
                 this.masterGain.connect(this.ctx.destination);
             }
 
@@ -173,17 +160,13 @@
                 if (this.ctx.state === 'suspended') this.ctx.resume();
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
-                
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
-                
                 gain.gain.setValueAtTime(0, this.ctx.currentTime + delay);
                 gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + delay + 0.02);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + delay + duration);
-
                 osc.connect(gain);
                 gain.connect(this.masterGain);
-                
                 osc.start(this.ctx.currentTime + delay);
                 osc.stop(this.ctx.currentTime + delay + duration);
             }
@@ -191,11 +174,10 @@
             playDrop() { this.playTone(400, 'sine', 0.15, 0, 0.3); }
             playStack() { this.playTone(200, 'triangle', 0.1); }
             playClear() { 
-                // Major chord arpeggio
-                this.playTone(523.25, 'sine', 0.3, 0);   // C5
-                this.playTone(659.25, 'sine', 0.3, 0.05); // E5
-                this.playTone(783.99, 'sine', 0.4, 0.1);  // G5
-                this.playTone(1046.50, 'sine', 0.6, 0.15); // C6
+                this.playTone(523.25, 'sine', 0.3, 0);   
+                this.playTone(659.25, 'sine', 0.3, 0.05); 
+                this.playTone(783.99, 'sine', 0.4, 0.1);  
+                this.playTone(1046.50, 'sine', 0.6, 0.15); 
             }
             playGameOver() {
                 this.playTone(150, 'sawtooth', 0.8, 0, 0.4);
@@ -205,28 +187,27 @@
 
         class Particle {
             constructor(x, y, color) {
-                this.x = x;
-                this.y = y;
+                this.x = x; this.y = y;
                 const angle = Math.random() * Math.PI * 2;
                 const speed = Math.random() * 4 + 2;
                 this.vx = Math.cos(angle) * speed;
                 this.vy = Math.sin(angle) * speed;
                 this.life = 1.0;
                 this.color = color;
-                this.size = Math.random() * 6 + 4; // Larger for high res
+                this.size = Math.random() * 6 + 4;
                 this.decay = Math.random() * 0.03 + 0.02;
             }
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                this.vy += 0.1; // gravity
+                this.vy += 0.1;
                 this.life -= this.decay;
                 this.size *= 0.92;
             }
             draw(ctx) {
                 ctx.save();
                 ctx.globalAlpha = this.life;
-                ctx.globalCompositeOperation = 'lighter'; // Additive blending for neon look
+                ctx.globalCompositeOperation = 'lighter';
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -238,7 +219,7 @@
         class Game {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize
+                this.ctx = this.canvas.getContext('2d', { alpha: false });
                 this.audio = new AudioManager();
                 
                 this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
@@ -249,10 +230,8 @@
                 this.fallingPieces = []; 
                 this.nextPieceVal = this.randomNum();
 
-                // Resize handling including High DPI support
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
-                
                 this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
 
                 this.lastTime = 0;
@@ -261,38 +240,25 @@
             }
 
             resize() {
-                // --- High DPI (Retina) Support ---
                 const dpr = window.devicePixelRatio || 1;
-                
-                // 1. Get display size (CSS pixels)
                 const displayWidth = window.innerWidth;
                 const displayHeight = window.innerHeight;
-
-                // 2. Set canvas buffer size (Physical pixels)
                 this.canvas.width = Math.floor(displayWidth * dpr);
                 this.canvas.height = Math.floor(displayHeight * dpr);
-
-                // 3. Set canvas CSS size
                 this.canvas.style.width = `${displayWidth}px`;
                 this.canvas.style.height = `${displayHeight}px`;
-
-                // 4. Normalize coordinate system to CSS pixels
-                this.ctx.resetTransform(); // Reset first
+                this.ctx.resetTransform();
                 this.ctx.scale(dpr, dpr);
 
-                // --- Grid Calculation (Logical Coordinates) ---
-                const availableHeight = displayHeight - 140; // More space for HUD
+                const availableHeight = displayHeight - 140;
                 const availableWidth = displayWidth - 30;
-                
                 const maxCellH = availableHeight / ROWS;
                 const maxCellW = availableWidth / COLS;
-                
                 this.cellWidth = Math.min(maxCellW, maxCellH, 65);
                 this.cellHeight = this.cellWidth;
 
                 const gridPixelWidth = this.cellWidth * COLS;
                 const gridPixelHeight = this.cellHeight * ROWS;
-                
                 this.gridOffsetX = (displayWidth - gridPixelWidth) / 2;
                 this.gridOffsetY = Math.max((displayHeight - gridPixelHeight) / 2 + 30, 100);
             }
@@ -318,13 +284,25 @@
                 return (col >= 0 && col < COLS) ? col : -1;
             }
 
+            // Helper to find the highest occupied row index (visually lowest index number)
+            // in a column. If column is empty, returns ROWS.
+            getTopRowIndex(col) {
+                for (let r = 0; r < ROWS; r++) {
+                    if (this.grid[r][col] !== null) {
+                        return r;
+                    }
+                }
+                return ROWS;
+            }
+
             handleInput(e) {
                 if (!this.isPlaying) return;
                 const col = this.getColFromX(e.clientX);
                 if (col === -1) return;
 
-                // Top row full check
-                if (this.grid[0] && this.grid[0][col] !== null) return; 
+                // Only block if the top cell is actually occupied by a SETTLED piece
+                // Falling pieces don't block input, they just stack
+                if (this.grid[0][col] !== null) return; 
 
                 this.spawnPieceInColumn(col, this.nextPieceVal);
                 this.nextPieceVal = this.randomNum();
@@ -333,36 +311,13 @@
             }
 
             spawnPieceInColumn(col, val) {
-                let staticTargetRow = ROWS - 1;
-                for (let r = 0; r < ROWS; r++) {
-                    if (this.grid[r][col] !== null) {
-                        staticTargetRow = r - 1;
-                        break;
-                    }
-                }
-
-                let finalTargetRow = staticTargetRow;
-                for (let p of this.fallingPieces) {
-                    if (p.col === col) {
-                        if (p.targetRow <= finalTargetRow) {
-                            finalTargetRow = p.targetRow - 1;
-                        }
-                    }
-                }
-
-                if (finalTargetRow < 0) {
-                    this.gameOver();
-                    return;
-                }
-
-                const targetPixelY = this.gridOffsetY + (finalTargetRow * this.cellHeight);
-
+                // Note: We don't calculate a fixed targetRow anymore.
+                // The target is calculated dynamically every frame.
+                
                 this.fallingPieces.push({
                     col: col,
-                    targetRow: finalTargetRow,
                     val: val,
-                    y: this.gridOffsetY - this.cellHeight,
-                    targetY: targetPixelY,
+                    y: this.gridOffsetY - this.cellHeight, // Start above
                     speed: 0,
                     landed: false
                 });
@@ -371,28 +326,74 @@
             update(dt) {
                 if (!this.isPlaying) return;
 
+                // Sort falling pieces so lower ones update first? 
+                // Actually not strictly necessary if we check collision correctly.
+                // But iterating backwards is good for removal.
+
                 for (let i = this.fallingPieces.length - 1; i >= 0; i--) {
                     let p = this.fallingPieces[i];
-                    p.speed += 1.8; // Stronger gravity feeling
+                    
+                    // 1. Update Physics
+                    p.speed += 1.8;
                     p.y += p.speed;
 
-                    const floorLimit = this.gridOffsetY + (ROWS - 1) * this.cellHeight;
-                    let hit = false;
-
-                    if (p.y >= p.targetY) hit = true;
-                    if (p.y > floorLimit && p.targetRow === ROWS - 1) {
-                        hit = true; 
-                        p.y = p.targetY;
+                    // 2. Calculate Dynamic Floor
+                    // The floor is either the bottom of the grid OR the top of the stack in the grid.
+                    // PLUS: We must consider other falling pieces in the same column that are below this one.
+                    
+                    let floorIndex = this.getTopRowIndex(p.col); // Index in grid (0-9 or 10)
+                    
+                    // Check against other falling pieces to stack on top of them
+                    // We look for the highest 'y' (visually lowest) piece in the same column that is below 'p'
+                    let lowestOtherY = -1;
+                    
+                    // Safety: Calculate pixel position of the grid slot
+                    const floorPixelY = this.gridOffsetY + (floorIndex * this.cellHeight);
+                    
+                    // Check collision with Floor (Grid Stack or Bottom)
+                    // Target Y for the piece to sit in the slot above floorIndex is:
+                    // (floorIndex - 1) * cellHeight + offset
+                    // But wait, if floorIndex is 10 (empty col), it sits at 9.
+                    
+                    let targetRow = floorIndex - 1;
+                    
+                    // Adjust targetRow based on other falling pieces below it
+                    // If there is a piece at row 9 falling, this one should target 8.
+                    // Simple approach: Count how many falling pieces are in this column BELOW this one
+                    let piecesBelow = 0;
+                    for (let j = 0; j < this.fallingPieces.length; j++) {
+                        if (i === j) continue;
+                        const other = this.fallingPieces[j];
+                        if (other.col === p.col && other.y > p.y) {
+                            piecesBelow++;
+                        }
                     }
+                    
+                    targetRow -= piecesBelow;
 
-                    if (hit) {
-                        p.y = p.targetY;
+                    // Game Over check immediately if target is out of bounds?
+                    // No, wait until it lands.
+                    
+                    const targetPixelY = this.gridOffsetY + (targetRow * this.cellHeight);
+                    
+                    // Collision Detection
+                    if (p.y >= targetPixelY) {
+                        if (targetRow < 0) {
+                            this.gameOver();
+                            return;
+                        }
+
+                        // Landed
+                        p.y = targetPixelY;
                         p.landed = true;
                         
-                        if (this.grid[p.targetRow]) {
-                            this.grid[p.targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
-                            this.checkMatch(p.targetRow, p.col);
-                        }
+                        // Add to grid
+                        this.grid[targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
+                        
+                        // Check Matches (Multi-block logic)
+                        this.checkMatch(p.col); // Scan entire column
+                        
+                        // Remove from falling list
                         this.fallingPieces.splice(i, 1);
                     }
                 }
@@ -403,53 +404,110 @@
                 }
             }
 
-            checkMatch(row, col) {
-                if (row < ROWS - 1) {
-                    const below = this.grid[row + 1][col];
-                    if (below) {
-                        const current = this.grid[row][col];
-                        const sum = current.val + below.val;
-
-                        if (sum === 10) {
-                            setTimeout(() => {
-                                this.createExplosion(col, row, this.getColor(current.val));
-                                this.createExplosion(col, row + 1, this.getColor(below.val));
-                                
-                                this.grid[row][col] = null;
-                                this.grid[row + 1][col] = null;
-                                this.score += 100;
-                                this.updateUI();
-                                this.audio.playClear();
-                                this.applyGravity(col);
-                            }, 60); 
-                        } else {
-                            this.audio.playStack();
-                            if (row === 0) this.gameOver();
-                        }
-                    } else {
-                         this.audio.playStack();
+            checkMatch(col) {
+                // New Logic: Find ANY continuous sequence summing to 10 in this column.
+                // Scan column to extract values
+                let stack = [];
+                // grid[0][col] is top, grid[ROWS-1][col] is bottom.
+                // We want to preserve indices to remove them correctly.
+                for (let r = 0; r < ROWS; r++) {
+                    if (this.grid[r][col] !== null) {
+                        stack.push({ val: this.grid[r][col].val, r: r });
                     }
+                }
+
+                // Search for sequence summing to 10
+                // We prioritize the longest sequence? Or just the first found?
+                // Let's try all sub-sequences.
+                let matchFound = false;
+                let matchIndices = []; // Stores 'r' indices
+
+                // Iterate start position
+                outerLoop:
+                for (let i = 0; i < stack.length; i++) {
+                    let currentSum = 0;
+                    let currentIndices = [];
+                    // Iterate end position
+                    for (let j = i; j < stack.length; j++) {
+                        currentSum += stack[j].val;
+                        currentIndices.push(stack[j].r);
+
+                        if (currentSum === 10) {
+                            // Rule: Must be at least 2 blocks?
+                            // User said: "1, 1, 2, 6" is ok. Even "10" single block? 
+                            // Usually single block 10 is not possible with 1-9.
+                            // But if we sum to 10, we match.
+                            matchFound = true;
+                            matchIndices = currentIndices;
+                            break outerLoop; // Stop after first match to keep it simple
+                        }
+                        if (currentSum > 10) {
+                            break; // Exceeded, move to next start
+                        }
+                    }
+                }
+
+                if (matchFound) {
+                    setTimeout(() => {
+                        // Create Explosion & Remove
+                        matchIndices.forEach(r => {
+                            const cellVal = this.grid[r][col].val;
+                            this.createExplosion(col, r, this.getColor(cellVal));
+                            this.grid[r][col] = null;
+                        });
+
+                        this.score += 100 * matchIndices.length; // Bonus for length
+                        this.updateUI();
+                        this.audio.playClear();
+                        
+                        // Apply Gravity after removal
+                        this.applyGravity(col);
+                    }, 60);
                 } else {
-                    this.audio.playStack();
+                    // If piece landed but no match, play stack sound
+                    // (Only if this checkMatch was triggered by a landing, which it is)
+                     // Note: This runs recursively, so we might want to debounce sound.
+                     // For now, it's fine.
                 }
             }
 
             applyGravity(col) {
-                let writePtr = ROWS - 1;
-                for (let r = ROWS - 1; r >= 0; r--) {
+                // Compact the column downwards
+                // Collect all pieces
+                let pieces = [];
+                for (let r = 0; r < ROWS; r++) {
                     if (this.grid[r][col] !== null) {
-                        if (writePtr !== r) {
-                            this.grid[writePtr][col] = this.grid[r][col];
-                            this.grid[r][col] = null;
-                            
-                             if (writePtr < ROWS - 1 && this.grid[writePtr + 1][col]) {
-                                if (this.grid[writePtr][col].val + this.grid[writePtr + 1][col].val === 10) {
-                                    // Chain reaction simplified
-                                }
-                            }
-                        }
-                        writePtr--;
+                        pieces.push(this.grid[r][col]);
+                        this.grid[r][col] = null; // Clear
                     }
+                }
+
+                // Place them back from bottom
+                let writeRow = ROWS - 1;
+                let moved = false;
+                for (let i = pieces.length - 1; i >= 0; i--) {
+                    this.grid[writeRow][col] = pieces[i];
+                    writeRow--;
+                    // Note: if writeRow was different from original row, it moved.
+                }
+
+                // After gravity, check for matches AGAIN (Chain reaction)
+                // We need a slight delay or just run it immediately? 
+                // Immediate run is logic-correct, but visual delay is nice.
+                // Let's run immediately to simplify state, but we might not see the fall.
+                // Actually, since we just updated the grid array, the draw loop will show them at new positions instantly.
+                // To make it look like falling, we would need to turn them back into fallingPieces.
+                // But for robustness as requested ("fix floating"), instant snap is safer.
+                // We check match recursively.
+                
+                // Check match again if we have pieces
+                if (pieces.length > 0) {
+                     // To prevent infinite loop if logic is buggy, ensure state changed?
+                     // With "Sum 10 removes blocks", it should converge to no matches.
+                     // Use setTimeout to allow "Chain" visual effect
+                     setTimeout(() => {
+                         this.checkMatch(col);
+                     }, 150);
                 }
             }
 
@@ -470,7 +528,6 @@
 
             updateUI() {
                 const scoreEl = document.getElementById('scoreDisplay');
-                // Number scramble animation
                 let current = parseInt(scoreEl.innerText);
                 if (current !== this.score) {
                     scoreEl.innerText = this.score;
@@ -495,13 +552,10 @@
                 return COLORS.palette[num - 1] || '#fff';
             }
 
-            // --- High Quality Rendering ---
             draw() {
-                // Background
                 this.ctx.fillStyle = COLORS.bg;
-                this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight); // Use logical size for fillRect as we scaled ctx
+                this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight);
 
-                // Grid Container (Glass look)
                 const boardH = ROWS * this.cellHeight;
                 const boardW = COLS * this.cellWidth;
                 
@@ -512,7 +566,6 @@
                 this.ctx.lineWidth = 2;
                 this.ctx.stroke();
 
-                // Draw Grid Lines
                 this.ctx.beginPath();
                 this.ctx.strokeStyle = COLORS.grid;
                 this.ctx.lineWidth = 1;
@@ -531,47 +584,37 @@
                 const drawCell = (val, r, c, yPixel = null) => {
                     const x = this.gridOffsetX + c * this.cellWidth;
                     const y = yPixel !== null ? yPixel : this.gridOffsetY + r * this.cellHeight;
-                    
                     const size = this.cellWidth * 0.85;
                     const margin = (this.cellWidth - size) / 2;
                     const color = this.getColor(val);
 
-                    // --- Sophisticated Block Rendering ---
-                    
-                    // 1. Outer Glow
                     this.ctx.shadowBlur = 20;
                     this.ctx.shadowColor = color;
-                    
-                    // 2. Main Body (Gradient)
                     const grad = this.ctx.createLinearGradient(x, y, x, y + size);
                     grad.addColorStop(0, color);
-                    grad.addColorStop(1, adjustColor(color, -40)); // Darken bottom
+                    grad.addColorStop(1, adjustColor(color, -40));
 
                     this.ctx.fillStyle = grad;
                     this.ctx.beginPath();
                     this.ctx.roundRect(x + margin, y + margin, size, size, 10);
                     this.ctx.fill();
-                    this.ctx.shadowBlur = 0; // Reset shadow for crisp details
+                    this.ctx.shadowBlur = 0;
 
-                    // 3. Inner Gloss (Top highlight)
                     this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
                     this.ctx.beginPath();
                     this.ctx.ellipse(x + this.cellWidth/2, y + margin + size*0.2, size*0.6, size*0.2, 0, 0, Math.PI * 2);
                     this.ctx.fill();
 
-                    // 4. Text
                     this.ctx.fillStyle = '#fff';
                     this.ctx.font = `bold ${size * 0.5}px 'JetBrains Mono', monospace`;
                     this.ctx.textAlign = 'center';
                     this.ctx.textBaseline = 'middle';
-                    // Text shadow for readability
                     this.ctx.shadowColor = 'rgba(0,0,0,0.5)';
                     this.ctx.shadowBlur = 4;
                     this.ctx.fillText(val, x + this.cellWidth/2, y + this.cellHeight/2 + 2);
                     this.ctx.shadowBlur = 0;
                 };
 
-                // Helper for gradient
                 function adjustColor(color, amount) {
                     return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
                 }
@@ -592,7 +635,6 @@
                     drawCell(p.val, -1, p.col, p.y);
                 }
 
-                // Particles
                 for (let p of this.particles) {
                     p.draw(this.ctx);
                 }
@@ -607,7 +649,6 @@
             }
         }
 
-        // --- Init ---
         const game = new Game();
 
         document.getElementById('startBtn').addEventListener('click', () => {
@@ -623,7 +664,6 @@
             game.reset();
         });
 
-        // Polyfill for roundRect if needed (modern browsers support it)
         if (!CanvasRenderingContext2D.prototype.roundRect) {
             CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
                 if (w < 2 * r) r = w / 2;
@@ -638,7 +678,6 @@
                 return this;
             };
         }
-
     </script>
 </body>
 </html>
