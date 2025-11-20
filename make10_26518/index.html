@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Make 10: Neon Drop</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #050505;
+            color: #ffffff;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* UI Overlay Transitions */
+        .fade-enter { opacity: 0; transform: scale(0.95); }
+        .fade-enter-active { opacity: 1; transform: scale(1); transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .fade-exit { opacity: 1; transform: scale(1); }
+        .fade-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 0.2s ease, transform 0.2s ease; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+        }
+        .btn-primary:active {
+            transform: scale(0.96);
+            box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col items-center justify-center relative">
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD (Heads Up Display) -->
+    <div class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-10">
+        <div class="flex flex-col gap-1">
+            <div class="text-xs text-gray-400 tracking-widest uppercase">SCORE</div>
+            <div id="scoreDisplay" class="text-2xl font-bold text-white tabular-nums">0</div>
+        </div>
+        <div class="flex flex-col gap-1 items-end">
+            <div class="text-xs text-gray-400 tracking-widest uppercase">NEXT</div>
+            <div id="nextPieceDisplay" class="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
+                <!-- Next number populated by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="absolute inset-0 flex items-center justify-center z-20 bg-black/80 backdrop-blur-sm transition-all duration-300">
+        <div class="glass-panel p-8 rounded-2xl max-w-sm w-full text-center space-y-6 m-4">
+            <div>
+                <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">MAKE 10</h1>
+                <p class="text-gray-400 text-sm">Neon Drop</p>
+            </div>
+            
+            <div class="space-y-2 text-left bg-white/5 p-4 rounded-lg text-sm text-gray-300">
+                <p><span class="text-blue-400 font-bold">ルール:</span></p>
+                <ul class="list-disc list-inside space-y-1">
+                    <li>レーンをタップして数字を落とします。</li>
+                    <li>縦に重なった数字の合計が <span class="text-green-400 font-bold">10</span> になると消えます。</li>
+                    <li>例: 「3」の上に「7」を落とす → 消滅！</li>
+                    <li>画面上部まで積み上がるとゲームオーバー。</li>
+                </ul>
+            </div>
+
+            <button id="startBtn" class="btn-primary w-full py-4 rounded-xl text-white font-bold text-lg tracking-wide uppercase">
+                Game Start
+            </button>
+        </div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div id="gameOverScreen" class="hidden absolute inset-0 flex items-center justify-center z-20 bg-black/90 backdrop-blur-md transition-all duration-300">
+        <div class="glass-panel p-8 rounded-2xl max-w-xs w-full text-center space-y-6">
+            <div class="text-red-500 font-bold tracking-widest text-xl">SYSTEM FAILURE</div>
+            <div>
+                <div class="text-xs text-gray-400 uppercase">Final Score</div>
+                <div id="finalScore" class="text-5xl font-bold text-white my-2">0</div>
+            </div>
+            <button id="restartBtn" class="btn-primary w-full py-3 rounded-xl text-white font-bold tracking-wide">
+                TRY AGAIN
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * MAKE 10: NEON DROP
+         * Developed with a focus on clean architecture and satisfying interaction.
+         */
+
+        // --- Configuration ---
+        const COLS = 6;
+        const ROWS = 10;
+        const CELL_SIZE_RATIO = 0.85; // Percentage of width to fill
+        const COLORS = {
+            bg: '#050505',
+            grid: '#1a1a1a',
+            text: '#ffffff',
+            accent: '#3b82f6',
+            particles: ['#60a5fa', '#34d399', '#f472b6', '#fbbf24']
+        };
+
+        // --- Audio Manager (Web Audio API) ---
+        class AudioManager {
+            constructor() {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.gain.value = 0.3;
+                this.masterGain.connect(this.ctx.destination);
+            }
+
+            playTone(freq, type, duration, delay = 0) {
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
+                
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + delay + duration);
+
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                
+                osc.start(this.ctx.currentTime + delay);
+                osc.stop(this.ctx.currentTime + delay + duration);
+            }
+
+            playDrop() { this.playTone(300, 'sine', 0.1); }
+            playStack() { this.playTone(150, 'triangle', 0.1); }
+            playClear() { 
+                this.playTone(600, 'sine', 0.2); 
+                this.playTone(900, 'sine', 0.2, 0.05); 
+                this.playTone(1200, 'sine', 0.3, 0.1); 
+            }
+            playGameOver() {
+                this.playTone(100, 'sawtooth', 0.5);
+                this.playTone(80, 'sawtooth', 0.5, 0.2);
+            }
+        }
+
+        // --- Particle System ---
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 10;
+                this.vy = (Math.random() - 0.5) * 10;
+                this.life = 1.0;
+                this.color = color;
+                this.size = Math.random() * 5 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.03;
+                this.size *= 0.95;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // --- Game Logic ---
+        class Game {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.audio = new AudioManager();
+                
+                // Initialize grid robustly using Array.from to ensure independent arrays
+                this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                this.particles = [];
+                this.score = 0;
+                this.isPlaying = false;
+                
+                this.fallingPieces = []; 
+                this.nextPieceVal = this.randomNum();
+
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                
+                // Input
+                this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
+
+                // Loop
+                this.lastTime = 0;
+                this.animate = this.animate.bind(this);
+                requestAnimationFrame(this.animate);
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                
+                // Calculate grid dimensions to fit screen nicely
+                this.cellWidth = Math.min(this.canvas.width / COLS, 80);
+                this.cellHeight = this.cellWidth; // Square cells
+                
+                this.gridOffsetX = (this.canvas.width - (this.cellWidth * COLS)) / 2;
+                this.gridOffsetY = (this.canvas.height - (this.cellHeight * ROWS)) / 2;
+
+                // Ensure grid is not cut off at bottom on mobile
+                if (this.gridOffsetY < 50) this.gridOffsetY = 60; 
+            }
+
+            reset() {
+                // Ensure dimensions are correct before starting (fixes issues if resized during idle)
+                this.resize();
+                
+                // Clear grid completely
+                this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
+                
+                this.score = 0;
+                this.particles = [];
+                this.fallingPieces = [];
+                this.nextPieceVal = this.randomNum();
+                this.updateUI();
+                this.isPlaying = true;
+            }
+
+            randomNum() {
+                return Math.floor(Math.random() * 9) + 1;
+            }
+
+            getColFromX(x) {
+                const relativeX = x - this.gridOffsetX;
+                const col = Math.floor(relativeX / this.cellWidth);
+                return (col >= 0 && col < COLS) ? col : -1;
+            }
+
+            handleInput(e) {
+                if (!this.isPlaying) return;
+
+                const col = this.getColFromX(e.clientX);
+                if (col === -1) return;
+
+                // Check if column is full at the top
+                if (this.grid[0] && this.grid[0][col] !== null) {
+                    return; 
+                }
+
+                this.spawnPieceInColumn(col, this.nextPieceVal);
+                this.nextPieceVal = this.randomNum();
+                this.updateUI();
+                this.audio.playDrop();
+            }
+
+            spawnPieceInColumn(col, val) {
+                // 1. Calculate lowest empty row based on STATIC grid
+                let staticTargetRow = ROWS - 1;
+                for (let r = 0; r < ROWS; r++) {
+                    if (this.grid[r][col] !== null) {
+                        staticTargetRow = r - 1;
+                        break;
+                    }
+                }
+
+                // 2. Adjust for FALLING pieces in the same column
+                let finalTargetRow = staticTargetRow;
+                for (let p of this.fallingPieces) {
+                    if (p.col === col) {
+                        // Stack on top of the highest falling piece
+                        if (p.targetRow <= finalTargetRow) {
+                            finalTargetRow = p.targetRow - 1;
+                        }
+                    }
+                }
+
+                if (finalTargetRow < 0) {
+                    this.gameOver();
+                    return;
+                }
+
+                // Calculate exact Y pixels for target
+                const targetPixelY = this.gridOffsetY + (finalTargetRow * this.cellHeight);
+
+                // Add to falling animation list
+                this.fallingPieces.push({
+                    col: col,
+                    row: -1, 
+                    targetRow: finalTargetRow,
+                    val: val,
+                    y: this.gridOffsetY - this.cellHeight, // Start above grid
+                    targetY: targetPixelY,
+                    speed: 0,
+                    landed: false
+                });
+            }
+
+            update(dt) {
+                if (!this.isPlaying) return;
+
+                // Update Falling Pieces
+                for (let i = this.fallingPieces.length - 1; i >= 0; i--) {
+                    let p = this.fallingPieces[i];
+                    
+                    // Gravity simulation
+                    p.speed += 1.5; 
+                    p.y += p.speed;
+
+                    // Check collision (using >= to catch high speed overshoots)
+                    // Also clamp to prevent falling through floor if logic fails momentarily
+                    const floorLimit = this.gridOffsetY + (ROWS - 1) * this.cellHeight;
+                    
+                    // Use explicit targetY, but safeguard with floorLimit for bottom row
+                    let hit = false;
+                    if (p.y >= p.targetY) {
+                        hit = true;
+                    }
+                    
+                    // Additional safeguard: if it somehow passed target but targetRow is valid
+                    if (p.y > floorLimit && p.targetRow === ROWS - 1) {
+                        hit = true;
+                    }
+
+                    if (hit) {
+                        p.y = p.targetY; // Snap to grid position
+                        p.landed = true;
+                        
+                        // Add to grid (Safe check)
+                        if (this.grid[p.targetRow]) {
+                            this.grid[p.targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
+                            
+                            // Logic Check
+                            this.checkMatch(p.targetRow, p.col);
+                        }
+                        
+                        // Remove from falling list
+                        this.fallingPieces.splice(i, 1);
+                    }
+                }
+
+                // Update Particles
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    this.particles[i].update();
+                    if (this.particles[i].life <= 0) this.particles.splice(i, 1);
+                }
+            }
+
+            checkMatch(row, col) {
+                // Check number below
+                if (row < ROWS - 1) {
+                    const below = this.grid[row + 1][col];
+                    if (below) {
+                        const current = this.grid[row][col];
+                        const sum = current.val + below.val;
+
+                        if (sum === 10) {
+                            // MATCH!
+                            setTimeout(() => {
+                                this.createExplosion(col, row, COLORS.particles[0]);
+                                this.createExplosion(col, row + 1, COLORS.particles[1]);
+                                
+                                this.grid[row][col] = null;
+                                this.grid[row + 1][col] = null;
+                                this.score += 100;
+                                this.updateUI();
+                                this.audio.playClear();
+
+                                // Trigger gravity for anything above
+                                this.applyGravity(col);
+                            }, 50); 
+                        } else {
+                            this.audio.playStack();
+                            if (row === 0) this.gameOver();
+                        }
+                    } else {
+                         this.audio.playStack();
+                    }
+                } else {
+                    this.audio.playStack();
+                }
+            }
+
+            applyGravity(col) {
+                // Simple gravity: shift everything down if empty space exists
+                let writePtr = ROWS - 1;
+                for (let r = ROWS - 1; r >= 0; r--) {
+                    if (this.grid[r][col] !== null) {
+                        if (writePtr !== r) {
+                            this.grid[writePtr][col] = this.grid[r][col];
+                            this.grid[r][col] = null;
+                            
+                            // Re-check for matches after falling (simple chain reaction)
+                             if (writePtr < ROWS - 1 && this.grid[writePtr + 1][col]) {
+                                if (this.grid[writePtr][col].val + this.grid[writePtr + 1][col].val === 10) {
+                                    // Chain reaction logic could go here, 
+                                    // but kept simple for stability: just play sound or leave it
+                                }
+                            }
+                        }
+                        writePtr--;
+                    }
+                }
+            }
+
+            createExplosion(c, r, color) {
+                const x = this.gridOffsetX + c * this.cellWidth + this.cellWidth / 2;
+                const y = this.gridOffsetY + r * this.cellHeight + this.cellHeight / 2;
+                for (let i = 0; i < 15; i++) {
+                    this.particles.push(new Particle(x, y, color || '#fff'));
+                }
+            }
+
+            gameOver() {
+                this.isPlaying = false;
+                this.audio.playGameOver();
+                document.getElementById('finalScore').innerText = this.score;
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+
+            updateUI() {
+                document.getElementById('scoreDisplay').innerText = this.score;
+                document.getElementById('nextPieceDisplay').innerText = this.nextPieceVal;
+                const nextPiece = document.getElementById('nextPieceDisplay');
+                nextPiece.style.borderColor = this.getColor(this.nextPieceVal);
+                nextPiece.style.color = this.getColor(this.nextPieceVal);
+                nextPiece.style.boxShadow = `0 0 10px ${this.getColor(this.nextPieceVal)}40`;
+            }
+
+            getColor(num) {
+                const palette = [
+                    '#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#32ade6', 
+                    '#007aff', '#5856d6', '#af52de', '#ff2d55'
+                ];
+                return palette[num - 1] || '#fff';
+            }
+
+            draw() {
+                this.ctx.fillStyle = COLORS.bg;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw Grid Background
+                this.ctx.strokeStyle = '#151515';
+                this.ctx.lineWidth = 1;
+                for (let c = 0; c <= COLS; c++) {
+                    const x = this.gridOffsetX + c * this.cellWidth;
+                    this.ctx.beginPath(); this.ctx.moveTo(x, this.gridOffsetY); this.ctx.lineTo(x, this.gridOffsetY + ROWS * this.cellHeight); this.ctx.stroke();
+                }
+                this.ctx.strokeStyle = '#333';
+                this.ctx.beginPath(); 
+                this.ctx.moveTo(this.gridOffsetX, this.gridOffsetY + ROWS * this.cellHeight); 
+                this.ctx.lineTo(this.gridOffsetX + COLS * this.cellWidth, this.gridOffsetY + ROWS * this.cellHeight); 
+                this.ctx.stroke();
+
+                const drawCell = (val, r, c, yOffset = 0) => {
+                    const x = this.gridOffsetX + c * this.cellWidth;
+                    const y = this.gridOffsetY + r * this.cellHeight + yOffset;
+                    const size = this.cellWidth * 0.8;
+                    const margin = (this.cellWidth - size) / 2;
+                    const color = this.getColor(val);
+
+                    this.ctx.shadowBlur = 15;
+                    this.ctx.shadowColor = color;
+                    this.ctx.fillStyle = 'rgba(30,30,30,0.9)';
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = 2;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(x + margin, y + margin, size, size, 12);
+                    this.ctx.fill();
+                    this.ctx.stroke();
+
+                    this.ctx.fillStyle = '#fff';
+                    this.ctx.shadowBlur = 0;
+                    this.ctx.font = `bold ${size * 0.5}px Inter`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(val, x + this.cellWidth/2, y + this.cellHeight/2 + 2);
+                };
+
+                // Draw Static Grid
+                if (this.grid && this.grid.length === ROWS) {
+                    for (let r = 0; r < ROWS; r++) {
+                        for (let c = 0; c < COLS; c++) {
+                            if (this.grid[r][c]) {
+                                drawCell(this.grid[r][c].val, r, c);
+                            }
+                        }
+                    }
+                }
+
+                // Draw Falling Pieces
+                for (let p of this.fallingPieces) {
+                    const size = this.cellWidth * 0.8;
+                    const margin = (this.cellWidth - size) / 2;
+                    const x = this.gridOffsetX + p.col * this.cellWidth;
+                    const color = this.getColor(p.val);
+                    
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = color;
+                    this.ctx.fillStyle = color;
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(x + margin, p.y + margin, size, size, 12);
+                    this.ctx.fill();
+
+                    this.ctx.fillStyle = '#000';
+                    this.ctx.shadowBlur = 0;
+                    this.ctx.font = `bold ${size * 0.5}px Inter`;
+                    this.ctx.textAlign = 'center';
+                    this.ctx.textBaseline = 'middle';
+                    this.ctx.fillText(p.val, x + this.cellWidth/2, p.y + this.cellHeight/2);
+                }
+
+                for (let p of this.particles) {
+                    p.draw(this.ctx);
+                }
+            }
+
+            animate(timestamp) {
+                const dt = timestamp - this.lastTime;
+                this.lastTime = timestamp;
+                this.update(dt);
+                this.draw();
+                requestAnimationFrame(this.animate);
+            }
+        }
+
+        // --- Init ---
+        const game = new Game();
+
+        document.getElementById('startBtn').addEventListener('click', () => {
+            document.getElementById('startScreen').classList.add('hidden');
+            game.audio.ctx.resume();
+            game.reset();
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            document.getElementById('gameOverScreen').classList.add('hidden');
+            game.reset();
+        });
+
+    </script>
+</body>
+</html>
