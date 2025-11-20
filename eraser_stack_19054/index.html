@@ -92,6 +92,18 @@
         }
         .animate-pop { animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
+        /* New Record Animation */
+        @keyframes rainbow {
+            0% { color: #ef4444; }
+            25% { color: #eab308; }
+            50% { color: #22c55e; }
+            75% { color: #3b82f6; }
+            100% { color: #a855f7; }
+        }
+        .animate-rainbow {
+            animation: rainbow 2s linear infinite;
+        }
+
         .btn-push {
             background: #ef4444;
             border-bottom: 6px solid #b91c1c;
@@ -137,9 +149,11 @@
                     <p class="text-slate-500 font-bold text-sm tracking-[0.3em]">ERASER TOWER</p>
                 </div>
 
-                <div id="result-panel" class="hidden mb-8 bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                <div id="result-panel" class="hidden mb-8 bg-white p-6 rounded-2xl shadow-lg border border-slate-100 relative overflow-hidden">
+                    <div id="new-record-badge" class="hidden absolute top-0 right-0 bg-yellow-400 text-white text-[10px] font-bold px-2 py-1 transform translate-x-2 -translate-y-0 rotate-12 shadow-sm">NEW!</div>
                     <div class="text-xs font-bold text-slate-400 mb-1">RECORD</div>
                     <div class="text-4xl font-black text-slate-800" id="final-score">0</div>
+                    <div id="new-record-text" class="hidden text-sm font-bold animate-rainbow mt-2 tracking-widest">NEW RECORD!</div>
                 </div>
 
                 <button id="start-btn" class="bg-slate-900 text-white px-10 py-4 rounded-full font-bold text-xl shadow-xl hover:bg-slate-800 transition-transform active:scale-95">
@@ -190,6 +204,9 @@
     let currentPreview = null;
     let stack = [];
     let cameraY = 0;
+    
+    // 紙吹雪用
+    let confettis = [];
 
     // --- 4. システム初期化 ---
     window.onload = () => {
@@ -279,11 +296,16 @@
         score = 0;
         stack = [];
         cameraY = 0;
+        confettis = []; // 紙吹雪リセット
         updateScoreDisplay();
 
         document.getElementById('menu-overlay').classList.add('opacity-0', 'pointer-events-none');
         document.getElementById('result-panel').classList.add('hidden');
         document.getElementById('drop-btn').classList.remove('disabled');
+        
+        // 新記録表示リセット
+        document.getElementById('new-record-badge').classList.add('hidden');
+        document.getElementById('new-record-text').classList.add('hidden');
 
         Composite.clear(engine.world);
         Engine.clear(engine); 
@@ -319,10 +341,14 @@
 
         document.getElementById('drop-btn').classList.add('disabled');
 
+        let isNewRecord = false;
         if (score > bestScore) {
             bestScore = score;
             localStorage.setItem('eraser_stack_best', bestScore);
             document.getElementById('best-score-display').innerText = bestScore;
+            isNewRecord = true;
+            spawnConfetti(); // 紙吹雪発射
+            playSound('win');
         }
 
         const menu = document.getElementById('menu-overlay');
@@ -330,6 +356,12 @@
         
         document.getElementById('result-panel').classList.remove('hidden');
         document.getElementById('final-score').innerText = score;
+        
+        if (isNewRecord) {
+            document.getElementById('new-record-badge').classList.remove('hidden');
+            document.getElementById('new-record-text').classList.remove('hidden');
+        }
+        
         document.getElementById('start-btn').innerText = "RETRY";
     }
 
@@ -394,8 +426,6 @@
             let highestY = platformBody.position.y;
             
             stack.forEach(body => {
-                // 【修正】「着地済み」かつ「ほぼ静止」しているブロックのみを高さ計算に含める
-                // 落下中の新しいブロックを除外することで、カメラが上に飛ぶのを防ぐ
                 if (body.plugin.hasLanded && body.speed < 1.0 && body.position.y < highestY) {
                     highestY = body.position.y;
                 }
@@ -431,7 +461,6 @@
                                     (bodyB.label === 'eraser' && bodyA.label === 'platform');
 
             if (isEraserContact) {
-                // 【重要】衝突したら「着地」フラグを立てる
                 if (bodyA.label === 'eraser') bodyA.plugin.hasLanded = true;
                 if (bodyB.label === 'eraser') bodyB.plugin.hasLanded = true;
 
@@ -458,7 +487,16 @@
     // --- 8. 描画 ---
     function renderGame() {
         const ctx = render.context;
+        const bounds = render.bounds;
+
+        // 【重要修正】
+        // カメラ移動(Render.lookAt)によるboundsの変化に合わせて、
+        // 描画コンテキストをずらす。これで台座や消しゴムがスクロールするようになる。
+        ctx.save();
+        ctx.translate(-bounds.min.x, -bounds.min.y);
         
+        // --- 描画開始 ---
+
         if (platformBody) {
             const { x, y } = platformBody.position;
             drawFancyRect(ctx, x, y, CONFIG.platform.w, CONFIG.platform.h, 0, CONFIG.colors.platform, true);
@@ -485,6 +523,12 @@
 
             drawEraser(ctx, x, y, CONFIG.eraser.w, CONFIG.eraser.h, 0, color, 0.5);
         }
+
+        // 紙吹雪の描画
+        updateAndDrawConfetti(ctx, bounds);
+
+        // --- 描画終了 ---
+        ctx.restore();
     }
 
     function drawEraser(ctx, x, y, w, h, angle, color, opacity) {
@@ -570,6 +614,52 @@
         ctx.closePath();
     }
 
+    // --- 9. 紙吹雪 (Confetti) ---
+    function spawnConfetti() {
+        // 画面の中央（現在のカメラ位置基準）
+        const centerX = width / 2;
+        const centerY = cameraY + height / 2;
+        
+        for (let i = 0; i < 80; i++) {
+            confettis.push({
+                x: centerX,
+                y: centerY,
+                vx: (Math.random() - 0.5) * 20,
+                vy: (Math.random() - 1) * 20 - 10, // 上方向に吹き出す
+                angle: Math.random() * 360,
+                vAngle: (Math.random() - 0.5) * 10,
+                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                life: 150
+            });
+        }
+    }
+
+    function updateAndDrawConfetti(ctx, bounds) {
+        if (confettis.length === 0) return;
+
+        for (let i = confettis.length - 1; i >= 0; i--) {
+            const p = confettis[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.5; // 重力
+            p.angle += p.vAngle;
+            p.life--;
+
+            if (p.life <= 0) {
+                confettis.splice(i, 1);
+                continue;
+            }
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-4, -4, 8, 8);
+            ctx.restore();
+        }
+    }
+
+    // --- 10. サウンド ---
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     function playSound(type) {
@@ -605,6 +695,17 @@
             gain.gain.linearRampToValueAtTime(0, now + 0.5);
             osc.start(now);
             osc.stop(now + 0.5);
+        } else if (type === 'win') {
+            // ファンファーレ風
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(440, now);
+            osc.frequency.setValueAtTime(554, now + 0.1); // C#
+            osc.frequency.setValueAtTime(659, now + 0.2); // E
+            osc.frequency.setValueAtTime(880, now + 0.3); // A
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.6);
+            osc.start(now);
+            osc.stop(now + 0.6);
         }
     }
 </script>
