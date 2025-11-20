@@ -3,130 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chicken Race Collection</title>
+    <title>Chicken Race: Ultimate v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;600;900&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+            --accent-blue: #007AFF;
+            --accent-red: #FF3B30;
+        }
 
         body {
-            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             touch-action: none;
-            background-color: #f5f5f7;
+            background-color: #F2F2F7; /* Apple system gray 6 */
             overflow: hidden;
             user-select: none;
             -webkit-user-select: none;
+            color: #1C1C1E;
         }
 
+        /* Modern Glassmorphism */
         .glass-panel {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            box-shadow: var(--glass-shadow);
             border-radius: 24px;
         }
 
         canvas {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             z-index: 1;
         }
 
         #ui-layer {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             z-index: 10;
             pointer-events: none;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            padding: 2rem;
+            padding: env(safe-area-inset-top, 20px) 1.5rem env(safe-area-inset-bottom, 20px) 1.5rem;
         }
 
         .mode-card {
-            transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
         .mode-card:active {
+            transform: scale(0.94);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .mode-card::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .mode-card:hover::after { opacity: 1; }
+
+        .scroll-container {
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .scroll-container::-webkit-scrollbar { display: none; }
+
+        .hidden { display: none !important; opacity: 0; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
+        
+        /* Animations */
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+        .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
+
+        .fade-enter {
+            opacity: 0;
             transform: scale(0.95);
         }
+        .fade-enter-active {
+            opacity: 1;
+            transform: scale(1);
+            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .fade-exit {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .fade-exit-active {
+            opacity: 0;
+            transform: scale(1.05);
+            transition: opacity 0.3s ease-in, transform 0.3s ease-in;
+        }
 
-        /* Utilities */
-        .hidden { display: none !important; }
-        .pointer-events-auto { pointer-events: auto; }
     </style>
 </head>
-<body class="h-screen w-screen text-slate-800">
+<body class="h-screen w-screen">
 
     <canvas id="gameCanvas"></canvas>
 
-    <!-- UI Layer -->
     <div id="ui-layer">
         <!-- Header -->
-        <div class="w-full flex justify-between items-start pointer-events-auto">
-            <button id="back-btn" class="hidden glass-panel p-3 rounded-full text-slate-500 hover:text-slate-800 transition-colors mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <div class="w-full flex justify-between items-center pointer-events-auto z-20 pt-4">
+            <button id="back-btn" class="hidden glass-panel w-12 h-12 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <div id="score-container" class="hidden">
-                <h1 id="game-title" class="text-xs font-bold tracking-widest text-slate-400 uppercase mb-1">GAME</h1>
+            
+            <div id="score-widget" class="hidden flex flex-col items-end glass-panel px-4 py-2">
+                <span id="game-title-label" class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">MODE</span>
                 <div class="flex items-baseline gap-2">
-                    <span class="text-sm text-slate-500">BEST:</span>
-                    <span id="best-score" class="text-2xl font-mono font-bold text-slate-700">0</span>
+                    <span class="text-xs text-slate-500 font-medium">BEST</span>
+                    <span id="best-score" class="text-xl font-monospaced font-bold text-slate-800">0</span>
                 </div>
             </div>
-            <div class="flex-grow"></div> <!-- Spacer -->
-            <button id="mute-btn" class="glass-panel p-3 rounded-full text-slate-500 hover:text-slate-800 transition-colors pointer-events-auto">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+
+            <div class="flex-grow"></div>
+
+            <button id="mute-btn" class="glass-panel w-12 h-12 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform ml-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             </button>
         </div>
 
         <!-- Menu Screen -->
-        <div id="menu-screen" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-auto p-6 bg-white/30 backdrop-blur-sm transition-opacity duration-300">
-            <h1 class="text-4xl md:text-6xl font-black tracking-tighter mb-2 text-transparent bg-clip-text bg-gradient-to-br from-slate-700 to-slate-900">CHICKEN<br>COLLECTION</h1>
-            <p class="text-slate-500 font-bold mb-10 tracking-wide">限界を見極めろ</p>
+        <div id="menu-screen" class="absolute inset-0 pt-32 pb-10 px-6 pointer-events-auto scroll-container flex flex-col items-center transition-all duration-500">
+            <div class="text-center mb-12">
+                <h1 class="text-5xl md:text-7xl font-bold tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-b from-slate-800 to-slate-600">Chicken<br>Ultimate</h1>
+                <p class="text-slate-400 font-medium tracking-wide text-sm uppercase">Limit Breaker Simulator</p>
+            </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl">
-                <!-- Balloon Card -->
-                <button onclick="gameApp.selectMode('BALLOON')" class="mode-card glass-panel p-6 flex flex-col items-center text-center group hover:bg-white">
-                    <div class="w-16 h-16 rounded-full bg-blue-100 text-blue-500 flex items-center justify-center mb-4 text-3xl">🎈</div>
-                    <h3 class="text-xl font-bold text-slate-800">BALLOON</h3>
-                    <p class="text-xs text-slate-500 mt-2 font-jp">風船を限界まで膨らませろ</p>
-                </button>
-                
-                <!-- Water Card -->
-                <button onclick="gameApp.selectMode('WATER')" class="mode-card glass-panel p-6 flex flex-col items-center text-center group hover:bg-white">
-                    <div class="w-16 h-16 rounded-full bg-cyan-100 text-cyan-600 flex items-center justify-center mb-4 text-3xl">💧</div>
-                    <h3 class="text-xl font-bold text-slate-800">WATER</h3>
-                    <p class="text-xs text-slate-500 mt-2 font-jp">表面張力ギリギリを狙え</p>
-                </button>
-                
-                <!-- Cliff Card -->
-                <button onclick="gameApp.selectMode('CLIFF')" class="mode-card glass-panel p-6 flex flex-col items-center text-center group hover:bg-white">
-                    <div class="w-16 h-16 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-4 text-3xl">🏎️</div>
-                    <h3 class="text-xl font-bold text-slate-800">CLIFF</h3>
-                    <p class="text-xs text-slate-500 mt-2 font-jp">崖っぷちで急停車せよ</p>
-                </button>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-2xl pb-32">
+                <!-- Cards generated by JS -->
             </div>
         </div>
 
-        <!-- In-Game Info -->
-        <div id="center-info" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center w-full pointer-events-none hidden">
-            <div id="instruction" class="animate-pulse">
-                <p class="text-4xl font-black tracking-tighter mb-2 text-slate-800">HOLD</p>
-                <p class="text-sm text-slate-500 font-jp font-bold bg-white/50 px-4 py-1 rounded-full inline-block backdrop-blur">長押しで攻める</p>
+        <!-- Gameplay UI -->
+        <div id="game-ui" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
+            <div id="instruction" class="text-center animate-pulse-soft transition-opacity duration-300">
+                <p class="text-6xl font-black tracking-tighter mb-4 text-slate-900/10 mix-blend-multiply">HOLD</p>
+                <p class="text-xs font-bold bg-white/80 backdrop-blur px-6 py-2 rounded-full text-slate-600 shadow-lg inline-block tracking-wider">長押しで限界へ</p>
             </div>
-            
-            <div id="result-display" class="hidden scale-90 opacity-0 transition-all duration-300">
-                <p id="result-title" class="text-5xl font-black tracking-tighter mb-1 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">SCORE</p>
-                <p id="result-value" class="text-7xl font-mono font-bold text-slate-800 mb-4">0</p>
-                <p id="result-comment" class="text-lg font-bold text-slate-500 font-jp">コメント</p>
-                <div class="mt-8">
-                    <p class="text-xs text-slate-400 font-mono animate-bounce">TAP TO RETRY</p>
+
+            <div id="result-panel" class="hidden absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                <div class="glass-panel p-10 w-[85%] max-w-md flex flex-col items-center shadow-2xl transform transition-all duration-500 scale-90 opacity-0" id="result-card">
+                    <div id="result-icon" class="text-6xl mb-4">🎉</div>
+                    <p id="result-title" class="text-4xl font-black tracking-tighter mb-2">SCORE</p>
+                    <p id="result-score" class="text-6xl font-mono font-bold text-slate-800 mb-6 tracking-tighter">0</p>
+                    <div class="w-full h-px bg-slate-200 mb-6"></div>
+                    <p id="result-comment" class="text-lg font-bold text-slate-500 whitespace-nowrap">Comment</p>
+                    <p class="text-[10px] text-slate-400 font-mono mt-10 uppercase tracking-widest animate-pulse">Tap to Retry</p>
                 </div>
             </div>
         </div>
@@ -134,675 +171,886 @@
 
     <script>
         /**
-         * AUDIO SYSTEM
+         * GAME CONFIGURATION
+         * 9 Modes (Samurai removed)
          */
-        class AudioController {
+        const MODES = [
+            { id: 'BALLOON', name: 'Balloon', icon: '🎈', desc: '風船の限界', color: 'text-blue-500' },
+            { id: 'WATER',   name: 'Water',   icon: '💧', desc: '表面張力',   color: 'text-cyan-500' },
+            { id: 'CLIFF',   name: 'Cliff',   icon: '🏎️', desc: '断崖絶壁',   color: 'text-red-500' },
+            { id: 'TOAST',   name: 'Toast',   icon: '🍞', desc: '最高の焦げ', color: 'text-orange-500' },
+            { id: 'PUMP',    name: 'Pump',    icon: '🚲', desc: 'タイヤ空気圧', color: 'text-slate-600' },
+            { id: 'ICE',     name: 'Ice Cream', icon: '🍦', desc: '積み上げ',   color: 'text-pink-500' },
+            { id: 'BATTERY', name: 'Charge',  icon: '⚡', desc: '過充電注意', color: 'text-green-500' },
+            { id: 'FISHING', name: 'Fishing', icon: '🎣', desc: '糸の耐久度', color: 'text-indigo-500' },
+            { id: 'ROCKET',  name: 'Launch',  icon: '🚀', desc: '発射出力',   color: 'text-purple-500' },
+        ];
+
+        /**
+         * AUDIO SYSTEM
+         * Improved synthesis for smoother, "Apple-like" sound design
+         */
+        class AudioSynth {
             constructor() {
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 this.muted = false;
-                this.oscillator = null;
-                this.gainNode = null;
-                this.noiseNode = null;
+                this.masterGain = this.ctx.createGain();
+                this.masterGain.connect(this.ctx.destination);
+                this.masterGain.gain.value = 0.4; // Prevent clipping
+                this.activeNodes = [];
             }
 
             resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
 
-            playAction(mode, ratio) {
+            playTone(freq, type, dur, vol = 1) {
+                if (this.muted) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                
+                // Soft envelope
+                gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
+                
+                osc.connect(gain);
+                gain.connect(this.masterGain);
+                osc.start();
+                osc.stop(this.ctx.currentTime + dur);
+            }
+
+            // Procedural continuous sound (Tension builder)
+            startContinuous(mode) {
                 if (this.muted) return;
                 this.resume();
+                this.stopContinuous();
 
-                if (mode === 'BALLOON') this.playBalloonSound(ratio);
-                else if (mode === 'WATER') this.playWaterSound(ratio);
-                else if (mode === 'CLIFF') this.playEngineSound(ratio);
-            }
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
 
-            stopAction() {
-                const now = this.ctx.currentTime;
-                if (this.gainNode) this.gainNode.gain.setTargetAtTime(0, now, 0.1);
-                if (this.oscillator) {
-                    this.oscillator.stop(now + 0.2);
-                    this.oscillator = null;
-                }
-                if (this.noiseNode) { // For water
-                    this.noiseNode.disconnect();
-                    this.noiseNode = null;
-                }
-            }
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.masterGain);
 
-            // Mode: Balloon (Sine wave pitch up)
-            playBalloonSound(ratio) {
-                if (!this.oscillator) {
-                    this.oscillator = this.ctx.createOscillator();
-                    this.gainNode = this.ctx.createGain();
-                    this.oscillator.type = 'sine';
-                    this.oscillator.connect(this.gainNode);
-                    this.gainNode.connect(this.ctx.destination);
-                    this.oscillator.start();
-                }
-                const freq = 100 + (ratio * 400);
-                this.oscillator.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
-                this.gainNode.gain.setTargetAtTime(0.1, this.ctx.currentTime, 0.1);
-            }
-
-            // Mode: Water (White noise filter opening)
-            playWaterSound(ratio) {
-                if (!this.noiseNode) {
-                    // Create noise buffer
+                gain.gain.value = 0;
+                
+                // Mode specifics
+                if (mode === 'WATER' || mode === 'TOAST') {
+                    // White Noise for organic textures
                     const bufferSize = this.ctx.sampleRate * 2;
                     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                     const data = buffer.getChannelData(0);
                     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-
-                    this.noiseNode = this.ctx.createBufferSource();
-                    this.noiseNode.buffer = buffer;
-                    this.noiseNode.loop = true;
                     
-                    // Filter
-                    this.filterNode = this.ctx.createBiquadFilter();
-                    this.filterNode.type = 'lowpass';
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    noise.loop = true;
+                    noise.connect(filter); // Connect noise instead of osc
+                    noise.start();
+                    this.activeNodes.push(noise);
                     
-                    this.gainNode = this.ctx.createGain();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 100;
+                } else {
+                    // Oscillator for mechanical textures
+                    osc.type = (mode === 'CLIFF' || mode === 'ROCKET') ? 'sawtooth' : 'sine';
+                    osc.start();
+                    this.activeNodes.push(osc);
                     
-                    this.noiseNode.connect(this.filterNode);
-                    this.filterNode.connect(this.gainNode);
-                    this.gainNode.connect(this.ctx.destination);
-                    this.noiseNode.start();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 200;
                 }
-                
-                // Sound gets clearer (pitch rises) as glass fills
-                const freq = 200 + (ratio * 1000);
-                this.filterNode.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
-                this.gainNode.gain.setTargetAtTime(0.15, this.ctx.currentTime, 0.1);
+
+                this.activeGain = gain;
+                this.activeFilter = filter;
+                this.activeOsc = osc; // Might be unused if noise
             }
 
-            // Mode: Cliff (Sawtooth engine rev)
-            playEngineSound(ratio) {
-                if (!this.oscillator) {
-                    this.oscillator = this.ctx.createOscillator();
-                    this.gainNode = this.ctx.createGain();
-                    this.oscillator.type = 'sawtooth';
-                    
-                    // Lowpass to muffle engine slightly
-                    this.filterNode = this.ctx.createBiquadFilter();
-                    this.filterNode.type = 'lowpass';
-                    this.filterNode.frequency.value = 400;
+            updateContinuous(ratio, mode) {
+                if (!this.activeGain) return;
+                const now = this.ctx.currentTime;
+                const safeRatio = Math.min(ratio, 1.1);
 
-                    this.oscillator.connect(this.filterNode);
-                    this.filterNode.connect(this.gainNode);
-                    this.gainNode.connect(this.ctx.destination);
-                    this.oscillator.start();
+                // Volume swells with progress
+                this.activeGain.gain.setTargetAtTime(0.3 * safeRatio, now, 0.1);
+
+                if (mode === 'WATER' || mode === 'TOAST') {
+                    // Filter opens up for noise
+                    const freq = 100 + (Math.pow(safeRatio, 2) * 4000);
+                    this.activeFilter.frequency.setTargetAtTime(freq, now, 0.1);
+                } else {
+                    // Pitch rises
+                    const freq = 100 + (safeRatio * 800);
+                    if(this.activeOsc) this.activeOsc.frequency.setTargetAtTime(freq, now, 0.1);
+                    this.activeFilter.frequency.setTargetAtTime(freq * 2, now, 0.1);
                 }
-                
-                const freq = 50 + (ratio * 150); // Low rumble to high rev
-                this.oscillator.frequency.setTargetAtTime(freq, this.ctx.currentTime, 0.1);
-                
-                // Modulate filter for "power" feel
-                this.filterNode.frequency.setTargetAtTime(400 + (ratio * 1000), this.ctx.currentTime, 0.1);
-                this.gainNode.gain.setTargetAtTime(0.1, this.ctx.currentTime, 0.1);
             }
 
-            playFail() {
+            stopContinuous() {
+                if (this.activeGain) {
+                    this.activeGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15);
+                }
+                setTimeout(() => {
+                    this.activeNodes.forEach(n => { try{n.stop()}catch(e){n.disconnect()} });
+                    this.activeNodes = [];
+                }, 200);
+                this.activeGain = null;
+            }
+
+            playWin(quality) {
                 if (this.muted) return;
-                this.stopAction();
-                this.resume();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.5);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.5);
+                this.stopContinuous();
+                // Major chord arpeggio, soft and bell-like
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major
+                notes.forEach((freq, i) => {
+                    setTimeout(() => this.playTone(freq, 'sine', 0.8, 0.2), i * 60);
+                });
             }
 
-            playSuccess(quality) {
+            playLose() {
                 if (this.muted) return;
-                this.stopAction();
-                this.resume();
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                osc.type = 'triangle';
-                const freq = 440 + (quality * 440); // Higher score, higher pitch
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                osc.frequency.exponentialRampToValueAtTime(freq, this.ctx.currentTime + 0.1);
-                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
-                osc.connect(gain);
-                gain.connect(this.ctx.destination);
-                osc.start();
-                osc.stop(this.ctx.currentTime + 0.4);
+                this.stopContinuous();
+                // Low thud
+                this.playTone(100, 'square', 0.4, 0.3);
+                this.playTone(80, 'sawtooth', 0.5, 0.3);
             }
-
-            toggleMute() { this.muted = !this.muted; return this.muted; }
         }
 
         /**
-         * APP CONTROLLER
+         * VISUAL ENGINE
          */
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const audio = new AudioController();
+        const audio = new AudioSynth();
 
+        // Helper: High DPI Canvas
+        function resizeCanvas() {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            ctx.scale(dpr, dpr);
+            return { w: window.innerWidth, h: window.innerHeight };
+        }
+        let dims = resizeCanvas();
+        window.addEventListener('resize', () => dims = resizeCanvas());
+
+        // UI Refs
         const ui = {
             menu: document.getElementById('menu-screen'),
-            scoreContainer: document.getElementById('score-container'),
+            grid: document.querySelector('#menu-screen .grid'),
+            game: document.getElementById('game-ui'),
+            resultPanel: document.getElementById('result-panel'),
+            resultCard: document.getElementById('result-card'),
+            // Elements
             backBtn: document.getElementById('back-btn'),
-            centerInfo: document.getElementById('center-info'),
-            instruction: document.getElementById('instruction'),
-            resultDisplay: document.getElementById('result-display'),
-            resultTitle: document.getElementById('result-title'),
-            resultValue: document.getElementById('result-value'),
-            resultComment: document.getElementById('result-comment'),
+            scoreWidget: document.getElementById('score-widget'),
+            titleLabel: document.getElementById('game-title-label'),
             bestScore: document.getElementById('best-score'),
-            gameTitle: document.getElementById('game-title'),
-            muteBtn: document.getElementById('mute-btn')
+            instruction: document.getElementById('instruction'),
+            muteBtn: document.getElementById('mute-btn'),
+            // Result Text
+            resTitle: document.getElementById('result-title'),
+            resScore: document.getElementById('result-score'),
+            resComment: document.getElementById('result-comment'),
+            resIcon: document.getElementById('result-icon')
         };
 
-        class GameApp {
-            constructor() {
-                this.mode = null; // 'BALLOON', 'WATER', 'CLIFF'
-                this.state = 'MENU'; // MENU, PLAYING, RESULT
-                this.gamePhase = 'IDLE'; // IDLE, ACTING, FINISHED
-                this.progress = 0; // 0 to ??? (limit is hidden)
-                this.limit = 0;
+        // Build Menu
+        MODES.forEach(mode => {
+            const card = document.createElement('div');
+            card.className = 'mode-card glass-panel aspect-square flex flex-col items-center justify-center text-center p-4';
+            card.innerHTML = `
+                <div class="text-4xl mb-3 filter drop-shadow-sm">${mode.icon}</div>
+                <div class="font-bold text-sm text-slate-800 leading-none mb-1">${mode.name}</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">${mode.desc}</div>
+            `;
+            card.onclick = () => game.init(mode);
+            ui.grid.appendChild(card);
+        });
+
+        // Game Logic
+        const game = {
+            config: null,
+            state: 'MENU',
+            val: 0,
+            limit: 100, // Normalized internally
+            particles: [],
+            shake: 0,
+            
+            init(config) {
+                this.config = config;
+                this.state = 'IDLE';
+                this.val = 0;
+                this.limit = 85 + Math.random() * 30; // Randomized Limit
                 this.particles = [];
                 
-                this.resize();
-                window.addEventListener('resize', () => this.resize());
-                
-                // Input binding
-                const start = (e) => this.handleStart(e);
-                const end = (e) => this.handleEnd(e);
-                
-                window.addEventListener('mousedown', start);
-                window.addEventListener('touchstart', (e) => { e.preventDefault(); start(e); }, { passive: false });
-                window.addEventListener('mouseup', end);
-                window.addEventListener('touchend', end);
-
-                ui.backBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    this.toMenu();
-                });
-                
-                ui.muteBtn.addEventListener('mousedown', (e) => {
-                    e.stopPropagation();
-                    const m = audio.toggleMute();
-                    ui.muteBtn.innerHTML = m 
-                        ? '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v6a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0a7 7 0 0 1 0 2"></path></svg>'
-                        : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>';
-                });
-
-                this.loop = this.loop.bind(this);
-                requestAnimationFrame(this.loop);
-            }
-
-            resize() {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-                this.cx = canvas.width / 2;
-                this.cy = canvas.height / 2;
-                this.minDim = Math.min(canvas.width, canvas.height);
-            }
-
-            toMenu() {
-                this.state = 'MENU';
-                this.gamePhase = 'IDLE';
-                this.mode = null;
-                ui.menu.classList.remove('hidden');
-                ui.scoreContainer.classList.add('hidden');
-                ui.backBtn.classList.add('hidden');
-                ui.centerInfo.classList.add('hidden');
-                audio.stopAction();
-            }
-
-            selectMode(mode) {
-                this.mode = mode;
-                this.state = 'PLAYING';
-                
-                // Update UI for Game Mode
+                // Transitions
                 ui.menu.classList.add('hidden');
-                ui.scoreContainer.classList.remove('hidden');
+                ui.game.classList.remove('hidden');
+                ui.instruction.classList.remove('hidden');
+                ui.instruction.style.opacity = '1';
+                
                 ui.backBtn.classList.remove('hidden');
-                ui.centerInfo.classList.remove('hidden');
-                ui.gameTitle.innerText = mode;
-
-                // Load Score
-                const saved = localStorage.getItem(`chicken_race_${mode}`) || 0;
-                ui.bestScore.innerText = saved;
-
-                this.resetRound();
-            }
-
-            resetRound() {
-                this.gamePhase = 'IDLE';
-                this.progress = 0;
-                this.particles = [];
+                ui.scoreWidget.classList.remove('hidden');
+                ui.resultPanel.classList.add('hidden');
                 
-                // Set random limit based on mode logic (abstract units)
-                // Base 100. Limit varies 80-120.
-                this.limit = 85 + Math.random() * 35; 
-
-                // Reset UI
-                ui.instruction.style.display = 'block';
-                ui.resultDisplay.classList.add('hidden');
-                ui.resultDisplay.classList.remove('opacity-100', 'scale-100');
-                ui.resultDisplay.classList.add('opacity-0', 'scale-90');
-            }
-
-            handleStart(e) {
-                if (this.state !== 'PLAYING') return;
-                // If clicking back button area, ignore (handled by button click event, but safety check)
-                if (e.target.closest('button')) return;
-
-                if (this.gamePhase === 'FINISHED') {
-                    this.resetRound();
-                    return;
-                }
-
-                if (this.gamePhase === 'IDLE') {
-                    this.gamePhase = 'ACTING';
-                    ui.instruction.style.display = 'none';
-                    audio.resume();
-                }
-            }
-
-            handleEnd(e) {
-                if (this.state !== 'PLAYING' || this.gamePhase !== 'ACTING') return;
+                ui.titleLabel.innerText = config.name;
+                ui.bestScore.innerText = localStorage.getItem(`cr_v2_${config.id}`) || 0;
                 
-                this.gamePhase = 'FINISHED';
-                audio.stopAction();
-                this.calculateResult();
-            }
+                audio.resume();
+            },
 
-            calculateResult() {
-                const ratio = this.progress / this.limit;
+            back() {
+                this.state = 'MENU';
+                audio.stopContinuous();
+                ui.menu.classList.remove('hidden');
+                ui.game.classList.add('hidden');
+                ui.backBtn.classList.add('hidden');
+                ui.scoreWidget.classList.add('hidden');
+            },
+
+            startCharge() {
+                if (this.state !== 'IDLE') return;
+                this.state = 'CHARGING';
+                ui.instruction.style.opacity = '0';
+                audio.startContinuous(this.config.id);
+            },
+
+            endCharge() {
+                if (this.state !== 'CHARGING') return;
+                this.state = 'RESULT';
+                audio.stopContinuous();
+
+                const ratio = this.val / this.limit;
+                let isWin = false;
                 let score = 0;
-                let comment = "";
-                let isWin = true;
 
-                if (this.progress > this.limit) {
-                    // FAILED
-                    isWin = false;
-                    audio.playFail();
-                    if (navigator.vibrate) navigator.vibrate(300);
-                    this.createFailureEffect();
-                    comment = this.getFailComment();
+                if (this.val > this.limit) {
+                    // Fail
+                    audio.playLose();
+                    if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+                    this.spawnParticles(true);
                 } else {
-                    // SUCCESS
-                    score = Math.floor(Math.pow(ratio, 4) * 1000); // Exponential scoring
-                    audio.playSuccess(ratio);
-                    this.createConfetti();
-                    comment = this.getSuccessComment(ratio);
+                    // Win
+                    isWin = true;
+                    score = Math.floor(Math.pow(ratio, 6) * 10000); // High risk curve
+                    audio.playWin(ratio);
+                    this.spawnParticles(false);
 
-                    // Save High Score
-                    const key = `chicken_race_${this.mode}`;
-                    const currentBest = parseInt(localStorage.getItem(key) || 0);
-                    if (score > currentBest) {
+                    // Save
+                    const key = `cr_v2_${this.config.id}`;
+                    const best = parseInt(localStorage.getItem(key) || 0);
+                    if (score > best) {
                         localStorage.setItem(key, score);
                         ui.bestScore.innerText = score;
-                        comment = "NEW RECORD!!";
                     }
                 }
 
-                // UI Update
-                ui.resultTitle.innerText = isWin ? "SCORE" : "OOPS!";
-                ui.resultTitle.className = isWin 
-                    ? "text-5xl font-black tracking-tighter mb-1 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600"
-                    : "text-5xl font-black tracking-tighter mb-1 text-red-500";
-                ui.resultValue.innerText = score;
-                ui.resultComment.innerText = comment;
-
-                ui.resultDisplay.classList.remove('hidden');
+                // Show Result
                 setTimeout(() => {
-                    ui.resultDisplay.classList.remove('opacity-0', 'scale-90');
-                    ui.resultDisplay.classList.add('opacity-100', 'scale-100');
-                }, 50);
-            }
-
-            getSuccessComment(ratio) {
-                if (ratio < 0.5) return "ビビリすぎです";
-                if (ratio < 0.8) return "安全運転";
-                if (ratio < 0.95) return "ナイス度胸！";
-                return "神業！限界ギリギリ！";
-            }
-
-            getFailComment() {
-                if (this.mode === 'BALLOON') return "破裂しました";
-                if (this.mode === 'WATER') return "こぼれました";
-                if (this.mode === 'CLIFF') return "落下しました";
-                return "失敗！";
-            }
-
-            createFailureEffect() {
-                const color = this.mode === 'WATER' ? '#0ea5e9' : '#ef4444';
-                for(let i=0; i<40; i++) {
-                    this.particles.push(new Particle(this.cx, this.cy, color, 15));
-                }
-            }
-
-            createConfetti() {
-                const colors = ['#3b82f6', '#8b5cf6', '#f43f5e', '#10b981', '#f59e0b'];
-                for(let i=0; i<60; i++) {
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    this.particles.push(new Particle(this.cx, this.cy, color, 20));
-                }
-            }
-
-            loop(time) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                if (this.state === 'PLAYING') {
-                    // Update Logic
-                    if (this.gamePhase === 'ACTING') {
-                        // Progress speed depends on mode logic
-                        // Non-linear growth makes it harder at end
-                        const speedBase = 0.3;
-                        const acceleration = 1 + (this.progress / this.limit) * 2;
-                        this.progress += speedBase * acceleration;
-                        
-                        const ratio = Math.min(this.progress / this.limit, 1.1);
-                        audio.playAction(this.mode, ratio);
-
-                        // Auto fail check
-                        if (this.progress > this.limit) {
-                            this.handleEnd(); // Trigger fail
-                        }
-
-                        // Vibrate near limit
-                        if (navigator.vibrate && ratio > 0.85 && time % 15 < 1) {
-                             navigator.vibrate(10);
-                        }
-                    }
-
-                    // Render specific mode
-                    if (this.mode === 'BALLOON') this.renderBalloon(time);
-                    else if (this.mode === 'WATER') this.renderWater(time);
-                    else if (this.mode === 'CLIFF') this.renderCliff(time);
-                } else {
-                    // Menu background animation?
-                    this.renderMenuBG(time);
-                }
-
-                // Particles
-                for (let i = this.particles.length - 1; i >= 0; i--) {
-                    const p = this.particles[i];
-                    p.update();
-                    p.draw(ctx);
-                    if (p.alpha <= 0) this.particles.splice(i, 1);
-                }
-
-                requestAnimationFrame(this.loop);
-            }
-
-            // --- RENDERERS ---
-
-            renderMenuBG(time) {
-                ctx.fillStyle = '#f8fafc';
-                ctx.fillRect(0,0,canvas.width, canvas.height);
-                // Subtle moving shapes
-                ctx.fillStyle = 'rgba(59, 130, 246, 0.05)';
-                const x = Math.sin(time * 0.0005) * 100 + this.cx;
-                const y = Math.cos(time * 0.0006) * 100 + this.cy;
-                ctx.beginPath();
-                ctx.arc(x, y, 300, 0, Math.PI*2);
-                ctx.fill();
-            }
-
-            renderBalloon(time) {
-                const scale = this.minDim * 0.004;
-                const baseRadius = 40 * scale;
-                // Visual radius
-                let visualProgress = Math.min(this.progress, this.limit * 1.2);
-                if (this.gamePhase === 'FINISHED' && this.progress > this.limit) visualProgress = 0; // Popped
-
-                const r = baseRadius + (visualProgress * 2 * scale);
-                
-                // Wobble
-                const ratio = visualProgress / this.limit;
-                const wobbleAmp = Math.max(0, ratio - 0.5) * 5;
-                const wx = Math.sin(time * 0.02) * wobbleAmp;
-                const wy = Math.cos(time * 0.025) * wobbleAmp;
-
-                // String
-                if (r > 0) {
-                    ctx.beginPath();
-                    ctx.moveTo(this.cx, this.cy + r + wy);
-                    ctx.bezierCurveTo(this.cx + 10, this.cy + r + 100, this.cx - 10, this.cy + r + 150, this.cx + 20, this.cy + r + 200);
-                    ctx.strokeStyle = '#94a3b8';
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-
-                    // Color shift Blue -> Red
-                    const hue = Math.max(0, 210 - (ratio * 210)); 
-                    ctx.fillStyle = `hsl(${hue}, 80%, 60%)`;
+                    ui.resultPanel.classList.remove('hidden');
+                    ui.resultCard.classList.remove('scale-90', 'opacity-0');
+                    ui.resultCard.classList.add('scale-100', 'opacity-100');
                     
-                    ctx.beginPath();
-                    ctx.ellipse(this.cx + wx, this.cy + wy, r, r * 1.08, 0, 0, Math.PI * 2);
-                    ctx.fill();
+                    ui.resTitle.innerText = isWin ? "SUCCESS" : "FAILED";
+                    ui.resTitle.style.color = isWin ? "#007AFF" : "#FF3B30";
+                    ui.resScore.innerText = score;
+                    ui.resIcon.innerText = isWin ? (ratio > 0.98 ? '👑' : '🎉') : '💥';
+                    ui.resComment.innerText = this.getComment(ratio, isWin);
+                }, 600);
+            },
 
-                    // Shine
-                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                    ctx.beginPath();
-                    ctx.ellipse(this.cx - r*0.3 + wx, this.cy - r*0.4 + wy, r*0.2, r*0.3, -0.5, 0, Math.PI*2);
-                    ctx.fill();
+            getComment(ratio, isWin) {
+                if (!isWin) return "限界を超えました";
+                if (ratio < 0.5) return "安全すぎます";
+                if (ratio < 0.8) return "もっと攻められます";
+                if (ratio < 0.95) return "ナイス・チキン！";
+                if (ratio < 0.99) return "プロフェッショナル";
+                return "神の領域";
+            },
 
-                    // Danger shake
-                    if (ratio > 0.9) {
-                        const shake = Math.sin(time * 0.8) * 3;
-                        ctx.strokeStyle = 'rgba(255,0,0,0.3)';
-                        ctx.lineWidth = 8;
-                        ctx.stroke();
-                    }
-                }
-            }
-
-            renderWater(time) {
-                const glassW = this.minDim * 0.4;
-                const glassH = this.minDim * 0.5;
-                const glassBottom = this.cy + glassH/2;
-                const glassTop = this.cy - glassH/2;
-
-                // Glass
-                ctx.strokeStyle = '#94a3b8';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(this.cx - glassW/2, glassTop);
-                ctx.lineTo(this.cx - glassW/2, glassBottom);
-                ctx.lineTo(this.cx + glassW/2, glassBottom);
-                ctx.lineTo(this.cx + glassW/2, glassTop);
-                ctx.stroke();
-
-                // Water Level logic
-                // progress 0-80 fills glass. 80-100 creates meniscus (surface tension). >100 spills.
-                const fillLimit = this.limit * 0.85; 
-                let visualP = this.progress;
-                
-                let waterHeight = 0;
-                let bulge = 0;
-
-                if (visualP <= fillLimit) {
-                    waterHeight = (visualP / fillLimit) * glassH;
-                } else {
-                    waterHeight = glassH;
-                    // Surface tension bulge
-                    bulge = (visualP - fillLimit) * 2.5 * (this.minDim * 0.005); 
-                }
-
-                if (this.gamePhase === 'FINISHED' && this.progress > this.limit) {
-                    // Spilled
-                    waterHeight = glassH;
-                    bulge = 0;
-                    // Draw spill
-                    ctx.fillStyle = '#0ea5e9';
-                    ctx.beginPath();
-                    ctx.rect(this.cx - glassW/2 - 10, glassTop, 10, glassH + 20);
-                    ctx.rect(this.cx + glassW/2, glassTop, 10, glassH + 20);
-                    ctx.fill();
-                }
-
-                // Draw Water
-                ctx.fillStyle = 'rgba(14, 165, 233, 0.6)'; // Sky blue
-                ctx.beginPath();
-                ctx.moveTo(this.cx - glassW/2 + 2, glassBottom - 2);
-                ctx.lineTo(this.cx + glassW/2 - 2, glassBottom - 2);
-                
-                // Right side up
-                ctx.lineTo(this.cx + glassW/2 - 2, glassBottom - waterHeight);
-                
-                // Top Surface (Curve if bulging)
-                if (bulge > 0) {
-                    ctx.bezierCurveTo(
-                        this.cx + glassW/4, glassBottom - waterHeight - bulge * 2,
-                        this.cx - glassW/4, glassBottom - waterHeight - bulge * 2,
-                        this.cx - glassW/2 + 2, glassBottom - waterHeight
-                    );
-                } else {
-                    ctx.lineTo(this.cx - glassW/2 + 2, glassBottom - waterHeight);
-                }
-                ctx.closePath();
-                ctx.fill();
-
-                // Danger visual
-                if (visualP > fillLimit && this.gamePhase === 'ACTING') {
-                    ctx.fillStyle = `rgba(255, 50, 50, ${(visualP - fillLimit)/20})`;
-                    ctx.font = "bold 20px sans-serif";
-                    ctx.fillText("!", this.cx, glassTop - 20);
-                }
-            }
-
-            renderCliff(time) {
-                const groundY = this.cy + 50;
-                const cliffX = this.cx + this.minDim * 0.3;
-
-                // Sky
-                ctx.fillStyle = '#e0f2fe'; // Light sky
-                ctx.fillRect(0, 0, canvas.width, groundY);
-
-                // Ground
-                ctx.fillStyle = '#475569'; // Slate
-                ctx.fillRect(0, groundY, cliffX, canvas.height - groundY);
-                
-                // Cliff Edge Warning
-                ctx.fillStyle = '#fbbf24'; // Yellow stripe
-                ctx.fillRect(cliffX - 20, groundY, 20, 10);
-                ctx.fillStyle = '#000';
-                ctx.beginPath();
-                ctx.moveTo(cliffX - 15, groundY); ctx.lineTo(cliffX-10, groundY+10); ctx.lineTo(cliffX-5, groundY);
-                ctx.fill();
-
-                // Car Logic
-                // 0 -> cliffX - startX
-                const startX = this.cx - this.minDim * 0.3;
-                const distance = cliffX - startX;
-                
-                // Determine car position
-                let carX = startX + (this.progress / this.limit) * distance;
-                let carY = groundY;
-                let angle = 0;
-
-                // Fall logic
-                if (this.progress > this.limit) {
-                    // Over the edge
-                    const over = carX - cliffX;
-                    if (this.gamePhase === 'FINISHED') {
-                        // Falling animation
-                        carX = cliffX + over; // Keep horizontal momentum slightly?
-                        carY += Math.pow((Date.now() % 1000) / 10, 2); // Fake gravity for visual
-                        angle = Math.PI / 4;
-                    }
-                }
-
-                // Draw Car
-                ctx.save();
-                ctx.translate(carX, carY);
-                ctx.rotate(angle);
-                
-                // Shake if speeding fast
-                if (this.gamePhase === 'ACTING') {
-                    ctx.translate(Math.random()*2 - 1, Math.random()*2 - 1);
-                }
-
-                // Body
-                ctx.fillStyle = '#f43f5e'; // Rose red
-                ctx.beginPath();
-                ctx.roundRect(-20, -20, 40, 20, 5);
-                ctx.fill();
-                // Cabin
-                ctx.fillStyle = '#94a3b8';
-                ctx.beginPath();
-                ctx.roundRect(-10, -30, 25, 15, 2);
-                ctx.fill();
-                // Wheels
-                ctx.fillStyle = '#1e293b';
-                ctx.beginPath();
-                ctx.arc(-12, 0, 8, 0, Math.PI*2);
-                ctx.arc(12, 0, 8, 0, Math.PI*2);
-                ctx.fill();
-
-                // Speed lines
-                if (this.gamePhase === 'ACTING') {
-                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(-25, -10); ctx.lineTo(-40, -10);
-                    ctx.moveTo(-25, -25); ctx.lineTo(-35, -25);
-                    ctx.stroke();
-                }
-
-                ctx.restore();
-
-                // Goal Flag
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(cliffX, groundY);
-                ctx.lineTo(cliffX, groundY - 60);
-                ctx.stroke();
-                ctx.fillStyle = 'red';
-                ctx.beginPath();
-                ctx.moveTo(cliffX, groundY - 60);
-                ctx.lineTo(cliffX + 20, groundY - 50);
-                ctx.lineTo(cliffX, groundY - 40);
-                ctx.fill();
-            }
-        }
-
-        // Helper: Particle
-        class Particle {
-            constructor(x, y, color, speed) {
-                this.x = x;
-                this.y = y;
-                this.color = color;
-                const angle = Math.random() * Math.PI * 2;
-                const v = Math.random() * speed;
-                this.vx = Math.cos(angle) * v;
-                this.vy = Math.sin(angle) * v;
-                this.alpha = 1;
-                this.g = 0.3;
-                this.size = Math.random() * 6 + 3;
-            }
             update() {
-                this.x += this.vx;
-                this.y += this.vy;
-                this.vy += this.g;
-                this.alpha -= 0.02;
+                if (this.state === 'CHARGING') {
+                    // Dynamic speed adjustment
+                    const ratio = this.val / this.limit;
+                    const speed = 0.3 + (ratio * 0.5); // Speeds up
+                    this.val += speed;
+
+                    // Audio & Haptics
+                    audio.updateContinuous(ratio, this.config.id);
+                    
+                    // Shake calculation (Exponential)
+                    if (ratio > 0.8) {
+                        const severity = (ratio - 0.8) * 5; // 0 to 1
+                        this.shake = Math.pow(severity, 2) * 10;
+                        if (navigator.vibrate && Math.random() < 0.2) navigator.vibrate(10);
+                    } else {
+                        this.shake = 0;
+                    }
+
+                    // Auto-fail visually slightly after limit
+                    // Actually, for water, we want to show the spill. 
+                    // Let's allow going slightly over visually before forcing result screen logic.
+                    if (this.val > this.limit * 1.2) {
+                        this.endCharge(); // Force stop if user fell asleep
+                    }
+                } else {
+                    this.shake *= 0.9;
+                }
+
+                // Physics update
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.6; // Gravity
+                    p.life -= 0.015;
+                });
+                this.particles = this.particles.filter(p => p.life > 0);
+            },
+
+            spawnParticles(isFail) {
+                const cx = dims.w / 2;
+                const cy = dims.h / 2;
+                const count = isFail ? 60 : 100;
+                const colors = isFail 
+                    ? ['#FF3B30', '#FF9500'] 
+                    : ['#007AFF', '#5AC8FA', '#FFCC00', '#FFFFFF'];
+
+                for(let i=0; i<count; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 15 + 5;
+                    this.particles.push({
+                        x: cx, 
+                        y: cy,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed - 5,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        size: Math.random() * 6 + 2,
+                        life: 1.0
+                    });
+                }
             }
-            draw(ctx) {
-                ctx.save();
-                ctx.globalAlpha = this.alpha;
-                ctx.fillStyle = this.color;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.restore();
+        };
+
+        // Input Handlers
+        function handleInput(e) {
+            if (e.target.closest('button')) return;
+            e.preventDefault();
+            
+            if (game.state === 'RESULT') {
+                // Retry
+                game.init(game.config);
+            } else {
+                game.startCharge();
             }
         }
 
-        // Init
-        const gameApp = new GameApp();
+        function handleRelease(e) {
+            game.endCharge();
+        }
+
+        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('touchstart', handleInput, {passive: false});
+        window.addEventListener('mouseup', handleRelease);
+        window.addEventListener('touchend', handleRelease);
+        
+        ui.backBtn.onclick = (e) => { e.stopPropagation(); game.back(); };
+        ui.muteBtn.onclick = (e) => { 
+            e.stopPropagation(); 
+            audio.muted = !audio.muted;
+            ui.muteBtn.style.opacity = audio.muted ? '0.5' : '1';
+        };
+
+        /**
+         * RENDER LOOP
+         */
+        function loop() {
+            requestAnimationFrame(loop);
+            game.update();
+
+            // Clear & Setup
+            ctx.clearRect(0, 0, dims.w, dims.h);
+            
+            if (game.state === 'MENU') return;
+
+            ctx.save();
+
+            // Camera Shake
+            if (game.shake > 0) {
+                const sx = (Math.random() - 0.5) * game.shake;
+                const sy = (Math.random() - 0.5) * game.shake;
+                ctx.translate(sx, sy);
+            }
+
+            const cx = dims.w / 2;
+            const cy = dims.h / 2;
+            const ratio = game.val / game.limit; // 1.0 is limit
+            const isFail = game.state === 'RESULT' && game.val > game.limit;
+
+            // --- DRAW MODES ---
+            // Common Shadow for depth
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = "rgba(0,0,0,0.1)";
+
+            switch (game.config.id) {
+                case 'BALLOON': drawBalloon(cx, cy, ratio, isFail); break;
+                case 'WATER':   drawWater(cx, cy, ratio, isFail); break;
+                case 'CLIFF':   drawCliff(cx, cy, ratio, isFail); break;
+                case 'TOAST':   drawToast(cx, cy, ratio, isFail); break;
+                case 'PUMP':    drawPump(cx, cy, ratio, isFail); break;
+                case 'ICE':     drawIce(cx, cy, ratio, isFail); break;
+                case 'BATTERY': drawBattery(cx, cy, ratio, isFail); break;
+                case 'FISHING': drawFishing(cx, cy, ratio, isFail); break;
+                case 'ROCKET':  drawRocket(cx, cy, ratio, isFail); break;
+            }
+
+            ctx.shadowBlur = 0; // Reset shadow for particles
+
+            // Draw Particles
+            game.particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                ctx.fill();
+            });
+
+            ctx.restore();
+        }
+
+        /**
+         * DRAWING FUNCTIONS
+         */
+        
+        function drawBalloon(cx, cy, ratio, popped) {
+            if (popped) return;
+            // Smooth easing for size
+            const size = 60 + (ratio * 180);
+            
+            // String
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + size);
+            ctx.quadraticCurveTo(cx + Math.sin(Date.now()/200)*20, cy + size + 100, cx, cy + size + 200);
+            ctx.strokeStyle = '#C7C7CC';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Balloon Body
+            const grad = ctx.createRadialGradient(cx - size*0.3, cy - size*0.3, size*0.1, cx, cy, size);
+            
+            // Color shift based on tension
+            const hue = 210 - (Math.min(ratio, 1.1) * 210); // Blue -> Red
+            grad.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.9)`);
+            grad.addColorStop(1, `hsla(${hue}, 80%, 50%, 0.9)`);
+            
+            ctx.fillStyle = grad;
+            
+            // Wobble
+            const wX = Math.sin(Date.now()/60) * (ratio * 10);
+            const wY = Math.cos(Date.now()/70) * (ratio * 10);
+            
+            ctx.beginPath();
+            ctx.ellipse(cx + wX, cy + wY, size, size * 1.1, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Specular Highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.beginPath();
+            ctx.ellipse(cx - size*0.3 + wX, cy - size*0.3 + wY, size*0.2, size*0.1, -0.5, 0, Math.PI*2);
+            ctx.fill();
+        }
+
+        function drawWater(cx, cy, ratio, spilled) {
+            const w = 160;
+            const h = 220;
+            const glassY = cy + 50;
+
+            // Glass Body (Back)
+            ctx.fillStyle = 'rgba(230, 240, 255, 0.3)';
+            ctx.beginPath();
+            ctx.roundRect(cx - w/2, glassY - h, w, h, 8);
+            ctx.fill();
+            
+            // Glass Border
+            ctx.strokeStyle = 'rgba(255,255,255, 0.8)';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(cx - w/2, glassY - h);
+            ctx.lineTo(cx - w/2, glassY - 8);
+            ctx.quadraticCurveTo(cx - w/2, glassY, cx - w/2 + 8, glassY);
+            ctx.lineTo(cx + w/2 - 8, glassY);
+            ctx.quadraticCurveTo(cx + w/2, glassY, cx + w/2, glassY - 8);
+            ctx.lineTo(cx + w/2, glassY - h);
+            ctx.stroke();
+
+            // Water Calculation
+            // 0.0 -> 0.85 : Filling up
+            // 0.85 -> 1.0 : Surface Tension (Bulge)
+            
+            const rimY = glassY - h;
+            let waterY = glassY;
+            let bulgeH = 0;
+
+            if (ratio <= 0.85) {
+                // Filling
+                const fillRatio = ratio / 0.85;
+                waterY = glassY - (fillRatio * h);
+            } else {
+                // Full + Bulge
+                waterY = rimY;
+                // Bulge grows exponentially near 1.0
+                const tensionRatio = (ratio - 0.85) / 0.15; // 0 to 1
+                bulgeH = tensionRatio * 40; // Max bulge height
+            }
+
+            // If spilled, water cascades down
+            if (spilled) {
+                bulgeH = 0;
+                waterY = rimY;
+                
+                // Spill Streams
+                ctx.fillStyle = '#007AFF';
+                ctx.beginPath();
+                ctx.roundRect(cx - w/2 - 15, rimY, 15, h + 50, 5);
+                ctx.roundRect(cx + w/2, rimY, 15, h + 50, 5);
+                ctx.fill();
+            }
+
+            // Draw Water Content
+            ctx.fillStyle = 'rgba(0, 122, 255, 0.8)';
+            ctx.beginPath();
+            ctx.moveTo(cx - w/2 + 4, glassY - 4); // Bottom Left
+            ctx.lineTo(cx + w/2 - 4, glassY - 4); // Bottom Right
+            
+            if (waterY === rimY) {
+                // At rim or bulging
+                ctx.lineTo(cx + w/2 - 4, rimY);
+                // Surface Curve (Bulge)
+                ctx.bezierCurveTo(
+                    cx + w/4, rimY - bulgeH, 
+                    cx - w/4, rimY - bulgeH, 
+                    cx - w/2 + 4, rimY
+                );
+            } else {
+                // Filling
+                ctx.lineTo(cx + w/2 - 4, waterY);
+                ctx.lineTo(cx - w/2 + 4, waterY);
+            }
+            ctx.fill();
+
+            // Surface highlight line if bulging
+            if (bulgeH > 0) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cx - w/2 + 4, rimY);
+                ctx.bezierCurveTo(
+                    cx - w/4, rimY - bulgeH + 2, 
+                    cx + w/4, rimY - bulgeH + 2, 
+                    cx + w/2 - 4, rimY
+                );
+                ctx.stroke();
+            }
+        }
+
+        function drawCliff(cx, cy, ratio, fallen) {
+            // Minimalist abstract visuals
+            const groundY = cy + 100;
+            const edgeX = cx + 100;
+            
+            // Ground
+            ctx.fillStyle = '#3A3A3C';
+            ctx.fillRect(0, groundY, edgeX, 400);
+            
+            // Warning Strip
+            ctx.fillStyle = '#FFD60A';
+            ctx.fillRect(edgeX - 30, groundY, 30, 10);
+
+            // Car Position
+            // Start from left (-200) to edge (0 relative to edgeX)
+            const startX = cx - 250;
+            const dist = edgeX - startX;
+            
+            let carX = startX + (Math.min(ratio, 1.2) * dist);
+            let carY = groundY - 20; // Wheel bottom
+            let angle = 0;
+
+            if (fallen) {
+                // Animation handled by particles largely, but draw falling car
+                carX = edgeX + 50;
+                carY += 150;
+                angle = 1.0;
+            } else {
+                 // Engine vibration
+                 carX += (Math.random()-0.5) * (ratio * 4);
+                 carY += (Math.random()-0.5) * (ratio * 4);
+            }
+
+            ctx.save();
+            ctx.translate(carX, carY);
+            ctx.rotate(angle);
+
+            // Car Body (Porsche-esque silhouette)
+            ctx.fillStyle = '#FF3B30';
+            ctx.beginPath();
+            ctx.moveTo(-40, 0);
+            ctx.lineTo(40, 0);
+            ctx.quadraticCurveTo(40, -20, 20, -20);
+            ctx.lineTo(-20, -20);
+            ctx.quadraticCurveTo(-40, -20, -40, 0);
+            ctx.fill();
+            
+            // Wheels
+            ctx.fillStyle = '#1C1C1E';
+            ctx.beginPath(); ctx.arc(-25, 0, 8, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(25, 0, 8, 0, Math.PI*2); ctx.fill();
+            
+            ctx.restore();
+        }
+
+        function drawToast(cx, cy, ratio, burnt) {
+            // Toaster
+            ctx.fillStyle = '#AEAEB2';
+            ctx.beginPath();
+            ctx.roundRect(cx - 80, cy - 40, 160, 100, 16);
+            ctx.fill();
+            
+            // Slot
+            ctx.fillStyle = '#1C1C1E';
+            ctx.fillRect(cx - 60, cy - 40, 120, 10);
+
+            // Toast
+            const popUp = ratio * 30; // Rises slightly
+            
+            // Color interpolation: White -> Golden -> Brown -> Black
+            let r, g, b;
+            if (ratio < 0.5) { // White to Golden
+                const p = ratio / 0.5;
+                r=255; g=255 - (p*50); b=240 - (p*100);
+            } else if (ratio < 1.0) { // Golden to Brown
+                const p = (ratio - 0.5) / 0.5;
+                r=255 - (p*100); g=205 - (p*100); b=140 - (p*100);
+            } else { // Brown to Black
+                r=50; g=30; b=10;
+            }
+            
+            if (burnt) { r=20; g=20; b=20; }
+
+            ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
+            ctx.beginPath();
+            ctx.roundRect(cx - 45, cy - 40 - 80 + (30 - popUp), 90, 80, 8);
+            ctx.fill();
+
+            // Smoke
+            if (ratio > 0.7) {
+                ctx.globalAlpha = (ratio - 0.7) / 0.3;
+                ctx.fillStyle = '#8E8E93';
+                const smokeY = cy - 150 - (Date.now()/20 % 50);
+                ctx.beginPath();
+                ctx.arc(cx, smokeY, 20, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function drawPump(cx, cy, ratio, exploded) {
+            if (exploded) return;
+
+            const tireR = 80 + (ratio * 20);
+            
+            // Tire
+            ctx.fillStyle = '#1C1C1E';
+            ctx.beginPath();
+            ctx.arc(cx, cy, tireR, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Rim
+            ctx.fillStyle = '#D1D1D6';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 50, 0, Math.PI*2);
+            ctx.fill();
+
+            // Pump Gauge (Overlay)
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.beginPath();
+            ctx.arc(cx, cy + 140, 60, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Needle
+            const angle = -Math.PI + (ratio * Math.PI * 1.5); // -180 to +90
+            ctx.strokeStyle = '#FF3B30';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + 140);
+            ctx.lineTo(cx + Math.cos(angle)*50, cy + 140 + Math.sin(angle)*50);
+            ctx.stroke();
+        }
+
+        function drawIce(cx, cy, ratio, fallen) {
+            // Cone
+            ctx.fillStyle = '#FFD60A'; // Waffle color
+            ctx.beginPath();
+            ctx.moveTo(cx, cy + 150);
+            ctx.lineTo(cx - 30, cy + 50);
+            ctx.lineTo(cx + 30, cy + 50);
+            ctx.fill();
+
+            // Detail lines
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(cx, cy+150); ctx.lineTo(cx-20, cy+50); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx, cy+150); ctx.lineTo(cx+20, cy+50); ctx.stroke();
+
+            if (fallen) return;
+
+            // Stack
+            const count = 1 + Math.floor(ratio * 8);
+            const lean = Math.sin(Date.now()/300) * ratio * 40;
+
+            ctx.save();
+            ctx.translate(cx, cy + 50);
+            ctx.rotate(lean * 0.01); // Slight lean for whole stack
+
+            for(let i=0; i<count; i++) {
+                // Colors
+                const flavor = i % 3;
+                if (flavor === 0) ctx.fillStyle = '#FFDBF0'; // Strawberry
+                else if (flavor === 1) ctx.fillStyle = '#FEFBE0'; // Vanilla
+                else ctx.fillStyle = '#C0F2D8'; // Mint
+                
+                const y = -20 - (i*35);
+                const xOff = Math.sin((Date.now()/200) + i) * (ratio * 5); // Wobbly stack
+
+                ctx.beginPath();
+                ctx.arc(xOff, y, 28, 0, Math.PI*2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawBattery(cx, cy, ratio, exploded) {
+            if (exploded) return;
+            
+            // Battery Outline
+            ctx.strokeStyle = '#8E8E93';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(cx - 50, cy - 80, 100, 160);
+            ctx.fillStyle = '#8E8E93';
+            ctx.fillRect(cx - 30, cy - 95, 60, 15); // Terminal
+
+            // Fill
+            const h = 150 * ratio;
+            const color = ratio > 1.0 ? '#FF3B30' : (ratio > 0.7 ? '#FFCC00' : '#34C759');
+            
+            ctx.fillStyle = color;
+            ctx.fillRect(cx - 44, cy + 74 - h, 88, h);
+
+            // Lightning Icon
+            if (ratio > 0.1) {
+                ctx.fillStyle = 'rgba(255,255,255,0.8)';
+                ctx.font = '40px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚡', cx, cy + 10);
+            }
+
+            // Glow
+            if (ratio > 0.8) {
+                ctx.shadowBlur = (ratio - 0.8) * 50;
+                ctx.shadowColor = color;
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cx - 50, cy - 80, 100, 160);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function drawFishing(cx, cy, ratio, snapped) {
+            if (snapped) {
+                // Broken line
+                ctx.strokeStyle = '#8E8E93';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 100);
+                ctx.lineTo(cx, cy);
+                ctx.stroke();
+                return;
+            }
+
+            // Rod Handle (offscreen mostly)
+            
+            // Line Tension
+            const tension = ratio * 50; // Sag reduction
+            const endY = cy + 100;
+            
+            // Line color turns red
+            ctx.strokeStyle = ratio > 0.9 ? '#FF3B30' : '#8E8E93';
+            ctx.lineWidth = 2;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - 150); // Rod tip
+            // Bezier curve simulates tension (straightens out)
+            const cpX = cx + (Math.random()-0.5) * ratio * 10; // Vibration
+            const cpY = cy + (50 * (1 - ratio)); // Control point moves up as tension increases
+            
+            ctx.quadraticCurveTo(cpX, cpY, cx, endY);
+            ctx.stroke();
+
+            // Bobber / Lure
+            ctx.fillStyle = '#FF3B30';
+            ctx.beginPath();
+            ctx.arc(cx, endY, 10, 0, Math.PI*2);
+            ctx.fill();
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(cx, endY, 10, 0, Math.PI, true);
+            ctx.fill();
+
+            // Ripples
+            if (ratio < 0.5) {
+                ctx.strokeStyle = 'rgba(0,122,255,0.3)';
+                ctx.beginPath();
+                ctx.ellipse(cx, endY, 30 + Math.sin(Date.now()/200)*5, 10, 0, 0, Math.PI*2);
+                ctx.stroke();
+            }
+        }
+
+        function drawRocket(cx, cy, ratio, exploded) {
+            if (exploded) return;
+
+            const shake = (Math.random() - 0.5) * ratio * 10;
+            ctx.translate(cx + shake, cy);
+
+            // Rocket
+            ctx.fillStyle = '#E5E5EA';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 30, 70, 0, 0, Math.PI*2);
+            ctx.fill();
+            
+            // Fins
+            ctx.fillStyle = '#FF3B30';
+            ctx.beginPath();
+            ctx.moveTo(-20, 40); ctx.lineTo(-40, 70); ctx.lineTo(-20, 60); ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(20, 40); ctx.lineTo(40, 70); ctx.lineTo(20, 60); ctx.fill();
+
+            // Window
+            ctx.fillStyle = '#5AC8FA';
+            ctx.beginPath(); ctx.arc(0, -20, 12, 0, Math.PI*2); ctx.fill();
+            
+            // Thrust
+            const thrust = ratio * 150;
+            ctx.fillStyle = '#FF9500';
+            ctx.beginPath();
+            ctx.moveTo(-15, 65);
+            ctx.lineTo(15, 65);
+            ctx.lineTo(0, 65 + thrust + Math.random()*20);
+            ctx.fill();
+        }
+
+        // Start
+        loop();
 
     </script>
 </body>
