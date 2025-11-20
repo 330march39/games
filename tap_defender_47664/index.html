@@ -70,10 +70,6 @@
             text-shadow: 0 0 15px rgba(239, 68, 68, 0.9);
         }
 
-        .glow-text-gold {
-            text-shadow: 0 0 20px rgba(234, 179, 8, 0.9);
-        }
-
         .animate-pulse-fast {
             animation: pulse 0.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -148,6 +144,11 @@
                 this.playTone(100, 'sawtooth', 0.4, 0.3);
                 this.playTone(50, 'square', 0.5, 0.3);
             }
+            
+            playRankUp() {
+                this.playTone(600, 'sine', 0.1, 0.2);
+                setTimeout(() => this.playTone(1200, 'square', 0.3, 0.2), 100);
+            }
 
             playStart() {
                 this.playTone(440, 'sine', 0.1, 0.1);
@@ -182,7 +183,6 @@
         };
 
         // --- RANK SYSTEM CONFIGURATION ---
-        // "Almost impossible" S-rank tuning
         const RANK_SYSTEM = [
             { id: 'F', min: 0, color: 'text-slate-400' },
             { id: 'E', min: 5000, color: 'text-slate-300' },
@@ -190,7 +190,7 @@
             { id: 'C', min: 22000, color: 'text-cyan-400' },
             { id: 'B', min: 35000, color: 'text-blue-400' },
             { id: 'A', min: 55000, color: 'text-purple-400' },
-            { id: 'S', min: 80000, color: 'text-yellow-400' } // High ceiling
+            { id: 'S', min: 80000, color: 'text-yellow-400' } 
         ];
 
         const getRankInfo = (score) => {
@@ -226,6 +226,8 @@
             const comboRef = useRef(0);
             const healthRef = useRef(100);
             const killCountRef = useRef(0);
+            const currentRankRef = useRef(RANK_SYSTEM[0]); // Track rank in loop for effects
+            const rankUpEffectRef = useRef({ active: false, timer: 0, text: '' }); // Visual effect state
             
             // Game Objects
             const player = useRef({ x: 0, y: 0, radius: 32 });
@@ -236,7 +238,6 @@
             const difficultyMultiplier = useRef(1);
             const canvasShake = useRef(0);
             
-            // Screen scaling factor for mobile balance
             const screenScaleRef = useRef(1.0);
 
             useEffect(() => {
@@ -260,15 +261,10 @@
                 const typeRoll = Math.random();
                 let type = 'zzz';
                 
-                // --- DIFFICULTY CURVE ---
-                // Mobile Optimized scaling
                 let baseSpeed = 3.5 * screenScaleRef.current; 
-                
-                // Increase speed multiplier cap (allow it to get very fast for S rank)
                 let speed = baseSpeed + (difficultyMultiplier.current * 0.7 * screenScaleRef.current); 
                 let icon = ICONS.zzz;
 
-                // Enemy Types based on Kill Count (Progression)
                 if (killCountRef.current > 15 && typeRoll > 0.6) {
                     type = 'phone';
                     speed *= 1.3; 
@@ -276,13 +272,12 @@
                 }
                 if (killCountRef.current > 40 && typeRoll > 0.85) {
                     type = 'game';
-                    speed *= 1.1; // Slightly slower than phone but erratic
+                    speed *= 1.1;
                     icon = ICONS.game;
                 }
-                // Hard enemies appear sooner and more often to pressure player
                 if (killCountRef.current > 70 && typeRoll > 0.90) {
                     type = 'hard';
-                    speed *= 1.6; // Very fast
+                    speed *= 1.6;
                     icon = '🔥';
                 }
 
@@ -339,15 +334,11 @@
                 const shortestSide = Math.min(width, height);
                 screenScaleRef.current = Math.max(0.6, Math.min(1.2, shortestSide / 800));
 
-                // --- DIFFICULTY SCALING ---
-                // Aggressive scaling: Caps at 8x speed for S-rank challenge
-                // This ensures the game becomes "impossible" eventually
+                // Difficulty
                 difficultyMultiplier.current = 1 + (killCountRef.current / 25); 
 
                 if (lastSpawnTime.current === 0) lastSpawnTime.current = time;
 
-                // --- SPAWN RATE ---
-                // Drops to 150ms (insane barrage) at high kill counts
                 const minSpawnRate = 150;
                 const spawnRate = Math.max(minSpawnRate, 700 - (killCountRef.current * 12)); 
                 
@@ -370,11 +361,37 @@
                 ctx.save();
                 ctx.translate(shakeX, shakeY);
 
-                // Player
+                // --- DRAW PLAYER & EFFECTS ---
                 player.current.x = width / 2;
                 player.current.y = height / 2;
                 player.current.radius = 32 * screenScaleRef.current;
                 
+                // Rank Up Effect (Shockwave)
+                if (rankUpEffectRef.current.active) {
+                    const effect = rankUpEffectRef.current;
+                    effect.timer -= 0.02;
+                    if (effect.timer <= 0) effect.active = false;
+
+                    const scale = 1 + (1.0 - effect.timer) * 4; // Expand outward
+                    const alpha = effect.timer;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = alpha;
+                    ctx.strokeStyle = '#fbbf24'; // Amber/Gold
+                    ctx.lineWidth = 8 * screenScaleRef.current;
+                    ctx.beginPath();
+                    ctx.arc(player.current.x, player.current.y, player.current.radius * scale, 0, Math.PI * 2);
+                    ctx.stroke();
+                    
+                    // Text Popup
+                    ctx.font = `bold ${40 * screenScaleRef.current}px Orbitron`;
+                    ctx.fillStyle = '#fbbf24';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(`RANK ${effect.text}!`, player.current.x, player.current.y - (60 * screenScaleRef.current * scale));
+                    ctx.restore();
+                }
+
                 const pulseRate = healthRef.current < 30 ? 50 : 150;
                 const pulse = Math.sin(time / pulseRate) * (6 * screenScaleRef.current);
                 
@@ -528,9 +545,26 @@
                         setScore(scoreRef.current);
                         setCombo(comboRef.current);
                         
-                        // Update Rank in real-time
+                        // Update Rank and check for change
+                        const prevRank = currentRankRef.current;
                         const rankInfo = getRankInfo(scoreRef.current);
-                        setCurrentRank(rankInfo.current);
+                        const newRank = rankInfo.current;
+                        
+                        // Rank Up Logic
+                        if (newRank.id !== prevRank.id) {
+                            currentRankRef.current = newRank;
+                            setCurrentRank(newRank);
+                            
+                            // Trigger Effect
+                            rankUpEffectRef.current = {
+                                active: true,
+                                timer: 1.0,
+                                text: newRank.id
+                            };
+                            audio.playRankUp();
+                        } else {
+                             setCurrentRank(newRank); // Update progress bar if same rank
+                        }
 
                         if (comboRef.current > 0 && comboRef.current % 20 === 0) {
                             healthRef.current = Math.min(healthRef.current + 10, 100);
@@ -579,6 +613,7 @@
                 enemies.current = [];
                 particles.current = [];
                 scorePopups.current = [];
+                currentRankRef.current = RANK_SYSTEM[0]; // Reset Rank Ref
 
                 setGameState(GAME_STATE.PLAYING);
                 setScore(0);
@@ -591,7 +626,7 @@
                 gameStateRef.current = GAME_STATE.GAMEOVER;
                 setGameState(GAME_STATE.GAMEOVER);
                 
-                // Final rank update to be safe
+                // Final rank update
                 const rankInfo = getRankInfo(scoreRef.current);
                 setCurrentRank(rankInfo.current);
 
@@ -702,17 +737,24 @@
                                     TAP <span className="text-sky-500">DEFENDER</span>
                                 </h1>
                                 <p className="text-slate-400 mb-6 md:mb-8 text-xs md:text-sm font-bold leading-relaxed">
-                                    <span className="text-white">ランク・チャレンジ:</span><br/>
-                                    迫りくる弾幕を凌ぎ、<br/>
-                                    至高の<span className="text-yellow-400">Sランク</span>を目指せ！
+                                    <span className="text-white">警告:</span> 思考への侵入者を検知。<br/>
+                                    連続タップでコンボを繋ぎ、<br/>
+                                    脳内を守り抜け！
                                 </p>
                                 
-                                <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 font-tech mb-6 max-w-[200px] mx-auto text-left">
-                                    <div>Rank F: 0+</div>
-                                    <div>Rank C: 22,000+</div>
-                                    <div>Rank D: 12,000+</div>
-                                    <div>Rank A: 55,000+</div>
-                                    <div className="col-span-2 text-center text-yellow-400 font-bold mt-1">Rank S: 80,000+</div>
+                                <div className="flex justify-center gap-2 md:gap-4 mb-6 md:mb-8">
+                                    <div className="bg-slate-900/80 p-2 md:p-3 rounded border border-slate-800 text-center w-20 md:w-24">
+                                        <div className="text-xl md:text-2xl">💤</div>
+                                        <div className="text-[9px] md:text-[10px] text-slate-400 mt-1 font-bold">睡魔</div>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-2 md:p-3 rounded border border-slate-800 text-center w-20 md:w-24">
+                                        <div className="text-xl md:text-2xl">📱</div>
+                                        <div className="text-[9px] md:text-[10px] text-slate-400 mt-1 font-bold">誘惑</div>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-2 md:p-3 rounded border border-slate-800 text-center w-20 md:w-24">
+                                        <div className="text-xl md:text-2xl">🔥</div>
+                                        <div className="text-[9px] md:text-[10px] text-slate-400 mt-1 font-bold">脅威</div>
+                                    </div>
                                 </div>
 
                                 <button 
@@ -747,13 +789,20 @@
                                         {score.toLocaleString()}
                                     </div>
                                     
-                                    <div className="text-sm mt-4">
+                                    <div className="text-sm mt-4 w-full">
                                         {rankInfo.next ? (
-                                            <span className="text-slate-400">
-                                                NEXT RANK: <span className="text-white font-bold">{rankInfo.next.min.toLocaleString()}</span>
-                                                <br/>
-                                                <span className="text-xs opacity-70">あと { (rankInfo.next.min - score).toLocaleString() } ポイント</span>
-                                            </span>
+                                            <div className="w-full">
+                                                <div className="flex justify-between text-[10px] text-slate-400 mb-1">
+                                                    <span>NEXT RANK</span>
+                                                    <span>{Math.round(rankInfo.progress * 100)}%</span>
+                                                </div>
+                                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className="bg-sky-500 h-full transition-all duration-500"
+                                                        style={{ width: `${rankInfo.progress * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
                                         ) : (
                                             <span className="text-yellow-400 font-bold text-lg animate-pulse">
                                                 <span>🏆</span> LEGENDARY DEFENSE!
