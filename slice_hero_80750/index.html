@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Slice Hero - Infinite Cut</title>
+    <title>Emoji Cutter - Infinite Cut</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
@@ -74,7 +74,7 @@
         <!-- Start Screen -->
         <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/80 z-50 backdrop-blur-lg transition-all duration-500">
             <div class="mb-8 relative">
-                <h1 class="text-6xl md:text-8xl font-black text-white glitch-text tracking-tighter text-center relative z-10">SLICE<br>HERO</h1>
+                <h1 class="text-6xl md:text-8xl font-black text-white glitch-text tracking-tighter text-center relative z-10">EMOJI<br>CUTTER</h1>
                 <div class="absolute -inset-4 bg-indigo-500/20 blur-xl rounded-full -z-10"></div>
             </div>
             <p class="text-slate-300 mb-10 text-center max-w-xs font-bold leading-relaxed">
@@ -111,8 +111,8 @@
 
 <script>
 /**
- * Slice Hero - Infinite Cut
- * v2.0: Emoji Engine & Bug Fixes
+ * Emoji Cutter - Infinite Cut
+ * v2.1: Unique Emoji Logic
  */
 
 const canvas = document.getElementById('gameCanvas');
@@ -152,7 +152,8 @@ let state = {
     isDrawing: false,
     parts: [], 
     lastTime: 0,
-    currentEmoji: ''
+    currentEmoji: '',
+    usedEmojis: [] // Track used emojis per session
 };
 
 // --- 1. Robust Shape Generation (Emoji Engine) ---
@@ -216,9 +217,22 @@ function spawnNewShape(isBg = false) {
         return;
     }
 
-    // Select random emoji
-    const emoji = CFG.emojis[Math.floor(Math.random() * CFG.emojis.length)];
+    // Logic to prevent duplicates
+    // Filter out emojis that are already in state.usedEmojis
+    let availableEmojis = CFG.emojis.filter(e => !state.usedEmojis.includes(e));
+    
+    // If we've used all emojis, reset the pool
+    if (availableEmojis.length === 0) {
+        state.usedEmojis = [];
+        availableEmojis = CFG.emojis;
+    }
+
+    // Select random emoji from available pool
+    const emoji = availableEmojis[Math.floor(Math.random() * availableEmojis.length)];
+    
+    // Record usage
     state.currentEmoji = emoji;
+    state.usedEmojis.push(emoji);
 
     // Draw to the offscreen canvas
     drawCenteredEmoji(shapeCtx, emoji, shapeCanvas.width, shapeCanvas.height);
@@ -668,6 +682,8 @@ function startGame() {
         isDrawing: false,
         parts: [],
         lastTime: performance.now(),
+        usedEmojis: [], // Reset usage list on restart
+        currentEmoji: ''
     };
     particles = [];
 
