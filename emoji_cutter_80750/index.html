@@ -14,6 +14,8 @@
             overflow: hidden;
             background-color: #0f172a;
             color: white;
+            user-select: none;
+            -webkit-user-select: none;
         }
 
         canvas {
@@ -30,7 +32,7 @@
             25% { transform: translateX(-5px); }
             75% { transform: translateX(5px); }
         }
-        .shake { animation: shake 0.2s ease-in-out; }
+        .shake { animation: shake 0.15s ease-in-out; }
 
         /* UI Transitions */
         .fade-enter { opacity: 0; transform: scale(0.9); }
@@ -78,8 +80,8 @@
                 <div class="absolute -inset-4 bg-indigo-500/20 blur-xl rounded-full -z-10"></div>
             </div>
             <p class="text-slate-300 mb-10 text-center max-w-xs font-bold leading-relaxed">
-                無限のアイコンを<br>
-                <span class="text-pink-400">50:50</span> に切り裂け
+                音量ON推奨 🔊<br>
+                無限のアイコンを<span class="text-pink-400">50:50</span>に断ち切れ
             </p>
             <button id="startBtn" class="group relative px-10 py-4 bg-white text-slate-900 font-black text-xl rounded-full hover:scale-105 transition-all active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.3)] overflow-hidden">
                 <span class="relative z-10">GAME START</span>
@@ -98,8 +100,8 @@
                     <p class="text-3xl font-black text-pink-400" id="finalPerfects">0</p>
                 </div>
                 <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700 text-center backdrop-blur-md">
-                    <p class="text-xs text-slate-400 uppercase font-bold mb-1">Max Combo</p>
-                    <p class="text-3xl font-black text-yellow-400" id="finalCombo">0</p>
+                    <p class="text-xs text-slate-400 uppercase font-bold mb-1">Total Cuts</p>
+                    <p class="text-3xl font-black text-yellow-400" id="finalTotalCuts">0</p>
                 </div>
             </div>
             
@@ -112,7 +114,7 @@
 <script>
 /**
  * Emoji Cutter - Infinite Cut
- * v3.0: True Infinite Emoji Engine (Dynamic Unicode Generation)
+ * v4.0: Sound FX, Haptics, Color Filtering, & Total Cuts
  */
 
 const canvas = document.getElementById('gameCanvas');
@@ -126,14 +128,14 @@ const CFG = {
     perfectThreshold: 2.0,
     greatThreshold: 5.0,
     goodThreshold: 10.0,
-    // Unicode Ranges for Emojis (Start, End)
+    // Unicode Ranges for Emojis
+    // Removed symbols range to reduce non-colored glyphs
     emojiRanges: [
-        [0x1F300, 0x1F5FF], // Misc Symbols and Pictographs (Weather, Food, Music, etc)
-        [0x1F600, 0x1F64F], // Emoticons (Faces)
-        [0x1F680, 0x1F6FF], // Transport and Map
-        [0x1F900, 0x1F9FF], // Supplemental Symbols (Food, Animals, Objects)
-        [0x1FA70, 0x1FAFF], // Symbols and Pictographs Extended-A
-        [0x2600, 0x27BF]    // Misc Symbols (Sun, Snowman, Soccer ball, etc)
+        [0x1F300, 0x1F5FF], // Misc Symbols and Pictographs
+        [0x1F600, 0x1F64F], // Emoticons
+        [0x1F680, 0x1F6FF], // Transport
+        [0x1F900, 0x1F9FF], // Supplemental
+        [0x1FA70, 0x1FAFF]  // Extended
     ]
 };
 
@@ -142,17 +144,95 @@ let state = {
     score: 0,
     timeLeft: CFG.initialTime,
     combo: 0,
-    maxCombo: 0,
+    totalCuts: 0, // Changed from maxCombo tracking to Total Cuts
     perfectCount: 0,
     currentPath: [],
     isDrawing: false,
     parts: [], 
     lastTime: 0,
     currentEmoji: '',
-    usedEmojis: new Set() // Use Set for faster lookup
+    usedEmojis: new Set()
 };
 
-// --- 1. Robust Shape Generation (Emoji Engine) ---
+// --- 0. Audio & Haptics Engine (Synthesized) ---
+
+const Synth = {
+    ctx: null,
+    
+    init: function() {
+        if (!this.ctx) {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+    },
+
+    // Create a "SWOOSH" / "CUT" noise sound
+    playCut: function() {
+        if (!this.ctx) return;
+        
+        const t = this.ctx.currentTime;
+        
+        // White noise buffer
+        const bufferSize = this.ctx.sampleRate * 0.5; // 0.5 sec
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+            data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        // Filter to simulate the "whoosh"
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1200, t);
+        filter.frequency.exponentialRampToValueAtTime(100, t + 0.15);
+
+        // Gain envelope
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.8, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(t);
+        noise.stop(t + 0.2);
+    },
+    
+    // "Perfect" high pitch ping
+    playPerfect: function() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, t);
+        osc.frequency.exponentialRampToValueAtTime(1760, t + 0.1);
+        
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+        
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(t);
+        osc.stop(t + 0.3);
+    }
+};
+
+function triggerHaptic() {
+    // Simple vibration if supported
+    if (navigator.vibrate) {
+        navigator.vibrate(40); // 40ms vibration
+    }
+}
+
+
+// --- 1. Shape Generation & Color Filtering ---
 
 function init() {
     resize();
@@ -195,19 +275,32 @@ function drawCenteredEmoji(context, emoji, width, height) {
     context.shadowBlur = 0;
 }
 
-// Verify if the emoji was actually drawn (not a tofu/blank)
-function checkEmojiValidity(context, width, height) {
-    const sampleStep = 20;
+// Check if emoji is valid AND colorful (not grayscale/black&white)
+function checkEmojiValidityAndColor(context, width, height) {
+    const sampleStep = 15;
     const imgData = context.getImageData(0, 0, width, height).data;
     let pixelCount = 0;
+    let colorVariance = 0; // Tracks how "colorful" it is
     
-    for (let i = 3; i < imgData.length; i += 4 * sampleStep) {
-        if (imgData[i] > 50) {
+    for (let i = 0; i < imgData.length; i += 4 * sampleStep) {
+        const r = imgData[i];
+        const g = imgData[i+1];
+        const b = imgData[i+2];
+        const a = imgData[i+3];
+
+        if (a > 50) {
             pixelCount++;
+            // Calculate deviation from grayscale. If R=G=B, variance is 0.
+            colorVariance += Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
         }
     }
-    // If extremely few pixels are drawn, it's likely unsupported or blank
-    return pixelCount > 20;
+    
+    // Criteria: Must be visible (>20 pixels) AND have some color (variance > threshold)
+    // Pure black arrows/symbols will have near 0 variance.
+    const isVisible = pixelCount > 20;
+    const isColorful = (colorVariance / pixelCount) > 5; // Average color deviation
+
+    return isVisible && isColorful;
 }
 
 function spawnNewShape(isBg = false) {
@@ -226,36 +319,29 @@ function spawnNewShape(isBg = false) {
     let emoji = '';
     let isValid = false;
     let attempts = 0;
-    const maxAttempts = 20; // Prevent infinite loop
+    const maxAttempts = 30;
 
     while (!isValid && attempts < maxAttempts) {
         attempts++;
         emoji = generateRandomEmoji();
 
-        // 1. Deduplication Check
-        if (state.usedEmojis.has(emoji)) {
-            continue;
-        }
+        if (state.usedEmojis.has(emoji)) continue;
 
-        // 2. Render Check
         shapeCtx.clearRect(0, 0, shapeCanvas.width, shapeCanvas.height);
         drawCenteredEmoji(shapeCtx, emoji, shapeCanvas.width, shapeCanvas.height);
         
-        // 3. Visibility Check (Prevent tofu/blank)
-        if (checkEmojiValidity(shapeCtx, shapeCanvas.width, shapeCanvas.height)) {
+        if (checkEmojiValidityAndColor(shapeCtx, shapeCanvas.width, shapeCanvas.height)) {
             isValid = true;
             state.usedEmojis.add(emoji);
             state.currentEmoji = emoji;
         }
     }
 
-    // If we failed to find a valid emoji after many tries (rare), fallback to safe one
     if (!isValid) {
-        emoji = '⭐';
+        emoji = '🍅'; // Fallback to a known colorful emoji
         drawCenteredEmoji(shapeCtx, emoji, shapeCanvas.width, shapeCanvas.height);
     }
 
-    // Initial draw to main canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(shapeCanvas, 0, 0);
 }
@@ -304,6 +390,10 @@ function endDraw(e) {
 // --- 3. Physics & Cutting Logic ---
 
 function performCut() {
+    // Haptics & Sound
+    triggerHaptic();
+    Synth.playCut();
+
     shapeCtx.globalCompositeOperation = 'destination-out';
     shapeCtx.beginPath();
     shapeCtx.moveTo(state.currentPath[0].x, state.currentPath[0].y);
@@ -454,6 +544,9 @@ function handleSuccess(islands) {
 
     state.parts = [partA, partB];
     state.currentPath = [];
+    
+    // Update Total Cuts
+    state.totalCuts++;
 
     processScore(diff, ratioA, ratioB);
 }
@@ -472,6 +565,7 @@ function processScore(diff, r1, r2) {
         state.perfectCount++;
         timeBonus = 2;
         spawnConfetti(canvas.width/2, canvas.height/2);
+        Synth.playPerfect();
     } else if (diff <= CFG.greatThreshold) {
         label = "GREAT";
         colorClass = "text-green-400";
@@ -490,7 +584,7 @@ function processScore(diff, r1, r2) {
         state.combo = 0;
     }
 
-    if (state.combo > state.maxCombo) state.maxCombo = state.combo;
+    // if (state.combo > state.maxCombo) state.maxCombo = state.combo; // Replaced by Total Cuts logic
     
     const multiplier = 1 + (Math.min(state.combo, 10) * 0.1);
     points = Math.floor(points * multiplier);
@@ -652,12 +746,14 @@ function updateUI() {
 }
 
 function startGame() {
+    Synth.init(); // Initialize Audio Context on user gesture
+
     state = {
         phase: 'playing',
         score: 0,
         timeLeft: CFG.initialTime,
         combo: 0,
-        maxCombo: 0,
+        totalCuts: 0,
         perfectCount: 0,
         currentPath: [],
         isDrawing: false,
@@ -683,7 +779,7 @@ function gameOver() {
     state.phase = 'result';
     document.getElementById('finalScore').innerText = state.score;
     document.getElementById('finalPerfects').innerText = state.perfectCount;
-    document.getElementById('finalCombo').innerText = state.maxCombo;
+    document.getElementById('finalTotalCuts').innerText = state.totalCuts;
     
     const resultScreen = document.getElementById('resultScreen');
     resultScreen.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
