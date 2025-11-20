@@ -57,6 +57,16 @@
         .neon-text {
             text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(41, 151, 255, 0.3);
         }
+        
+        /* Target Number Pulse Animation */
+        @keyframes pulse-target {
+            0% { transform: scale(1); text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+            50% { transform: scale(1.2); text-shadow: 0 0 20px rgba(250, 204, 21, 0.8), 0 0 40px rgba(250, 204, 21, 0.4); }
+            100% { transform: scale(1); text-shadow: 0 0 10px rgba(250, 204, 21, 0.5); }
+        }
+        .target-change {
+            animation: pulse-target 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
     </style>
 </head>
 <body class="h-screen w-screen flex flex-col items-center justify-center relative">
@@ -65,12 +75,21 @@
     <canvas id="gameCanvas"></canvas>
 
     <!-- HUD -->
-    <div id="hud" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none z-10 select-none">
-        <div class="flex flex-col gap-1">
+    <div id="hud" class="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start pointer-events-none z-10 select-none">
+        <!-- Score -->
+        <div class="flex flex-col gap-1 w-20">
             <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">SCORE</div>
-            <div id="scoreDisplay" class="text-3xl font-bold text-white tabular-nums font-['JetBrains_Mono'] tracking-tighter neon-text">0</div>
+            <div id="scoreDisplay" class="text-2xl md:text-3xl font-bold text-white tabular-nums font-['JetBrains_Mono'] tracking-tighter neon-text">0</div>
         </div>
-        <div class="flex flex-col gap-2 items-end">
+
+        <!-- Target Display (Center) -->
+        <div class="flex flex-col gap-1 items-center transform translate-y-[-5px]">
+            <div class="text-[10px] text-yellow-500/80 tracking-[0.3em] font-bold uppercase">TARGET</div>
+            <div id="targetDisplay" class="text-5xl md:text-6xl font-black text-yellow-400 tabular-nums font-['JetBrains_Mono'] tracking-tighter drop-shadow-2xl" style="text-shadow: 0 0 30px rgba(250, 204, 21, 0.4);">10</div>
+        </div>
+
+        <!-- Next Piece -->
+        <div class="flex flex-col gap-2 items-end w-20">
             <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">NEXT</div>
             <div class="relative">
                 <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
@@ -86,13 +105,13 @@
             <div class="space-y-2">
                 <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-500 tracking-tight drop-shadow-lg">MAKE 10</h1>
                 <div class="h-1 w-12 bg-blue-500 mx-auto rounded-full opacity-80"></div>
-                <p class="text-gray-400 text-xs tracking-widest uppercase pt-2">Neon Drop Puzzle</p>
+                <p class="text-gray-400 text-xs tracking-widest uppercase pt-2">Dynamic Target Edition</p>
             </div>
             
             <div class="text-left bg-black/20 p-6 rounded-2xl text-sm text-gray-300 border border-white/5 leading-relaxed">
                 <p class="mb-3 text-white font-bold flex items-center gap-2">
                     <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
-                    HOW TO PLAY
+                    MISSION
                 </p>
                 <ul class="space-y-2 text-xs text-gray-400">
                     <li class="flex items-start gap-2">
@@ -100,12 +119,12 @@
                         <span>タップして数字を落とす</span>
                     </li>
                     <li class="flex items-start gap-2">
-                        <span class="text-blue-500 mt-0.5">●</span>
-                        <span>縦の合計が <strong class="text-white font-mono">10</strong> で消滅</span>
+                        <span class="text-yellow-500 mt-0.5">●</span>
+                        <span><strong class="text-yellow-400">TARGET</strong>の数字を作ると消滅</span>
                     </li>
                     <li class="flex items-start gap-2">
-                        <span class="text-blue-500 mt-0.5">●</span>
-                        <span>1・1・2・6のように複数でもOK</span>
+                        <span class="text-red-500 mt-0.5">●</span>
+                        <span>ターゲットはゲーム中に変化する！</span>
                     </li>
                 </ul>
             </div>
@@ -132,7 +151,7 @@
 
     <script>
         /**
-         * MAKE 10: NEON DROP (v2.0 - Dynamic Gravity & Multi-Match)
+         * MAKE 10: NEON DROP (v2.1 - Dynamic Target & Initial Rows)
          */
 
         const COLS = 6;
@@ -178,6 +197,10 @@
                 this.playTone(659.25, 'sine', 0.3, 0.05); 
                 this.playTone(783.99, 'sine', 0.4, 0.1);  
                 this.playTone(1046.50, 'sine', 0.6, 0.15); 
+            }
+            playTargetChange() {
+                this.playTone(800, 'sine', 0.3, 0, 0.4);
+                this.playTone(1200, 'square', 0.5, 0.1, 0.2);
             }
             playGameOver() {
                 this.playTone(150, 'sawtooth', 0.8, 0, 0.4);
@@ -225,6 +248,8 @@
                 this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
                 this.particles = [];
                 this.score = 0;
+                this.targetSum = 10;
+                this.lastLevel = 0;
                 this.isPlaying = false;
                 
                 this.fallingPieces = []; 
@@ -250,7 +275,7 @@
                 this.ctx.resetTransform();
                 this.ctx.scale(dpr, dpr);
 
-                const availableHeight = displayHeight - 140;
+                const availableHeight = displayHeight - 160; // Adjusted for HUD
                 const availableWidth = displayWidth - 30;
                 const maxCellH = availableHeight / ROWS;
                 const maxCellW = availableWidth / COLS;
@@ -260,18 +285,57 @@
                 const gridPixelWidth = this.cellWidth * COLS;
                 const gridPixelHeight = this.cellHeight * ROWS;
                 this.gridOffsetX = (displayWidth - gridPixelWidth) / 2;
-                this.gridOffsetY = Math.max((displayHeight - gridPixelHeight) / 2 + 30, 100);
+                this.gridOffsetY = Math.max((displayHeight - gridPixelHeight) / 2 + 40, 120);
             }
 
             reset() {
                 this.resize();
                 this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
                 this.score = 0;
+                this.targetSum = 10; // Reset target
+                this.lastLevel = 0;
                 this.particles = [];
                 this.fallingPieces = [];
                 this.nextPieceVal = this.randomNum();
+                
+                // --- NEW: Initialize bottom 2 rows with random blocks ---
+                this.initializeRandomRows(2);
+
                 this.updateUI();
                 this.isPlaying = true;
+            }
+
+            initializeRandomRows(rowCount) {
+                // Fill bottom 'rowCount' rows
+                for (let r = ROWS - 1; r >= ROWS - rowCount; r--) {
+                    for (let c = 0; c < COLS; c++) {
+                        let safe = false;
+                        let val;
+                        let attempts = 0;
+                        
+                        // Try to find a value that doesn't immediately clear
+                        while (!safe && attempts < 50) {
+                            val = this.randomNum();
+                            safe = true;
+
+                            // 1. Check if single value equals target (unlikely for 10, but possible for lower targets)
+                            if (val === this.targetSum) safe = false;
+
+                            // 2. Check vertical match with block below
+                            if (r < ROWS - 1) {
+                                const below = this.grid[r + 1][c];
+                                if (below && (val + below.val === this.targetSum)) {
+                                    safe = false;
+                                }
+                                // Also check 3-block sum if we had 3 rows (not needed for 2 rows logic, but good practice)
+                            }
+                            attempts++;
+                        }
+                        
+                        // Add block directly to grid
+                        this.grid[r][c] = { val: val, color: this.getColor(val) };
+                    }
+                }
             }
 
             randomNum() {
@@ -284,13 +348,9 @@
                 return (col >= 0 && col < COLS) ? col : -1;
             }
 
-            // Helper to find the highest occupied row index (visually lowest index number)
-            // in a column. If column is empty, returns ROWS.
             getTopRowIndex(col) {
                 for (let r = 0; r < ROWS; r++) {
-                    if (this.grid[r][col] !== null) {
-                        return r;
-                    }
+                    if (this.grid[r][col] !== null) return r;
                 }
                 return ROWS;
             }
@@ -299,9 +359,6 @@
                 if (!this.isPlaying) return;
                 const col = this.getColFromX(e.clientX);
                 if (col === -1) return;
-
-                // Only block if the top cell is actually occupied by a SETTLED piece
-                // Falling pieces don't block input, they just stack
                 if (this.grid[0][col] !== null) return; 
 
                 this.spawnPieceInColumn(col, this.nextPieceVal);
@@ -311,13 +368,10 @@
             }
 
             spawnPieceInColumn(col, val) {
-                // Note: We don't calculate a fixed targetRow anymore.
-                // The target is calculated dynamically every frame.
-                
                 this.fallingPieces.push({
                     col: col,
                     val: val,
-                    y: this.gridOffsetY - this.cellHeight, // Start above
+                    y: this.gridOffsetY - this.cellHeight,
                     speed: 0,
                     landed: false
                 });
@@ -326,40 +380,15 @@
             update(dt) {
                 if (!this.isPlaying) return;
 
-                // Sort falling pieces so lower ones update first? 
-                // Actually not strictly necessary if we check collision correctly.
-                // But iterating backwards is good for removal.
-
                 for (let i = this.fallingPieces.length - 1; i >= 0; i--) {
                     let p = this.fallingPieces[i];
-                    
-                    // 1. Update Physics
                     p.speed += 1.8;
                     p.y += p.speed;
 
-                    // 2. Calculate Dynamic Floor
-                    // The floor is either the bottom of the grid OR the top of the stack in the grid.
-                    // PLUS: We must consider other falling pieces in the same column that are below this one.
-                    
-                    let floorIndex = this.getTopRowIndex(p.col); // Index in grid (0-9 or 10)
-                    
-                    // Check against other falling pieces to stack on top of them
-                    // We look for the highest 'y' (visually lowest) piece in the same column that is below 'p'
-                    let lowestOtherY = -1;
-                    
-                    // Safety: Calculate pixel position of the grid slot
-                    const floorPixelY = this.gridOffsetY + (floorIndex * this.cellHeight);
-                    
-                    // Check collision with Floor (Grid Stack or Bottom)
-                    // Target Y for the piece to sit in the slot above floorIndex is:
-                    // (floorIndex - 1) * cellHeight + offset
-                    // But wait, if floorIndex is 10 (empty col), it sits at 9.
-                    
+                    let floorIndex = this.getTopRowIndex(p.col);
                     let targetRow = floorIndex - 1;
                     
-                    // Adjust targetRow based on other falling pieces below it
-                    // If there is a piece at row 9 falling, this one should target 8.
-                    // Simple approach: Count how many falling pieces are in this column BELOW this one
+                    // Check against other falling pieces
                     let piecesBelow = 0;
                     for (let j = 0; j < this.fallingPieces.length; j++) {
                         if (i === j) continue;
@@ -368,32 +397,19 @@
                             piecesBelow++;
                         }
                     }
-                    
                     targetRow -= piecesBelow;
-
-                    // Game Over check immediately if target is out of bounds?
-                    // No, wait until it lands.
                     
                     const targetPixelY = this.gridOffsetY + (targetRow * this.cellHeight);
                     
-                    // Collision Detection
                     if (p.y >= targetPixelY) {
                         if (targetRow < 0) {
                             this.gameOver();
                             return;
                         }
-
-                        // Landed
                         p.y = targetPixelY;
                         p.landed = true;
-                        
-                        // Add to grid
                         this.grid[targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
-                        
-                        // Check Matches (Multi-block logic)
-                        this.checkMatch(p.col); // Scan entire column
-                        
-                        // Remove from falling list
+                        this.checkMatch(p.col);
                         this.fallingPieces.splice(i, 1);
                     }
                 }
@@ -405,106 +421,106 @@
             }
 
             checkMatch(col) {
-                // New Logic: Find ANY continuous sequence summing to 10 in this column.
-                // Scan column to extract values
                 let stack = [];
-                // grid[0][col] is top, grid[ROWS-1][col] is bottom.
-                // We want to preserve indices to remove them correctly.
                 for (let r = 0; r < ROWS; r++) {
                     if (this.grid[r][col] !== null) {
                         stack.push({ val: this.grid[r][col].val, r: r });
                     }
                 }
 
-                // Search for sequence summing to 10
-                // We prioritize the longest sequence? Or just the first found?
-                // Let's try all sub-sequences.
                 let matchFound = false;
-                let matchIndices = []; // Stores 'r' indices
+                let matchIndices = [];
 
-                // Iterate start position
                 outerLoop:
                 for (let i = 0; i < stack.length; i++) {
                     let currentSum = 0;
                     let currentIndices = [];
-                    // Iterate end position
                     for (let j = i; j < stack.length; j++) {
                         currentSum += stack[j].val;
                         currentIndices.push(stack[j].r);
 
-                        if (currentSum === 10) {
-                            // Rule: Must be at least 2 blocks?
-                            // User said: "1, 1, 2, 6" is ok. Even "10" single block? 
-                            // Usually single block 10 is not possible with 1-9.
-                            // But if we sum to 10, we match.
+                        // --- UPDATED: Check against current dynamic target ---
+                        if (currentSum === this.targetSum) {
                             matchFound = true;
                             matchIndices = currentIndices;
-                            break outerLoop; // Stop after first match to keep it simple
+                            break outerLoop;
                         }
-                        if (currentSum > 10) {
-                            break; // Exceeded, move to next start
-                        }
+                        if (currentSum > this.targetSum) break;
                     }
                 }
 
                 if (matchFound) {
                     setTimeout(() => {
-                        // Create Explosion & Remove
                         matchIndices.forEach(r => {
                             const cellVal = this.grid[r][col].val;
                             this.createExplosion(col, r, this.getColor(cellVal));
                             this.grid[r][col] = null;
                         });
 
-                        this.score += 100 * matchIndices.length; // Bonus for length
+                        this.score += 100 * matchIndices.length;
+                        
+                        // --- NEW: Check Target Progression ---
+                        this.checkLevelProgression();
+                        
                         this.updateUI();
                         this.audio.playClear();
-                        
-                        // Apply Gravity after removal
                         this.applyGravity(col);
                     }, 60);
-                } else {
-                    // If piece landed but no match, play stack sound
-                    // (Only if this checkMatch was triggered by a landing, which it is)
-                     // Note: This runs recursively, so we might want to debounce sound.
-                     // For now, it's fine.
                 }
             }
 
+            // --- NEW: Dynamic Target Logic ---
+            checkLevelProgression() {
+                const levelStep = 500; // Change target every 500 points
+                const currentLevel = Math.floor(this.score / levelStep);
+
+                if (currentLevel > this.lastLevel) {
+                    this.lastLevel = currentLevel;
+                    this.changeTarget();
+                }
+            }
+
+            changeTarget() {
+                // Available targets: 7 to 15
+                const minT = 7;
+                const maxT = 15;
+                
+                // Ensure target actually changes
+                let newTarget = this.targetSum;
+                while (newTarget === this.targetSum) {
+                    newTarget = Math.floor(Math.random() * (maxT - minT + 1)) + minT;
+                }
+                
+                this.targetSum = newTarget;
+                this.audio.playTargetChange();
+
+                // Trigger visual animation
+                const targetEl = document.getElementById('targetDisplay');
+                targetEl.classList.remove('target-change');
+                void targetEl.offsetWidth; // Trigger reflow
+                targetEl.classList.add('target-change');
+                
+                // Visual color change hint
+                targetEl.style.color = '#fff';
+                setTimeout(() => { targetEl.style.color = '#facc15'; }, 300);
+            }
+
             applyGravity(col) {
-                // Compact the column downwards
-                // Collect all pieces
                 let pieces = [];
                 for (let r = 0; r < ROWS; r++) {
                     if (this.grid[r][col] !== null) {
                         pieces.push(this.grid[r][col]);
-                        this.grid[r][col] = null; // Clear
+                        this.grid[r][col] = null;
                     }
                 }
 
-                // Place them back from bottom
                 let writeRow = ROWS - 1;
-                let moved = false;
                 for (let i = pieces.length - 1; i >= 0; i--) {
                     this.grid[writeRow][col] = pieces[i];
                     writeRow--;
-                    // Note: if writeRow was different from original row, it moved.
                 }
 
-                // After gravity, check for matches AGAIN (Chain reaction)
-                // We need a slight delay or just run it immediately? 
-                // Immediate run is logic-correct, but visual delay is nice.
-                // Let's run immediately to simplify state, but we might not see the fall.
-                // Actually, since we just updated the grid array, the draw loop will show them at new positions instantly.
-                // To make it look like falling, we would need to turn them back into fallingPieces.
-                // But for robustness as requested ("fix floating"), instant snap is safer.
-                // We check match recursively.
-                
-                // Check match again if we have pieces
                 if (pieces.length > 0) {
-                     // To prevent infinite loop if logic is buggy, ensure state changed?
-                     // With "Sum 10 removes blocks", it should converge to no matches.
-                     // Use setTimeout to allow "Chain" visual effect
                      setTimeout(() => {
                          this.checkMatch(col);
                      }, 150);
@@ -528,6 +544,9 @@
 
             updateUI() {
                 const scoreEl = document.getElementById('scoreDisplay');
+                const targetEl = document.getElementById('targetDisplay');
+                
+                // Score Animation
                 let current = parseInt(scoreEl.innerText);
                 if (current !== this.score) {
                     scoreEl.innerText = this.score;
@@ -537,6 +556,11 @@
                         scoreEl.style.transform = 'scale(1)';
                         scoreEl.style.color = 'white';
                     }, 100);
+                }
+
+                // Update Target Text
+                if (parseInt(targetEl.innerText) !== this.targetSum) {
+                    targetEl.innerText = this.targetSum;
                 }
 
                 this.nextPieceVal = this.nextPieceVal || this.randomNum();
@@ -619,7 +643,6 @@
                     return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
                 }
 
-                // Draw Static Grid
                 if (this.grid && this.grid.length === ROWS) {
                     for (let r = 0; r < ROWS; r++) {
                         for (let c = 0; c < COLS; c++) {
@@ -630,7 +653,6 @@
                     }
                 }
 
-                // Draw Falling Pieces
                 for (let p of this.fallingPieces) {
                     drawCell(p.val, -1, p.col, p.y);
                 }
