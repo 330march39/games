@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TAP DEFENDER: 1000本ノック</title>
+    <title>TAP DEFENDER: High Voltage</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,8 +20,8 @@
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
 
-        /* Ensure full height for the container */
         html, body, #root {
             width: 100%;
             height: 100%;
@@ -31,9 +31,13 @@
 
         body {
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            background-color: #0f172a; /* Slate 900 */
+            background-color: #020617; /* Slate 950 - Darker bg */
             overflow: hidden;
-            touch-action: none; /* Prevent scroll/zoom on mobile */
+            touch-action: none;
+        }
+
+        .font-tech {
+            font-family: 'Orbitron', sans-serif;
         }
 
         .game-canvas {
@@ -61,30 +65,26 @@
         }
 
         /* Neon Glow Effects */
-        .glow-text {
-            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8);
+        .glow-text-blue {
+            text-shadow: 0 0 15px rgba(56, 189, 248, 0.9);
         }
         
+        .glow-text-red {
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.9);
+        }
+
         .animate-pulse-fast {
-            animation: pulse 0.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            animation: pulse 0.3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(3px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(3px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(1px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.5); }
+            100% { transform: scale(1); }
         }
 
-        .shake-screen {
-            animation: shake 0.5s;
+        .score-pop {
+            animation: pop 0.1s ease-out;
         }
     </style>
 </head>
@@ -112,9 +112,7 @@
                     } else if (this.ctx.state === 'suspended') {
                         this.ctx.resume();
                     }
-                } catch (e) {
-                    console.error("Audio init failed:", e);
-                }
+                } catch (e) {}
             }
 
             playTone(freq, type, duration, vol = 0.1) {
@@ -138,15 +136,17 @@
                 } catch (e) {}
             }
 
-            playShoot() {
-                // Higher pitch for faster feel
-                this.playTone(1000 + Math.random() * 300, 'sine', 0.08, 0.1); 
-                this.playTone(200, 'square', 0.05, 0.05);
+            playShoot(combo) {
+                // Pitch goes up with combo to increase tension/reward
+                const basePitch = 800;
+                const pitch = Math.min(basePitch + (combo * 50), 2000);
+                this.playTone(pitch, 'sine', 0.1, 0.1); 
+                this.playTone(150, 'square', 0.05, 0.05);
             }
 
             playDamage() {
-                this.playTone(150, 'sawtooth', 0.3, 0.2);
-                this.playTone(50, 'square', 0.4, 0.2);
+                this.playTone(100, 'sawtooth', 0.4, 0.3);
+                this.playTone(50, 'square', 0.5, 0.3);
             }
 
             playStart() {
@@ -165,13 +165,13 @@
         };
 
         const COLORS = {
-            bg: '#0f172a',
+            bg: '#020617',
             player: '#38bdf8', // Sky blue
-            playerGlow: 'rgba(56, 189, 248, 0.5)',
+            playerGlow: 'rgba(56, 189, 248, 0.6)',
             enemyZzz: '#a78bfa', // Violet
             enemyTech: '#f472b6', // Pink
+            enemyHard: '#ef4444', // Red
             particle: '#ffffff',
-            text: '#e2e8f0'
         };
 
         const ICONS = {
@@ -181,9 +181,11 @@
             email: '📧'
         };
 
+        // Target Score for S-Rank (Clear condition)
+        const TARGET_SCORE = 50000;
+
         // --- Main Component ---
         const App = () => {
-            // UI State
             const [gameState, setGameState] = useState(GAME_STATE.MENU);
             const [score, setScore] = useState(0);
             const [health, setHealth] = useState(100);
@@ -193,16 +195,18 @@
             const canvasRef = useRef(null);
             const requestRef = useRef();
             
-            // Game Logic Refs
+            // Refs for Loop
             const gameStateRef = useRef(GAME_STATE.MENU);
             const scoreRef = useRef(0);
             const comboRef = useRef(0);
             const healthRef = useRef(100);
+            const killCountRef = useRef(0); // Used for difficulty scaling instead of score
             
             // Game Objects
-            const player = useRef({ x: 0, y: 0, radius: 30 });
+            const player = useRef({ x: 0, y: 0, radius: 32 });
             const enemies = useRef([]);
             const particles = useRef([]);
+            const scorePopups = useRef([]); // Floating score numbers
             const lastSpawnTime = useRef(0);
             const difficultyMultiplier = useRef(1);
             const canvasShake = useRef(0);
@@ -216,7 +220,7 @@
             const spawnEnemy = (width, height, time) => {
                 const edge = Math.floor(Math.random() * 4); 
                 let x, y;
-                const buffer = 50;
+                const buffer = 60;
                 
                 switch(edge) {
                     case 0: x = Math.random() * width; y = -buffer; break;
@@ -227,21 +231,28 @@
 
                 const typeRoll = Math.random();
                 let type = 'zzz';
-                // SPEED UP: Base speed increased significantly
-                let speed = 2.5 + (difficultyMultiplier.current * 0.8); 
+                
+                // SPEED TUNING: Starts faster, ramps up quicker
+                let baseSpeed = 3.0; 
+                let speed = baseSpeed + (difficultyMultiplier.current * 0.6); 
                 let icon = ICONS.zzz;
-                let hp = 1;
 
-                // Difficulty Logic
-                if (scoreRef.current > 15 && typeRoll > 0.6) {
+                // Difficulty Logic based on Kill Count
+                if (killCountRef.current > 10 && typeRoll > 0.6) {
                     type = 'phone';
-                    speed *= 1.4; // Phone is very fast
+                    speed *= 1.3; 
                     icon = ICONS.phone;
                 }
-                if (scoreRef.current > 40 && typeRoll > 0.85) {
+                if (killCountRef.current > 25 && typeRoll > 0.85) {
                     type = 'game';
                     speed *= 1.1;
                     icon = ICONS.game;
+                }
+                // High level enemies
+                if (killCountRef.current > 50 && typeRoll > 0.95) {
+                    type = 'hard';
+                    speed *= 1.5;
+                    icon = '🔥';
                 }
 
                 enemies.current.push({
@@ -251,23 +262,34 @@
                     icon,
                     speed,
                     angle: Math.atan2(player.current.y - y, player.current.x - x),
-                    radius: 28, // Slightly larger hit radius for better mobile feel
+                    radius: 30,
                     wobble: Math.random() * Math.PI * 2,
                     active: true
                 });
             };
 
             const createExplosion = (x, y, color) => {
-                for (let i = 0; i < 12; i++) { // More particles for satisfaction
+                for (let i = 0; i < 15; i++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 10 + 5;
                     particles.current.push({
                         x, y,
-                        vx: (Math.random() - 0.5) * 15, // Faster explosion
-                        vy: (Math.random() - 0.5) * 15,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
                         life: 1.0,
                         color: color,
-                        size: Math.random() * 5 + 2
+                        size: Math.random() * 6 + 2
                     });
                 }
+            };
+
+            const createScorePopup = (x, y, points) => {
+                scorePopups.current.push({
+                    x, y,
+                    text: `+${points}`,
+                    life: 1.0,
+                    vy: -2
+                });
             };
 
             const update = useCallback((time) => {
@@ -282,20 +304,20 @@
                 const width = canvas.width;
                 const height = canvas.height;
 
-                // FASTER RAMPING: Difficulty increases faster
-                difficultyMultiplier.current = 1 + (scoreRef.current / 40); 
+                // DIFFICULTY SCALING: Based on kills, caps at 5x
+                difficultyMultiplier.current = Math.min(5, 1 + (killCountRef.current / 30)); 
 
                 if (lastSpawnTime.current === 0) lastSpawnTime.current = time;
 
-                // FASTER SPAWN: Starts at 800ms (was 2000ms), drops to 200ms
-                const spawnRate = Math.max(200, 800 - (scoreRef.current * 8)); 
+                // SPAWN RATE: Rapid fire. Drops to 250ms very quickly.
+                const spawnRate = Math.max(250, 700 - (killCountRef.current * 10)); 
                 if (time - lastSpawnTime.current > spawnRate) {
                     spawnEnemy(width, height, time);
                     lastSpawnTime.current = time;
                 }
 
                 // Clear Screen
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
+                ctx.fillStyle = 'rgba(2, 6, 23, 0.4)'; // Trail effect
                 ctx.fillRect(0, 0, width, height);
 
                 // Shake effect
@@ -303,7 +325,7 @@
                 if (canvasShake.current > 0) {
                     shakeX = (Math.random() - 0.5) * canvasShake.current;
                     shakeY = (Math.random() - 0.5) * canvasShake.current;
-                    canvasShake.current *= 0.9;
+                    canvasShake.current *= 0.85; // Fast decay
                     if (canvasShake.current < 0.5) canvasShake.current = 0;
                 }
 
@@ -314,21 +336,27 @@
                 player.current.x = width / 2;
                 player.current.y = height / 2;
                 
-                const pulse = Math.sin(time / 100) * 8; // Faster pulse
+                // Dynamic pulse based on health
+                const pulseRate = healthRef.current < 30 ? 50 : 150;
+                const pulse = Math.sin(time / pulseRate) * 6;
+                
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = COLORS.player;
                 ctx.beginPath();
                 ctx.arc(player.current.x, player.current.y, player.current.radius + pulse, 0, Math.PI * 2);
-                ctx.fillStyle = COLORS.playerGlow;
+                ctx.fillStyle = healthRef.current < 30 ? 'rgba(239, 68, 68, 0.3)' : COLORS.playerGlow;
                 ctx.fill();
 
+                ctx.shadowBlur = 0;
                 ctx.beginPath();
                 ctx.arc(player.current.x, player.current.y, player.current.radius - 5, 0, Math.PI * 2);
-                ctx.fillStyle = COLORS.player;
+                ctx.fillStyle = healthRef.current < 30 ? '#ef4444' : COLORS.player;
                 ctx.fill();
                 ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 3;
                 ctx.stroke();
                 
-                ctx.font = '24px Arial';
+                ctx.font = '30px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('🧠', player.current.x, player.current.y + 2);
@@ -343,28 +371,32 @@
                     let vy = Math.sin(enemy.angle) * enemy.speed;
 
                     if (enemy.type === 'zzz') {
-                        enemy.wobble += 0.15; // Faster wobble
-                        vx += Math.cos(enemy.wobble) * 1.5;
-                        vy += Math.sin(enemy.wobble) * 1.5;
+                        enemy.wobble += 0.2;
+                        vx += Math.cos(enemy.wobble) * 2;
+                        vy += Math.sin(enemy.wobble) * 2;
                     }
 
                     enemy.x += vx;
                     enemy.y += vy;
 
-                    ctx.shadowColor = enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech;
-                    ctx.shadowBlur = 20;
+                    // Enemy Visuals
+                    const isHard = enemy.type === 'hard';
+                    const color = isHard ? COLORS.enemyHard : (enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech);
+                    
+                    ctx.shadowColor = color;
+                    ctx.shadowBlur = isHard ? 30 : 15;
                     
                     ctx.beginPath();
                     ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
-                    ctx.fillStyle = enemy.type === 'zzz' ? 'rgba(167, 139, 250, 0.3)' : 'rgba(244, 114, 182, 0.3)';
+                    ctx.fillStyle = isHard ? 'rgba(239, 68, 68, 0.4)' : 'rgba(167, 139, 250, 0.2)';
                     ctx.fill();
                     ctx.lineWidth = 3;
-                    ctx.strokeStyle = enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech;
+                    ctx.strokeStyle = color;
                     ctx.stroke();
 
                     ctx.shadowBlur = 0;
                     ctx.fillStyle = '#fff';
-                    ctx.font = '28px Arial'; // Bigger icons
+                    ctx.font = '28px Arial';
                     ctx.fillText(enemy.icon, enemy.x, enemy.y + 2);
 
                     // Collision with Player
@@ -379,7 +411,7 @@
                 particles.current.forEach((p, index) => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.life -= 0.08; // Fade faster
+                    p.life -= 0.05;
                     p.size *= 0.9;
 
                     if (p.life <= 0) {
@@ -394,6 +426,25 @@
                     }
                 });
 
+                // Score Popups
+                ctx.font = 'bold 24px Orbitron';
+                ctx.textAlign = 'center';
+                scorePopups.current.forEach((p, index) => {
+                    p.y += p.vy;
+                    p.life -= 0.02;
+                    if (p.life <= 0) {
+                        scorePopups.current.splice(index, 1);
+                    } else {
+                        ctx.globalAlpha = p.life;
+                        ctx.fillStyle = '#fbbf24'; // Amber
+                        ctx.shadowColor = 'black';
+                        ctx.shadowBlur = 4;
+                        ctx.fillText(p.text, p.x, p.y);
+                        ctx.globalAlpha = 1.0;
+                        ctx.shadowBlur = 0;
+                    }
+                });
+
                 enemies.current = enemies.current.filter(e => e.active);
                 ctx.restore();
                 
@@ -402,11 +453,12 @@
 
             const handlePlayerHit = () => {
                 audio.playDamage();
-                canvasShake.current = 30; // More shake
+                canvasShake.current = 40; 
                 comboRef.current = 0;
                 setCombo(0);
                 
-                healthRef.current -= 20;
+                // High damage to force short games
+                healthRef.current -= 20; 
                 setHealth(healthRef.current);
 
                 if (healthRef.current <= 0) {
@@ -414,36 +466,48 @@
                 }
             };
 
-            // Shared logic for processing hits from mouse or touch
             const processInput = (x, y) => {
                  if (gameStateRef.current !== GAME_STATE.PLAYING) return;
                 
                 let hit = false;
+                let hitCount = 0;
                 
                 enemies.current.forEach(enemy => {
                     if (!enemy.active) return;
-                    // Generous hit box for mobile play
                     const dist = Math.hypot(x - enemy.x, y - enemy.y);
-                    if (dist < enemy.radius + 30) { // Increased hit radius (+30)
+                    if (dist < enemy.radius + 30) {
                         enemy.active = false;
                         hit = true;
+                        hitCount++;
                         
                         createExplosion(enemy.x, enemy.y, enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech);
                         
-                        scoreRef.current += 1;
+                        // NEW SCORE LOGIC: Combo Multiplier
+                        // Base: 100
+                        // Combo Bonus: +50 per combo
+                        const baseScore = 100;
+                        const comboBonus = comboRef.current * 50;
+                        const points = baseScore + comboBonus;
+
+                        createScorePopup(enemy.x, enemy.y, points);
+                        
+                        scoreRef.current += points;
                         comboRef.current += 1;
+                        killCountRef.current += 1;
+                        
                         setScore(scoreRef.current);
                         setCombo(comboRef.current);
                         
-                        if (comboRef.current % 10 === 0) {
-                            healthRef.current = Math.min(healthRef.current + 5, 100);
+                        // Healing is harder now (every 20 combos)
+                        if (comboRef.current > 0 && comboRef.current % 20 === 0) {
+                            healthRef.current = Math.min(healthRef.current + 10, 100);
                             setHealth(healthRef.current);
                         }
                     }
                 });
 
                 if (hit) {
-                    audio.playShoot();
+                    audio.playShoot(comboRef.current);
                 }
             };
 
@@ -455,9 +519,7 @@
                 processInput(x, y);
             };
 
-            // Multi-touch support for mobile
             const handleTouchStart = (e) => {
-                // e.preventDefault(); // Prevent default scrolling but allow React events
                 const canvas = canvasRef.current;
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvas.width / rect.width;
@@ -478,10 +540,12 @@
                 scoreRef.current = 0;
                 healthRef.current = 100;
                 comboRef.current = 0;
+                killCountRef.current = 0;
                 lastSpawnTime.current = 0;
                 difficultyMultiplier.current = 1;
                 enemies.current = [];
                 particles.current = [];
+                scorePopups.current = [];
 
                 setGameState(GAME_STATE.PLAYING);
                 setScore(0);
@@ -523,7 +587,7 @@
 
 
             return (
-                <div className="w-full h-full relative bg-slate-900 overflow-hidden select-none">
+                <div className="w-full h-full relative bg-slate-950 overflow-hidden select-none">
                     <canvas
                         ref={canvasRef}
                         className="game-canvas cursor-crosshair"
@@ -535,35 +599,37 @@
                     <div className="ui-layer p-4 flex flex-col justify-between pointer-events-none">
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col">
-                                <h1 className="text-slate-400 text-xs font-bold tracking-widest uppercase">集中力防衛システム</h1>
-                                <div className="text-4xl font-bold text-white glow-text font-mono">
-                                    {score} <span className="text-sm text-slate-500"></span>
+                                <div className="text-sky-500 text-xs font-bold tracking-widest font-tech">DEFENSE SYSTEM ACTIVE</div>
+                                <div className="text-5xl font-bold text-white glow-text-blue font-tech tabular-nums">
+                                    {score.toLocaleString()}
                                 </div>
+                                <div className="text-xs text-slate-500 font-tech tracking-wider">TARGET: {TARGET_SCORE.toLocaleString()}</div>
                             </div>
                             <div className="text-right">
-                                <div className="text-slate-400 text-xs font-bold tracking-widest">ハイスコア</div>
-                                <div className="text-xl font-mono text-emerald-400">{highScore}</div>
+                                <div className="text-slate-500 text-xs font-bold tracking-widest font-tech">HIGH SCORE</div>
+                                <div className="text-2xl font-tech text-emerald-400 tabular-nums">{highScore.toLocaleString()}</div>
                             </div>
                         </div>
 
                         {combo > 1 && (
-                             <div className="absolute top-24 left-1/2 transform -translate-x-1/2 text-center">
-                                <div className="text-yellow-400 font-black text-3xl italic animate-bounce drop-shadow-md">
-                                    {combo} COMBO!
+                             <div className="absolute top-28 left-1/2 transform -translate-x-1/2 text-center w-full">
+                                <div className="text-yellow-400 font-black text-5xl italic animate-bounce drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] font-tech">
+                                    {combo} <span className="text-2xl">COMBO</span>
                                 </div>
+                                <div className="text-white text-sm font-mono mt-1 opacity-80">BONUS +{(combo * 50)} PTS</div>
                              </div>
                         )}
 
                         <div className="w-full max-w-md mx-auto mb-8">
-                            <div className="flex justify-between text-xs text-slate-400 mb-1 font-bold tracking-widest">
-                                <span>メンタル・キャパシティ</span>
+                            <div className="flex justify-between text-xs text-sky-400 mb-1 font-bold tracking-widest font-tech">
+                                <span>MENTAL CAPACITY</span>
                                 <span>{Math.ceil(health)}%</span>
                             </div>
-                            <div className="w-full h-4 bg-slate-800 rounded-full overflow-hidden border border-slate-700">
+                            <div className="w-full h-4 bg-slate-900 rounded-sm overflow-hidden border border-slate-700 shadow-[0_0_10px_rgba(0,0,0,0.5)]">
                                 <div 
                                     className={`h-full transition-all duration-100 ease-out ${
-                                        health > 50 ? 'bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)]' : 
-                                        health > 20 ? 'bg-yellow-500' : 'bg-red-500 animate-pulse-fast'
+                                        health > 50 ? 'bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.8)]' : 
+                                        health > 20 ? 'bg-yellow-500' : 'bg-red-600 animate-pulse-fast'
                                     }`}
                                     style={{ width: `${health}%` }}
                                 />
@@ -573,71 +639,87 @@
 
                     {/* Start Screen */}
                     {gameState === GAME_STATE.MENU && (
-                        <div className="ui-layer interactive-ui bg-slate-900/95 backdrop-blur-sm flex items-center justify-center z-50">
-                            <div className="text-center p-8 max-w-sm w-full">
+                        <div className="ui-layer interactive-ui bg-slate-950/90 backdrop-blur-md flex items-center justify-center z-50">
+                            <div className="text-center p-8 max-w-md w-full border border-sky-900/30 rounded-2xl shadow-2xl">
                                 <div className="mb-8 relative inline-block">
-                                    <div className="absolute inset-0 bg-sky-500 blur-2xl opacity-30 rounded-full"></div>
-                                    <div className="relative text-7xl mb-2 animate-pulse">🧠</div>
+                                    <div className="absolute inset-0 bg-sky-500 blur-3xl opacity-20 rounded-full"></div>
+                                    <div className="relative text-8xl mb-2 animate-pulse">🧠</div>
                                 </div>
-                                <h1 className="text-5xl font-black text-white mb-2 tracking-tighter">
-                                    TAP <span className="text-sky-400">DEFENDER</span>
+                                <h1 className="text-5xl font-black text-white mb-2 tracking-tighter font-tech glow-text-blue">
+                                    TAP <span className="text-sky-500">DEFENDER</span>
                                 </h1>
-                                <p className="text-slate-400 mb-8 text-sm font-bold">
-                                    ミッション：集中力を死守せよ<br/>
-                                    ターゲット：迫りくる雑念を排除する
+                                <p className="text-slate-400 mb-8 text-sm font-bold leading-relaxed">
+                                    <span className="text-white">警告:</span> 思考への侵入者を検知しました。<br/>
+                                    連続タップでコンボを繋ぎ、<br/>
+                                    スコアを稼いで脳内を守り抜け！
                                 </p>
                                 
-                                <div className="space-y-6">
-                                    <div className="flex justify-center space-x-8 text-sm text-slate-300 mb-4 bg-slate-800/50 p-4 rounded-xl">
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-2xl mb-1">💤</span>
-                                            <span className="text-xs">睡魔</span>
-                                        </div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-2xl mb-1">📱</span>
-                                            <span className="text-xs">誘惑</span>
-                                        </div>
-                                        <div className="flex flex-col items-center">
-                                            <span className="text-2xl mb-1">🎮</span>
-                                            <span className="text-xs">娯楽</span>
-                                        </div>
+                                <div className="flex justify-center gap-4 mb-8">
+                                    <div className="bg-slate-900/80 p-3 rounded border border-slate-800 text-center w-24">
+                                        <div className="text-2xl">💤</div>
+                                        <div className="text-[10px] text-slate-400 mt-1 font-bold">睡魔</div>
                                     </div>
-
-                                    <button 
-                                        onClick={startGame}
-                                        className="w-full py-5 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.6)] transition-all active:scale-95 text-xl tracking-widest border-2 border-white/10"
-                                    >
-                                        防衛開始
-                                    </button>
+                                    <div className="bg-slate-900/80 p-3 rounded border border-slate-800 text-center w-24">
+                                        <div className="text-2xl">📱</div>
+                                        <div className="text-[10px] text-slate-400 mt-1 font-bold">誘惑</div>
+                                    </div>
+                                    <div className="bg-slate-900/80 p-3 rounded border border-slate-800 text-center w-24">
+                                        <div className="text-2xl">🔥</div>
+                                        <div className="text-[10px] text-slate-400 mt-1 font-bold">脅威</div>
+                                    </div>
                                 </div>
+
+                                <button 
+                                    onClick={startGame}
+                                    className="w-full py-5 bg-sky-600 hover:bg-sky-500 text-white font-black rounded-xl shadow-[0_0_30px_rgba(14,165,233,0.4)] transition-all active:scale-95 text-xl tracking-widest font-tech border-t border-sky-400"
+                                >
+                                    INITIATE DEFENSE
+                                </button>
                             </div>
                         </div>
                     )}
 
                     {/* Game Over Screen */}
                     {gameState === GAME_STATE.GAMEOVER && (
-                        <div className="ui-layer interactive-ui bg-red-950/90 backdrop-blur-md flex items-center justify-center z-50">
-                            <div className="text-center p-8 animate-bounce-in max-w-sm w-full">
-                                <h2 className="text-6xl font-black text-white mb-2 tracking-tighter shadow-red-500 drop-shadow-2xl">
-                                    決壊
+                        <div className="ui-layer interactive-ui bg-red-950/95 backdrop-blur-md flex items-center justify-center z-50">
+                            <div className="text-center p-8 animate-bounce-in max-w-md w-full">
+                                <h2 className="text-6xl font-black text-red-500 mb-2 tracking-tighter glow-text-red font-tech">
+                                    SYSTEM<br/>FAILURE
                                 </h2>
-                                <p className="text-red-200 mb-8 font-bold">集中力が切れました。<br/>雑念に支配されています。</p>
+                                <p className="text-red-200/80 mb-8 font-bold text-lg">
+                                    集中力が限界に達しました。<br/>
+                                    防御システムダウン。
+                                </p>
                                 
-                                <div className="bg-slate-900/80 p-6 rounded-2xl border border-red-500/30 mb-8 backdrop-blur-sm shadow-xl">
-                                    <div className="text-slate-400 text-xs uppercase tracking-widest mb-1">撃退数</div>
-                                    <div className="text-5xl font-mono font-black text-white">
-                                        {score}
+                                <div className="bg-slate-900/90 p-8 rounded-2xl border border-red-900/50 mb-8 shadow-2xl relative overflow-hidden">
+                                    {score >= TARGET_SCORE && (
+                                        <div className="absolute top-0 right-0 bg-yellow-500 text-black font-black text-xs px-2 py-1 font-tech transform rotate-0">
+                                            RANK S
+                                        </div>
+                                    )}
+                                    <div className="text-slate-500 text-xs uppercase tracking-widest mb-2 font-tech">FINAL SCORE</div>
+                                    <div className="text-6xl font-tech font-bold text-white mb-2 glow-text-blue">
+                                        {score.toLocaleString()}
                                     </div>
-                                    <div className="text-xs text-slate-500 mt-2 font-bold">
-                                        {score >= 1000 ? "神の領域に達しました 🏆" : "目標: 1000体"}
+                                    
+                                    <div className="flex justify-center items-center gap-2 text-sm font-bold mt-4">
+                                        {score >= TARGET_SCORE ? (
+                                            <span className="text-yellow-400 flex items-center gap-1">
+                                                <lucide-react.Trophy size={16} /> S-RANK ACHIEVED!
+                                            </span>
+                                        ) : (
+                                            <span className="text-slate-400">
+                                                NEXT RANK: {(TARGET_SCORE).toLocaleString()}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 <button 
                                     onClick={startGame}
-                                    className="w-full py-4 bg-white text-red-600 font-black rounded-xl hover:bg-gray-100 transition-transform active:scale-95 shadow-lg text-lg"
+                                    className="w-full py-4 bg-white text-slate-900 font-black rounded-xl hover:bg-slate-200 transition-transform active:scale-95 shadow-lg text-lg font-tech tracking-wider"
                                 >
-                                    再挑戦する
+                                    REBOOT SYSTEM
                                 </button>
                             </div>
                         </div>
