@@ -3,943 +3,625 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chicken Race: Ultimate v2.1</title>
+    <title>Chicken Tower</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800&family=Noto+Sans+JP:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@500;700;900&display=swap');
 
         :root {
-            --glass-bg: rgba(255, 255, 255, 0.65);
-            --glass-border: rgba(255, 255, 255, 0.4);
-            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
-            --accent-blue: #007AFF;
-            --accent-red: #FF3B30;
+            --glass: rgba(255, 255, 255, 0.8);
+            --glass-border: rgba(255, 255, 255, 0.6);
+            --accent: #007AFF;
+            --danger: #FF3B30;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            touch-action: none;
-            background-color: #F2F2F7; /* Apple system gray 6 */
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #F2F2F7;
+            color: #1C1C1E;
             overflow: hidden;
+            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            color: #1C1C1E;
         }
 
-        /* Modern Glassmorphism */
-        .glass-panel {
-            background: var(--glass-bg);
-            backdrop-filter: blur(24px) saturate(180%);
-            -webkit-backdrop-filter: blur(24px) saturate(180%);
+        canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+
+        .ui-layer {
+            position: absolute; inset: 0; pointer-events: none; z-index: 10;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)) 20px;
+        }
+
+        .glass-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--glass-border);
-            box-shadow: var(--glass-shadow);
             border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.05);
         }
 
-        canvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1;
+        .btn {
+            pointer-events: auto;
+            transition: transform 0.1s, opacity 0.2s;
         }
+        .btn:active { transform: scale(0.95); }
 
-        #ui-layer {
-            position: absolute;
-            inset: 0;
-            z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            padding: env(safe-area-inset-top, 20px) 1.5rem env(safe-area-inset-bottom, 20px) 1.5rem;
-        }
+        .hidden { display: none !important; opacity: 0; }
+        .pointer-auto { pointer-events: auto; }
 
-        .mode-card {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            /* Mobile tap highlight fix */
-            -webkit-tap-highlight-color: transparent;
-        }
-        .mode-card:active {
-            transform: scale(0.94);
-            background: rgba(255, 255, 255, 0.9);
-        }
-        .mode-card::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 100%);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .mode-card:hover::after { opacity: 1; }
-
-        .scroll-container {
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-        }
-        .scroll-container::-webkit-scrollbar { display: none; }
-
-        .hidden { display: none !important; opacity: 0; pointer-events: none; }
-        .pointer-events-auto { pointer-events: auto; }
+        /* Custom Animations */
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .anim-enter { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        /* Animations */
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 0.8; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.02); }
+        .shake-screen { animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0% { transform: translate(0,0); }
+            25% { transform: translate(2px, 2px); }
+            50% { transform: translate(-2px, -2px); }
+            75% { transform: translate(-2px, 2px); }
+            100% { transform: translate(0,0); }
         }
-        .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
-
     </style>
 </head>
 <body class="h-screen w-screen">
 
     <canvas id="gameCanvas"></canvas>
 
-    <div id="ui-layer">
-        <!-- Header -->
-        <div class="w-full flex justify-between items-center pointer-events-auto z-20 pt-4">
-            <button id="back-btn" class="hidden glass-panel w-12 h-12 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-            </button>
+    <!-- UI LAYER -->
+    <div class="ui-layer">
+        
+        <!-- HUD (Top) -->
+        <div id="hud" class="flex justify-between items-start hidden">
+            <div class="glass-card px-4 py-2 flex flex-col">
+                <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase">FLOOR</span>
+                <span id="floor-num" class="text-2xl font-black text-slate-800">1F</span>
+            </div>
             
-            <div id="score-widget" class="hidden flex flex-col items-end glass-panel px-4 py-2">
-                <span id="game-title-label" class="text-[10px] font-bold tracking-widest text-slate-400 uppercase">MODE</span>
-                <div class="flex items-baseline gap-2">
-                    <span class="text-xs text-slate-500 font-medium">BEST</span>
-                    <span id="best-score" class="text-xl font-monospaced font-bold text-slate-800">0</span>
+            <div class="flex gap-2">
+                <div class="glass-card px-4 py-2 flex flex-col items-end min-w-[80px]">
+                    <span class="text-[10px] text-slate-500 font-bold tracking-widest uppercase">SCORE</span>
+                    <span id="score-val" class="text-xl font-mono font-bold text-slate-800">0</span>
                 </div>
-            </div>
-
-            <div class="flex-grow"></div>
-
-            <button id="mute-btn" class="glass-panel w-12 h-12 flex items-center justify-center text-slate-500 hover:text-slate-900 active:scale-90 transition-transform ml-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-            </button>
-        </div>
-
-        <!-- Menu Screen -->
-        <div id="menu-screen" class="absolute inset-0 pt-32 pb-10 px-6 pointer-events-auto scroll-container flex flex-col items-center transition-all duration-500">
-            <div class="text-center mb-12">
-                <h1 class="text-5xl md:text-7xl font-bold tracking-tighter mb-2 bg-clip-text text-transparent bg-gradient-to-b from-slate-800 to-slate-600">Chicken<br>Ultimate</h1>
-                <p class="text-slate-400 font-medium tracking-wide text-sm uppercase">Limit Breaker Simulator</p>
-            </div>
-            
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 w-full max-w-2xl pb-32">
-                <!-- Cards generated by JS -->
+                <div class="glass-card px-3 py-2 flex items-center gap-1 text-red-500">
+                    <span class="text-lg">♥</span>
+                    <span id="lives-val" class="text-xl font-bold">3</span>
+                </div>
             </div>
         </div>
 
-        <!-- Gameplay UI -->
-        <div id="game-ui" class="absolute inset-0 flex items-center justify-center pointer-events-none hidden">
-            <div id="instruction" class="text-center animate-pulse-soft transition-opacity duration-300">
-                <p class="text-6xl font-black tracking-tighter mb-4 text-slate-900/10 mix-blend-multiply">HOLD</p>
-                <p class="text-xs font-bold bg-white/80 backdrop-blur px-6 py-2 rounded-full text-slate-600 shadow-lg inline-block tracking-wider">長押しで限界へ</p>
+        <!-- CENTER ALERTS -->
+        <div id="center-ui" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full text-center pointer-events-none">
+            
+            <!-- Title Screen -->
+            <div id="title-screen" class="pointer-auto flex flex-col items-center">
+                <div class="mb-8 relative">
+                    <div class="absolute -inset-4 bg-blue-500/20 blur-xl rounded-full animate-pulse"></div>
+                    <h1 class="relative text-6xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-slate-800 to-slate-600">CHICKEN<br>TOWER</h1>
+                </div>
+                <p class="text-slate-500 font-bold mb-8">リスクを背負って、塔を登れ</p>
+                <!-- ID added for JS listener -->
+                <button id="start-btn" class="btn glass-card px-12 py-4 text-xl font-black text-blue-600 shadow-lg bg-white/80">START CLIMB</button>
+                <p class="mt-4 text-xs text-slate-400 font-mono">BEST FLOOR: <span id="best-floor">0</span>F</p>
             </div>
 
-            <div id="result-panel" class="hidden absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
-                <div class="glass-panel p-10 w-[85%] max-w-md flex flex-col items-center shadow-2xl transform transition-all duration-500 scale-90 opacity-0" id="result-card">
-                    <div id="result-icon" class="text-6xl mb-4">🎉</div>
-                    <p id="result-title" class="text-4xl font-black tracking-tighter mb-2">SCORE</p>
-                    <p id="result-score" class="text-6xl font-mono font-bold text-slate-800 mb-6 tracking-tighter">0</p>
-                    <div class="w-full h-px bg-slate-200 mb-6"></div>
-                    <p id="result-comment" class="text-lg font-bold text-slate-500 whitespace-nowrap">Comment</p>
-                    <p class="text-[10px] text-slate-400 font-mono mt-10 uppercase tracking-widest animate-pulse">Tap to Retry</p>
+            <!-- Level Start / Instruction -->
+            <div id="level-start" class="hidden">
+                <h2 id="mode-name" class="text-4xl font-black text-slate-800 mb-2 uppercase tracking-tight">MODE NAME</h2>
+                <div class="inline-block glass-card px-6 py-2 mb-4">
+                    <p class="text-sm font-bold text-slate-500">NORMA</p>
+                    <p class="text-2xl font-black text-blue-600">80% <span class="text-sm text-slate-400">CHARGE</span></p>
                 </div>
+                <p class="text-xs text-slate-400 animate-pulse mt-4">TAP TO START</p>
             </div>
+
+            <!-- In-Game Feedback -->
+            <div id="feedback" class="hidden">
+                <p id="feedback-text" class="text-6xl font-black text-slate-900 drop-shadow-lg scale-150 transition-transform duration-200">SAFE</p>
+            </div>
+        </div>
+
+        <!-- SHOP SCREEN -->
+        <div id="shop-screen" class="absolute inset-0 bg-slate-100/90 backdrop-blur-md z-50 flex flex-col items-center justify-center hidden pointer-auto">
+            <h2 class="text-3xl font-black text-slate-800 mb-2">SUPPLY DEPOT</h2>
+            <p class="text-slate-500 mb-8">次の階層への準備を整えろ</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-4xl px-6" id="shop-items">
+                <!-- JS Injected -->
+            </div>
+            <!-- ID added for JS listener -->
+            <button id="next-floor-btn" class="btn mt-10 glass-card px-8 py-3 font-bold text-slate-600">GO NEXT FLOOR &rarr;</button>
+        </div>
+
+        <!-- FOOTER (Charge Bar) -->
+        <div id="footer" class="w-full hidden">
+            <!-- Charge Meter (Visual Aid) -->
+            <div class="glass-card p-1 relative h-6 w-full overflow-hidden">
+                <div class="absolute top-0 bottom-0 left-0 w-[80%] border-r-2 border-dashed border-slate-300/50 flex items-center justify-end pr-1">
+                    <span class="text-[8px] font-bold text-slate-400">MIN 80%</span>
+                </div>
+                <div id="charge-bar" class="h-full bg-gradient-to-r from-blue-400 via-purple-400 to-red-500 w-0 rounded-full transition-all duration-75 ease-linear"></div>
+            </div>
+            <p class="text-center text-[10px] text-slate-400 font-mono mt-2 uppercase">Hold Screen to Charge</p>
         </div>
     </div>
 
     <script>
-        /**
-         * GAME CONFIGURATION
-         */
-        const MODES = [
-            { id: 'BALLOON', name: 'Balloon', icon: '🎈', desc: '風船の限界', color: 'text-blue-500' },
-            { id: 'WATER',   name: 'Water',   icon: '💧', desc: '表面張力',   color: 'text-cyan-500' },
-            { id: 'CLIFF',   name: 'Cliff',   icon: '🏎️', desc: '断崖絶壁',   color: 'text-red-500' },
-            { id: 'TOAST',   name: 'Toast',   icon: '🍞', desc: '最高の焦げ', color: 'text-orange-500' },
-            { id: 'PUMP',    name: 'Pump',    icon: '🚲', desc: 'タイヤ空気圧', color: 'text-slate-600' },
-            { id: 'ICE',     name: 'Ice Cream', icon: '🍦', desc: '積み上げ',   color: 'text-pink-500' },
-            { id: 'BATTERY', name: 'Charge',  icon: '⚡', desc: '過充電注意', color: 'text-green-500' },
-            { id: 'FISHING', name: 'Fishing', icon: '🎣', desc: '糸の耐久度', color: 'text-indigo-500' },
-            { id: 'ROCKET',  name: 'Launch',  icon: '🚀', desc: '発射出力',   color: 'text-purple-500' },
-        ];
+        // Wrap logic in an IIFE to prevent global scope pollution and variable re-declaration errors
+        (() => {
+            /* --- CONFIGURATION --- */
+            const MODES = [
+                { id: 'BALLOON', name: 'BALLOON', color: '#3b82f6' },
+                { id: 'WATER',   name: 'WATER',   color: '#06b6d4' },
+                { id: 'CLIFF',   name: 'CLIFF',   color: '#ef4444' },
+                { id: 'TOAST',   name: 'TOASTER', color: '#f97316' },
+                { id: 'PUMP',    name: 'TIRE',    color: '#64748b' },
+                { id: 'ROCKET',  name: 'ROCKET',  color: '#8b5cf6' }
+            ];
 
-        /**
-         * AUDIO SYSTEM
-         */
-        class AudioSynth {
-            constructor() {
-                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-                this.muted = false;
-                this.masterGain = this.ctx.createGain();
-                this.masterGain.connect(this.ctx.destination);
-                this.masterGain.gain.value = 0.4; 
-                this.activeNodes = [];
-            }
+            const SHOP_ITEMS = [
+                { id: 'HEART', name: 'Medkit', desc: 'ライフを1回復', cost: 2000, icon: '❤️', action: (g)=>{ g.lives = Math.min(3, g.lives+1); } },
+                { id: 'INSURANCE', name: 'Shield', desc: '次の爆発を1回無効化', cost: 1500, icon: '🛡️', action: (g)=>{ g.hasShield = true; } },
+                { id: 'SLOW', name: 'Stabilizer', desc: 'チャージ速度低下', cost: 1000, icon: '🧊', action: (g)=>{ g.speedMod = 0.7; } },
+                { id: 'SCOPE', name: 'Visor', desc: '限界ラインを可視化', cost: 3000, icon: '🎯', action: (g)=>{ g.hasScope = true; } },
+                { id: 'GREED', name: 'Coin', desc: 'スコア+3000', cost: 0, icon: '💰', action: (g)=>{ g.score += 3000; } } 
+            ];
 
-            resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
+            /* --- AUDIO ENGINE (Web Audio API) --- */
+            class Sound {
+                constructor() {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    this.master = this.ctx.createGain();
+                    this.master.connect(this.ctx.destination);
+                    this.master.gain.value = 0.3;
+                    this.nodes = [];
+                }
+                resume() { if (this.ctx.state === 'suspended') this.ctx.resume(); }
 
-            playTone(freq, type, dur, vol = 1) {
-                if (this.muted) return;
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                
-                gain.gain.setValueAtTime(0, this.ctx.currentTime);
-                gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.02);
-                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
-                
-                osc.connect(gain);
-                gain.connect(this.masterGain);
-                osc.start();
-                osc.stop(this.ctx.currentTime + dur);
-            }
-
-            startContinuous(mode) {
-                if (this.muted) return;
-                this.resume();
-                this.stopContinuous();
-
-                const osc = this.ctx.createOscillator();
-                const gain = this.ctx.createGain();
-                const filter = this.ctx.createBiquadFilter();
-
-                osc.connect(filter);
-                filter.connect(gain);
-                gain.connect(this.masterGain);
-
-                gain.gain.value = 0;
-                
-                if (mode === 'WATER' || mode === 'TOAST') {
-                    const bufferSize = this.ctx.sampleRate * 2;
-                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-                    const data = buffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-                    
-                    const noise = this.ctx.createBufferSource();
-                    noise.buffer = buffer;
-                    noise.loop = true;
-                    noise.connect(filter);
-                    noise.start();
-                    this.activeNodes.push(noise);
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 100;
-                } else {
-                    osc.type = (mode === 'CLIFF' || mode === 'ROCKET') ? 'sawtooth' : 'sine';
+                playTone(freq, type, dur, vol=1) {
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.value = freq;
+                    g.gain.setValueAtTime(0, this.ctx.currentTime);
+                    g.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.01);
+                    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+                    osc.connect(g);
+                    g.connect(this.master);
                     osc.start();
-                    this.activeNodes.push(osc);
-                    filter.type = 'lowpass';
-                    filter.frequency.value = 200;
+                    osc.stop(this.ctx.currentTime + dur);
                 }
 
-                this.activeGain = gain;
-                this.activeFilter = filter;
-                this.activeOsc = osc; 
-            }
+                startChargeNoise(mode) {
+                    this.stopChargeNoise();
+                    this.resume();
+                    const osc = this.ctx.createOscillator();
+                    const g = this.ctx.createGain();
+                    
+                    if(mode === 'CLIFF' || mode === 'ROCKET') osc.type = 'sawtooth';
+                    else if(mode === 'WATER' || mode === 'TOAST') osc.type = 'square'; 
+                    else osc.type = 'sine';
 
-            updateContinuous(ratio, mode) {
-                if (!this.activeGain) return;
-                const now = this.ctx.currentTime;
-                const safeRatio = Math.min(ratio, 1.1);
-                this.activeGain.gain.setTargetAtTime(0.3 * safeRatio, now, 0.1);
-
-                if (mode === 'WATER' || mode === 'TOAST') {
-                    const freq = 100 + (Math.pow(safeRatio, 2) * 4000);
-                    this.activeFilter.frequency.setTargetAtTime(freq, now, 0.1);
-                } else {
-                    const freq = 100 + (safeRatio * 800);
-                    if(this.activeOsc) this.activeOsc.frequency.setTargetAtTime(freq, now, 0.1);
-                    this.activeFilter.frequency.setTargetAtTime(freq * 2, now, 0.1);
+                    osc.connect(g);
+                    g.connect(this.master);
+                    g.gain.value = 0;
+                    osc.start();
+                    
+                    this.activeOsc = osc;
+                    this.activeGain = g;
                 }
-            }
 
-            stopContinuous() {
-                if (this.activeGain) {
-                    this.activeGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.15);
+                updateCharge(ratio) {
+                    if(!this.activeGain) return;
+                    const now = this.ctx.currentTime;
+                    const freq = 100 + (ratio * 800);
+                    this.activeOsc.frequency.setTargetAtTime(freq, now, 0.1);
+                    const vol = 0.2 + (ratio * 0.3) + (Math.random()*0.05);
+                    this.activeGain.gain.setTargetAtTime(vol, now, 0.1);
                 }
-                setTimeout(() => {
-                    this.activeNodes.forEach(n => { try{n.stop()}catch(e){n.disconnect()} });
-                    this.activeNodes = [];
-                }, 200);
-                this.activeGain = null;
+
+                stopChargeNoise() {
+                    if(this.activeGain) {
+                        this.activeGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.1);
+                        setTimeout(() => {
+                            if(this.activeOsc) this.activeOsc.stop();
+                            this.activeOsc = null;
+                            this.activeGain = null;
+                        }, 150);
+                    }
+                }
+
+                playWin() { this.playTone(600, 'sine', 0.1); setTimeout(()=>this.playTone(900, 'sine', 0.2), 100); }
+                playFail() { this.playTone(150, 'sawtooth', 0.4); setTimeout(()=>this.playTone(100, 'sawtooth', 0.4), 100); }
+                playClick() { this.playTone(800, 'triangle', 0.05, 0.2); }
             }
 
-            playWin(quality) {
-                if (this.muted) return;
-                this.stopContinuous();
-                const notes = [523.25, 659.25, 783.99, 1046.50];
-                notes.forEach((freq, i) => {
-                    setTimeout(() => this.playTone(freq, 'sine', 0.8, 0.2), i * 60);
-                });
-            }
+            /* --- GAME ENGINE --- */
+            const cvs = document.getElementById('gameCanvas');
+            const ctx = cvs.getContext('2d');
+            const snd = new Sound();
 
-            playLose() {
-                if (this.muted) return;
-                this.stopContinuous();
-                this.playTone(100, 'square', 0.4, 0.3);
-                this.playTone(80, 'sawtooth', 0.5, 0.3);
-            }
-        }
-
-        /**
-         * VISUAL ENGINE
-         */
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const audio = new AudioSynth();
-
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            ctx.scale(dpr, dpr);
-            return { w: window.innerWidth, h: window.innerHeight };
-        }
-        let dims = resizeCanvas();
-        window.addEventListener('resize', () => dims = resizeCanvas());
-
-        const ui = {
-            menu: document.getElementById('menu-screen'),
-            grid: document.querySelector('#menu-screen .grid'),
-            game: document.getElementById('game-ui'),
-            resultPanel: document.getElementById('result-panel'),
-            resultCard: document.getElementById('result-card'),
-            backBtn: document.getElementById('back-btn'),
-            scoreWidget: document.getElementById('score-widget'),
-            titleLabel: document.getElementById('game-title-label'),
-            bestScore: document.getElementById('best-score'),
-            instruction: document.getElementById('instruction'),
-            muteBtn: document.getElementById('mute-btn'),
-            resTitle: document.getElementById('result-title'),
-            resScore: document.getElementById('result-score'),
-            resComment: document.getElementById('result-comment'),
-            resIcon: document.getElementById('result-icon')
-        };
-
-        MODES.forEach(mode => {
-            const card = document.createElement('div');
-            card.className = 'mode-card glass-panel aspect-square flex flex-col items-center justify-center text-center p-4';
-            card.innerHTML = `
-                <div class="text-4xl mb-3 filter drop-shadow-sm pointer-events-none">${mode.icon}</div>
-                <div class="font-bold text-sm text-slate-800 leading-none mb-1 pointer-events-none">${mode.name}</div>
-                <div class="text-[10px] font-medium text-slate-400 uppercase tracking-wide pointer-events-none">${mode.desc}</div>
-            `;
-            // Use both onclick and touchend for redundancy, but handle duplication
-            card.onclick = (e) => { 
-                e.stopPropagation(); 
-                game.init(mode); 
+            // UI Elements
+            const ui = {
+                title: document.getElementById('title-screen'),
+                hud: document.getElementById('hud'),
+                floor: document.getElementById('floor-num'),
+                score: document.getElementById('score-val'),
+                lives: document.getElementById('lives-val'),
+                center: document.getElementById('center-ui'),
+                levelStart: document.getElementById('level-start'),
+                modeName: document.getElementById('mode-name'),
+                feedback: document.getElementById('feedback'),
+                fbText: document.getElementById('feedback-text'),
+                footer: document.getElementById('footer'),
+                bar: document.getElementById('charge-bar'),
+                shop: document.getElementById('shop-screen'),
+                shopItems: document.getElementById('shop-items'),
+                bestFloor: document.getElementById('best-floor'),
+                startBtn: document.getElementById('start-btn'),
+                nextBtn: document.getElementById('next-floor-btn')
             };
-            ui.grid.appendChild(card);
-        });
 
-        const game = {
-            config: null,
-            state: 'MENU',
-            val: 0,
-            limit: 100,
-            particles: [],
-            shake: 0,
-            
-            init(config) {
-                this.config = config;
-                this.state = 'IDLE';
-                this.val = 0;
-                this.limit = 85 + Math.random() * 30;
-                this.particles = [];
+            // Resize
+            let W, H;
+            const resize = () => {
+                const dpr = window.devicePixelRatio || 1;
+                W = window.innerWidth;
+                H = window.innerHeight;
+                cvs.width = W * dpr;
+                cvs.height = H * dpr;
+                ctx.scale(dpr, dpr);
+            };
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Game Logic
+            const game = {
+                state: 'TITLE', // TITLE, READY, CHARGING, RESULT, SHOP
+                floor: 1,
+                lives: 3,
+                score: 0,
+                currentMode: null,
                 
-                ui.menu.classList.add('hidden');
-                ui.game.classList.remove('hidden');
-                ui.instruction.classList.remove('hidden');
-                ui.instruction.style.opacity = '1';
+                val: 0,
+                limit: 100,
+                minReq: 80,
+                speedMod: 1.0,
+                hasShield: false,
+                hasScope: false,
                 
-                ui.backBtn.classList.remove('hidden');
-                ui.scoreWidget.classList.remove('hidden');
-                ui.resultPanel.classList.add('hidden');
-                
-                ui.titleLabel.innerText = config.name;
-                ui.bestScore.innerText = localStorage.getItem(`cr_v2_${config.id}`) || 0;
-                
-                audio.resume();
-            },
+                particles: [],
+                shake: 0,
 
-            back() {
-                this.state = 'MENU';
-                audio.stopContinuous();
-                ui.menu.classList.remove('hidden');
-                ui.game.classList.add('hidden');
-                ui.backBtn.classList.add('hidden');
-                ui.scoreWidget.classList.add('hidden');
-            },
+                startRun() {
+                    this.floor = 1;
+                    this.lives = 3;
+                    this.score = 0;
+                    this.speedMod = 1.0;
+                    this.hasShield = false;
+                    this.hasScope = false;
+                    ui.title.classList.add('hidden');
+                    ui.hud.classList.remove('hidden');
+                    this.updateHUD();
+                    this.setupFloor();
+                },
 
-            startCharge() {
-                if (this.state !== 'IDLE') return;
-                this.state = 'CHARGING';
-                ui.instruction.style.opacity = '0';
-                audio.startContinuous(this.config.id);
-            },
-
-            endCharge() {
-                if (this.state !== 'CHARGING') return;
-                this.state = 'RESULT';
-                audio.stopContinuous();
-
-                const ratio = this.val / this.limit;
-                let isWin = false;
-                let score = 0;
-
-                if (this.val > this.limit) {
-                    audio.playLose();
-                    if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
-                    this.spawnParticles(true);
-                } else {
-                    isWin = true;
-                    score = Math.floor(Math.pow(ratio, 6) * 10000); 
-                    audio.playWin(ratio);
-                    this.spawnParticles(false);
-
-                    const key = `cr_v2_${this.config.id}`;
-                    const best = parseInt(localStorage.getItem(key) || 0);
-                    if (score > best) {
-                        localStorage.setItem(key, score);
-                        ui.bestScore.innerText = score;
-                    }
-                }
-
-                setTimeout(() => {
-                    ui.resultPanel.classList.remove('hidden');
-                    ui.resultCard.classList.remove('scale-90', 'opacity-0');
-                    ui.resultCard.classList.add('scale-100', 'opacity-100');
+                setupFloor() {
+                    this.state = 'READY';
+                    this.currentMode = MODES[Math.floor(Math.random() * MODES.length)];
                     
-                    ui.resTitle.innerText = isWin ? "SUCCESS" : "FAILED";
-                    ui.resTitle.style.color = isWin ? "#007AFF" : "#FF3B30";
-                    ui.resScore.innerText = score;
-                    ui.resIcon.innerText = isWin ? (ratio > 0.98 ? '👑' : '🎉') : '💥';
-                    ui.resComment.innerText = this.getComment(ratio, isWin);
-                }, 600);
-            },
+                    const difficulty = 1 + (this.floor * 0.1);
+                    this.limit = 85 + Math.random() * 30; 
+                    this.val = 0;
+                    this.particles = [];
+                    ui.bar.style.width = '0%';
+                    ui.bar.style.backgroundColor = '';
+                    
+                    ui.modeName.innerText = this.currentMode.name;
+                    ui.levelStart.classList.remove('hidden');
+                    ui.levelStart.classList.add('anim-enter');
+                    ui.footer.classList.add('hidden');
+                    ui.feedback.classList.add('hidden');
+                },
 
-            getComment(ratio, isWin) {
-                if (!isWin) return "限界を超えました";
-                if (ratio < 0.5) return "安全すぎます";
-                if (ratio < 0.8) return "もっと攻められます";
-                if (ratio < 0.95) return "ナイス・チキン！";
-                if (ratio < 0.99) return "プロフェッショナル";
-                return "神の領域";
-            },
+                startCharge() {
+                    if(this.state !== 'READY') return;
+                    snd.playClick();
+                    this.state = 'CHARGING';
+                    ui.levelStart.classList.add('hidden');
+                    ui.footer.classList.remove('hidden');
+                    snd.startChargeNoise(this.currentMode.id);
+                },
 
-            update() {
-                if (this.state === 'CHARGING') {
+                endCharge() {
+                    if(this.state !== 'CHARGING') return;
+                    this.state = 'RESULT';
+                    snd.stopChargeNoise();
+                    
                     const ratio = this.val / this.limit;
-                    const speed = 0.3 + (ratio * 0.5);
-                    this.val += speed;
-                    audio.updateContinuous(ratio, this.config.id);
+                    const pct = Math.floor(ratio * 100);
                     
-                    if (ratio > 0.8) {
-                        const severity = (ratio - 0.8) * 5;
-                        this.shake = Math.pow(severity, 2) * 10;
-                        if (navigator.vibrate && Math.random() < 0.2) navigator.vibrate(10);
+                    let success = false;
+                    let message = "";
+                    let color = "";
+
+                    if (this.val > this.limit) {
+                        if (this.hasShield) {
+                            success = true;
+                            message = "SHIELD SAVED!";
+                            color = "text-blue-500";
+                            this.hasShield = false;
+                            this.val = this.limit;
+                        } else {
+                            success = false;
+                            message = "EXPLODED!";
+                            color = "text-red-600";
+                            this.lives--;
+                            snd.playFail();
+                            if(navigator.vibrate) navigator.vibrate(500);
+                            this.spawnParticles(true);
+                        }
+                    } else if (pct < 80) {
+                        success = false;
+                        message = "TOO WEAK...";
+                        color = "text-slate-500";
+                        this.lives--;
+                        snd.playFail();
                     } else {
-                        this.shake = 0;
+                        success = true;
+                        snd.playWin();
+                        this.spawnParticles(false);
+                        
+                        let baseScore = Math.floor(this.val * 10) * this.floor;
+                        
+                        if (pct >= 95) {
+                            message = "PERFECT!!";
+                            color = "text-amber-500";
+                            baseScore *= 2;
+                        } else if (pct >= 90) {
+                            message = "GREAT!";
+                            color = "text-blue-500";
+                            baseScore *= 1.5;
+                        } else {
+                            message = "GOOD";
+                            color = "text-green-500";
+                        }
+                        this.score += Math.floor(baseScore);
                     }
 
-                    if (this.val > this.limit * 1.2) {
-                        this.endCharge();
-                    }
-                } else {
-                    this.shake *= 0.9;
-                }
+                    ui.fbText.innerText = message;
+                    ui.fbText.className = `text-6xl font-black drop-shadow-lg scale-150 transition-transform duration-200 ${color}`;
+                    ui.feedback.classList.remove('hidden');
+                    this.updateHUD();
 
-                this.particles.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.6;
-                    p.life -= 0.015;
-                });
-                this.particles = this.particles.filter(p => p.life > 0);
-            },
+                    setTimeout(() => {
+                        if (this.lives <= 0) {
+                            this.gameOver();
+                        } else if (success) {
+                            if (this.floor % 3 === 0) {
+                                this.openShop();
+                            } else {
+                                this.nextFloor();
+                            }
+                        } else {
+                            this.setupFloor();
+                        }
+                    }, 1500);
+                },
 
-            spawnParticles(isFail) {
-                const cx = dims.w / 2;
-                const cy = dims.h / 2;
-                const count = isFail ? 60 : 100;
-                const colors = isFail 
-                    ? ['#FF3B30', '#FF9500'] 
-                    : ['#007AFF', '#5AC8FA', '#FFCC00', '#FFFFFF'];
+                nextFloor() {
+                    this.floor++;
+                    ui.shop.classList.add('hidden');
+                    this.updateHUD();
+                    this.setupFloor();
+                },
 
-                for(let i=0; i<count; i++) {
-                    const angle = Math.random() * Math.PI * 2;
-                    const speed = Math.random() * 15 + 5;
-                    this.particles.push({
-                        x: cx, 
-                        y: cy,
-                        vx: Math.cos(angle) * speed,
-                        vy: Math.sin(angle) * speed - 5,
-                        color: colors[Math.floor(Math.random() * colors.length)],
-                        size: Math.random() * 6 + 2,
-                        life: 1.0
+                openShop() {
+                    this.state = 'SHOP';
+                    ui.shopItems.innerHTML = '';
+                    
+                    const items = [...SHOP_ITEMS].sort(()=>0.5-Math.random()).slice(0,3);
+                    
+                    items.forEach(item => {
+                        const canBuy = this.score >= item.cost;
+                        const card = document.createElement('div');
+                        card.className = `glass-card p-4 flex flex-col items-center text-center transition-all ${canBuy ? 'active:scale-95 cursor-pointer hover:bg-white' : 'opacity-50 grayscale'}`;
+                        card.innerHTML = `
+                            <div class="text-4xl mb-2">${item.icon}</div>
+                            <h3 class="font-bold text-slate-800">${item.name}</h3>
+                            <p class="text-xs text-slate-500 mb-2 h-8">${item.desc}</p>
+                            <div class="font-mono font-bold ${canBuy ? 'text-blue-600' : 'text-red-400'}">$${item.cost}</div>
+                        `;
+                        card.onclick = () => {
+                            if(canBuy) {
+                                this.score -= item.cost;
+                                item.action(this);
+                                snd.playClick();
+                                this.updateHUD();
+                                this.nextFloor();
+                            }
+                        };
+                        ui.shopItems.appendChild(card);
                     });
+                    
+                    ui.shop.classList.remove('hidden');
+                },
+
+                gameOver() {
+                    alert(`GAME OVER\nFloor: ${this.floor}\nScore: ${this.score}`);
+                    const saved = localStorage.getItem('ct_best_floor') || 0;
+                    if (this.floor > saved) {
+                        localStorage.setItem('ct_best_floor', this.floor);
+                        ui.bestFloor.innerText = this.floor;
+                    }
+                    
+                    this.state = 'TITLE';
+                    ui.hud.classList.add('hidden');
+                    ui.footer.classList.add('hidden');
+                    ui.feedback.classList.add('hidden');
+                    ui.title.classList.remove('hidden');
+                },
+
+                updateHUD() {
+                    ui.floor.innerText = this.floor + 'F';
+                    ui.score.innerText = this.score;
+                    ui.lives.innerText = this.lives;
+                },
+
+                update() {
+                    if(this.state === 'CHARGING') {
+                        const baseSpd = 0.4;
+                        const floorFactor = 1 + (this.floor * 0.05);
+                        const speed = baseSpd * floorFactor * this.speedMod;
+                        
+                        const ratio = this.val / this.limit;
+                        this.val += speed * (1 + ratio);
+
+                        const displayPct = Math.min(100, (this.val / this.limit) * 100);
+                        ui.bar.style.width = `${displayPct}%`;
+                        
+                        if(ratio > 0.8) {
+                            this.shake = (ratio - 0.8) * 10;
+                            if(Math.random() > 0.8 && navigator.vibrate) navigator.vibrate(5);
+                        }
+
+                        snd.updateCharge(ratio);
+
+                        if(this.val > this.limit * 1.15) {
+                            this.endCharge();
+                        }
+                    } else {
+                        this.shake *= 0.9;
+                    }
+
+                    this.particles.forEach(p => {
+                        p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.life -= 0.02;
+                    });
+                    this.particles = this.particles.filter(p => p.life > 0);
+                },
+
+                spawnParticles(isFail) {
+                    const cx = W/2, cy = H/2;
+                    const count = isFail ? 50 : 80;
+                    const colors = isFail ? ['#ef4444', '#000'] : ['#fbbf24', '#fff', this.currentMode.color];
+                    for(let i=0; i<count; i++) {
+                        this.particles.push({
+                            x: cx, y: cy,
+                            vx: (Math.random()-0.5)*15, vy: (Math.random()-0.5)*15,
+                            color: colors[Math.floor(Math.random()*colors.length)],
+                            life: 1.0, size: Math.random()*8+2
+                        });
+                    }
+                }
+            };
+
+            // Initial Load Best Score
+            ui.bestFloor.innerText = localStorage.getItem('ct_best_floor') || 0;
+
+            // Attach button listeners JS-side to prevent global scope issues
+            if(ui.startBtn) ui.startBtn.onclick = () => game.startRun();
+            if(ui.nextBtn) ui.nextBtn.onclick = () => game.nextFloor();
+
+            // Input Handling
+            function handleStart(e) {
+                if(e.target.closest('button') || e.target.closest('.glass-card.active\\:scale-95')) return;
+                
+                if(game.state === 'READY') {
+                    game.startCharge();
                 }
             }
-        };
-
-        // --- IMPROVED INPUT HANDLING FOR MOBILE ---
-        function handleInput(e) {
-            // 1. Allow direct interaction with specific UI elements
-            // "closest" checks if the target itself or any parent matches the selector
-            if (e.target.closest('button') || e.target.closest('.mode-card')) {
-                // Allow default browser action (click) to pass through
-                return;
+            
+            function handleEnd(e) {
+                if(game.state === 'CHARGING') {
+                    game.endCharge();
+                }
             }
 
-            // 2. Prevent scrolling/zooming on the game area
-            if (e.cancelable) e.preventDefault();
-            
-            // 3. Game Logic
-            if (game.state === 'RESULT') {
-                game.init(game.config); // Retry on tapping background
-            } else {
-                game.startCharge();
-            }
-        }
+            window.addEventListener('mousedown', handleStart);
+            window.addEventListener('touchstart', (e)=>{ e.preventDefault(); handleStart(e); }, {passive: false});
+            window.addEventListener('mouseup', handleEnd);
+            window.addEventListener('touchend', handleEnd);
 
-        function handleRelease(e) {
-            // No preventDefault here to avoid getting stuck
-            game.endCharge();
-        }
+            /* --- RENDER LOOP --- */
+            function draw() {
+                requestAnimationFrame(draw);
+                game.update();
 
-        // Add listeners with passive: false to allow preventDefault
-        window.addEventListener('mousedown', handleInput);
-        window.addEventListener('touchstart', handleInput, {passive: false});
-        
-        window.addEventListener('mouseup', handleRelease);
-        window.addEventListener('touchend', handleRelease);
-        
-        // Button event listeners (click handles both mouse and touch taps correctly if propagated)
-        ui.backBtn.onclick = (e) => { e.stopPropagation(); game.back(); };
-        ui.muteBtn.onclick = (e) => { 
-            e.stopPropagation(); 
-            audio.muted = !audio.muted;
-            ui.muteBtn.style.opacity = audio.muted ? '0.5' : '1';
-        };
-
-        /**
-         * RENDER LOOP
-         */
-        function loop() {
-            requestAnimationFrame(loop);
-            game.update();
-
-            ctx.clearRect(0, 0, dims.w, dims.h);
-            
-            if (game.state === 'MENU') return;
-
-            ctx.save();
-
-            if (game.shake > 0) {
-                const sx = (Math.random() - 0.5) * game.shake;
-                const sy = (Math.random() - 0.5) * game.shake;
-                ctx.translate(sx, sy);
-            }
-
-            const cx = dims.w / 2;
-            const cy = dims.h / 2;
-            const ratio = game.val / game.limit;
-            const isFail = game.state === 'RESULT' && game.val > game.limit;
-
-            ctx.shadowBlur = 20;
-            ctx.shadowColor = "rgba(0,0,0,0.1)";
-
-            switch (game.config.id) {
-                case 'BALLOON': drawBalloon(cx, cy, ratio, isFail); break;
-                case 'WATER':   drawWater(cx, cy, ratio, isFail); break;
-                case 'CLIFF':   drawCliff(cx, cy, ratio, isFail); break;
-                case 'TOAST':   drawToast(cx, cy, ratio, isFail); break;
-                case 'PUMP':    drawPump(cx, cy, ratio, isFail); break;
-                case 'ICE':     drawIce(cx, cy, ratio, isFail); break;
-                case 'BATTERY': drawBattery(cx, cy, ratio, isFail); break;
-                case 'FISHING': drawFishing(cx, cy, ratio, isFail); break;
-                case 'ROCKET':  drawRocket(cx, cy, ratio, isFail); break;
-            }
-
-            ctx.shadowBlur = 0;
-
-            game.particles.forEach(p => {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
-                ctx.fill();
-            });
-
-            ctx.restore();
-        }
-
-        // --- DRAWING FUNCTIONS (Identical to v2.0) ---
-        
-        function drawBalloon(cx, cy, ratio, popped) {
-            if (popped) return;
-            const size = 60 + (ratio * 180);
-            
-            ctx.beginPath();
-            ctx.moveTo(cx, cy + size);
-            ctx.quadraticCurveTo(cx + Math.sin(Date.now()/200)*20, cy + size + 100, cx, cy + size + 200);
-            ctx.strokeStyle = '#C7C7CC';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            const grad = ctx.createRadialGradient(cx - size*0.3, cy - size*0.3, size*0.1, cx, cy, size);
-            const hue = 210 - (Math.min(ratio, 1.1) * 210);
-            grad.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.9)`);
-            grad.addColorStop(1, `hsla(${hue}, 80%, 50%, 0.9)`);
-            
-            ctx.fillStyle = grad;
-            const wX = Math.sin(Date.now()/60) * (ratio * 10);
-            const wY = Math.cos(Date.now()/70) * (ratio * 10);
-            
-            ctx.beginPath();
-            ctx.ellipse(cx + wX, cy + wY, size, size * 1.1, 0, 0, Math.PI*2);
-            ctx.fill();
-            
-            ctx.fillStyle = 'rgba(255,255,255,0.4)';
-            ctx.beginPath();
-            ctx.ellipse(cx - size*0.3 + wX, cy - size*0.3 + wY, size*0.2, size*0.1, -0.5, 0, Math.PI*2);
-            ctx.fill();
-        }
-
-        function drawWater(cx, cy, ratio, spilled) {
-            const w = 160;
-            const h = 220;
-            const glassY = cy + 50;
-
-            ctx.fillStyle = 'rgba(230, 240, 255, 0.3)';
-            ctx.beginPath();
-            ctx.roundRect(cx - w/2, glassY - h, w, h, 8);
-            ctx.fill();
-            
-            ctx.strokeStyle = 'rgba(255,255,255, 0.8)';
-            ctx.lineWidth = 6;
-            ctx.beginPath();
-            ctx.moveTo(cx - w/2, glassY - h);
-            ctx.lineTo(cx - w/2, glassY - 8);
-            ctx.quadraticCurveTo(cx - w/2, glassY, cx - w/2 + 8, glassY);
-            ctx.lineTo(cx + w/2 - 8, glassY);
-            ctx.quadraticCurveTo(cx + w/2, glassY, cx + w/2, glassY - 8);
-            ctx.lineTo(cx + w/2, glassY - h);
-            ctx.stroke();
-
-            const rimY = glassY - h;
-            let waterY = glassY;
-            let bulgeH = 0;
-
-            if (ratio <= 0.85) {
-                const fillRatio = ratio / 0.85;
-                waterY = glassY - (fillRatio * h);
-            } else {
-                waterY = rimY;
-                const tensionRatio = (ratio - 0.85) / 0.15;
-                bulgeH = tensionRatio * 40;
-            }
-
-            if (spilled) {
-                bulgeH = 0;
-                waterY = rimY;
-                ctx.fillStyle = '#007AFF';
-                ctx.beginPath();
-                ctx.roundRect(cx - w/2 - 15, rimY, 15, h + 50, 5);
-                ctx.roundRect(cx + w/2, rimY, 15, h + 50, 5);
-                ctx.fill();
-            }
-
-            ctx.fillStyle = 'rgba(0, 122, 255, 0.8)';
-            ctx.beginPath();
-            ctx.moveTo(cx - w/2 + 4, glassY - 4);
-            ctx.lineTo(cx + w/2 - 4, glassY - 4);
-            
-            if (waterY === rimY) {
-                ctx.lineTo(cx + w/2 - 4, rimY);
-                ctx.bezierCurveTo(
-                    cx + w/4, rimY - bulgeH, 
-                    cx - w/4, rimY - bulgeH, 
-                    cx - w/2 + 4, rimY
-                );
-            } else {
-                ctx.lineTo(cx + w/2 - 4, waterY);
-                ctx.lineTo(cx - w/2 + 4, waterY);
-            }
-            ctx.fill();
-
-            if (bulgeH > 0) {
-                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.moveTo(cx - w/2 + 4, rimY);
-                ctx.bezierCurveTo(
-                    cx - w/4, rimY - bulgeH + 2, 
-                    cx + w/4, rimY - bulgeH + 2, 
-                    cx + w/2 - 4, rimY
-                );
-                ctx.stroke();
-            }
-        }
-
-        function drawCliff(cx, cy, ratio, fallen) {
-            const groundY = cy + 100;
-            const edgeX = cx + 100;
-            
-            ctx.fillStyle = '#3A3A3C';
-            ctx.fillRect(0, groundY, edgeX, 400);
-            ctx.fillStyle = '#FFD60A';
-            ctx.fillRect(edgeX - 30, groundY, 30, 10);
-
-            const startX = cx - 250;
-            const dist = edgeX - startX;
-            
-            let carX = startX + (Math.min(ratio, 1.2) * dist);
-            let carY = groundY - 20;
-            let angle = 0;
-
-            if (fallen) {
-                carX = edgeX + 50;
-                carY += 150;
-                angle = 1.0;
-            } else {
-                 carX += (Math.random()-0.5) * (ratio * 4);
-                 carY += (Math.random()-0.5) * (ratio * 4);
-            }
-
-            ctx.save();
-            ctx.translate(carX, carY);
-            ctx.rotate(angle);
-
-            ctx.fillStyle = '#FF3B30';
-            ctx.beginPath();
-            ctx.moveTo(-40, 0);
-            ctx.lineTo(40, 0);
-            ctx.quadraticCurveTo(40, -20, 20, -20);
-            ctx.lineTo(-20, -20);
-            ctx.quadraticCurveTo(-40, -20, -40, 0);
-            ctx.fill();
-            
-            ctx.fillStyle = '#1C1C1E';
-            ctx.beginPath(); ctx.arc(-25, 0, 8, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(25, 0, 8, 0, Math.PI*2); ctx.fill();
-            
-            ctx.restore();
-        }
-
-        function drawToast(cx, cy, ratio, burnt) {
-            ctx.fillStyle = '#AEAEB2';
-            ctx.beginPath();
-            ctx.roundRect(cx - 80, cy - 40, 160, 100, 16);
-            ctx.fill();
-            ctx.fillStyle = '#1C1C1E';
-            ctx.fillRect(cx - 60, cy - 40, 120, 10);
-
-            const popUp = ratio * 30;
-            let r, g, b;
-            if (ratio < 0.5) { 
-                const p = ratio / 0.5;
-                r=255; g=255 - (p*50); b=240 - (p*100);
-            } else if (ratio < 1.0) { 
-                const p = (ratio - 0.5) / 0.5;
-                r=255 - (p*100); g=205 - (p*100); b=140 - (p*100);
-            } else { 
-                r=50; g=30; b=10;
-            }
-            
-            if (burnt) { r=20; g=20; b=20; }
-
-            ctx.fillStyle = `rgb(${Math.floor(r)},${Math.floor(g)},${Math.floor(b)})`;
-            ctx.beginPath();
-            ctx.roundRect(cx - 45, cy - 40 - 80 + (30 - popUp), 90, 80, 8);
-            ctx.fill();
-
-            if (ratio > 0.7) {
-                ctx.globalAlpha = (ratio - 0.7) / 0.3;
-                ctx.fillStyle = '#8E8E93';
-                const smokeY = cy - 150 - (Date.now()/20 % 50);
-                ctx.beginPath();
-                ctx.arc(cx, smokeY, 20, 0, Math.PI*2);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
-            }
-        }
-
-        function drawPump(cx, cy, ratio, exploded) {
-            if (exploded) return;
-            const tireR = 80 + (ratio * 20);
-            
-            ctx.fillStyle = '#1C1C1E';
-            ctx.beginPath();
-            ctx.arc(cx, cy, tireR, 0, Math.PI*2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#D1D1D6';
-            ctx.beginPath();
-            ctx.arc(cx, cy, 50, 0, Math.PI*2);
-            ctx.fill();
-
-            ctx.fillStyle = 'rgba(255,255,255,0.9)';
-            ctx.beginPath();
-            ctx.arc(cx, cy + 140, 60, 0, Math.PI*2);
-            ctx.fill();
-            
-            const angle = -Math.PI + (ratio * Math.PI * 1.5);
-            ctx.strokeStyle = '#FF3B30';
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(cx, cy + 140);
-            ctx.lineTo(cx + Math.cos(angle)*50, cy + 140 + Math.sin(angle)*50);
-            ctx.stroke();
-        }
-
-        function drawIce(cx, cy, ratio, fallen) {
-            ctx.fillStyle = '#FFD60A';
-            ctx.beginPath();
-            ctx.moveTo(cx, cy + 150);
-            ctx.lineTo(cx - 30, cy + 50);
-            ctx.lineTo(cx + 30, cy + 50);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-            ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(cx, cy+150); ctx.lineTo(cx-20, cy+50); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(cx, cy+150); ctx.lineTo(cx+20, cy+50); ctx.stroke();
-
-            if (fallen) return;
-
-            const count = 1 + Math.floor(ratio * 8);
-            const lean = Math.sin(Date.now()/300) * ratio * 40;
-
-            ctx.save();
-            ctx.translate(cx, cy + 50);
-            ctx.rotate(lean * 0.01);
-
-            for(let i=0; i<count; i++) {
-                const flavor = i % 3;
-                if (flavor === 0) ctx.fillStyle = '#FFDBF0'; 
-                else if (flavor === 1) ctx.fillStyle = '#FEFBE0'; 
-                else ctx.fillStyle = '#C0F2D8'; 
+                ctx.clearRect(0,0,W,H);
                 
-                const y = -20 - (i*35);
-                const xOff = Math.sin((Date.now()/200) + i) * (ratio * 5);
+                ctx.save();
+                if(game.shake > 0) {
+                    ctx.translate((Math.random()-0.5)*game.shake, (Math.random()-0.5)*game.shake);
+                }
 
+                const cx = W/2, cy = H/2;
+                if(game.currentMode && (game.state === 'CHARGING' || game.state === 'RESULT' || game.state === 'READY')) {
+                    const ratio = game.val / game.limit;
+                    const isFail = game.val > game.limit && game.state === 'RESULT';
+                    
+                    drawVisuals(cx, cy, ratio, isFail, game.currentMode.id);
+                }
+
+                game.particles.forEach(p => {
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI*2);
+                    ctx.fill();
+                });
+                ctx.restore();
+            }
+
+            function drawVisuals(cx, cy, ratio, isFail, mode) {
+                ctx.shadowBlur = 20; ctx.shadowColor = "rgba(0,0,0,0.1)";
+                
+                let size = 60 + (Math.min(ratio, 1.2) * 150);
+                let color = game.currentMode.color;
+                
+                if(game.hasScope && game.state === 'CHARGING') {
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 210, 0, Math.PI*2);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+
+                if(isFail) return; 
+
+                ctx.fillStyle = color;
                 ctx.beginPath();
-                ctx.arc(xOff, y, 28, 0, Math.PI*2);
-                ctx.fill();
-            }
-            ctx.restore();
-        }
-
-        function drawBattery(cx, cy, ratio, exploded) {
-            if (exploded) return;
-            ctx.strokeStyle = '#8E8E93';
-            ctx.lineWidth = 6;
-            ctx.strokeRect(cx - 50, cy - 80, 100, 160);
-            ctx.fillStyle = '#8E8E93';
-            ctx.fillRect(cx - 30, cy - 95, 60, 15);
-
-            const h = 150 * ratio;
-            const color = ratio > 1.0 ? '#FF3B30' : (ratio > 0.7 ? '#FFCC00' : '#34C759');
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(cx - 44, cy + 74 - h, 88, h);
-
-            if (ratio > 0.1) {
-                ctx.fillStyle = 'rgba(255,255,255,0.8)';
-                ctx.font = '40px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('⚡', cx, cy + 10);
-            }
-
-            if (ratio > 0.8) {
-                ctx.shadowBlur = (ratio - 0.8) * 50;
-                ctx.shadowColor = color;
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(cx - 50, cy - 80, 100, 160);
-                ctx.shadowBlur = 0;
-            }
-        }
-
-        function drawFishing(cx, cy, ratio, snapped) {
-            if (snapped) {
-                ctx.strokeStyle = '#8E8E93';
-                ctx.beginPath();
-                ctx.moveTo(cx, cy - 100);
-                ctx.lineTo(cx, cy);
-                ctx.stroke();
-                return;
+                
+                if (mode === 'WATER') {
+                    ctx.fillStyle = 'rgba(6, 182, 212, 0.2)';
+                    ctx.fillRect(cx-80, cy-100, 160, 200);
+                    let h = Math.min(ratio, 1.0) * 180;
+                    ctx.fillStyle = color;
+                    ctx.fillRect(cx-75, cy+95-h, 150, h);
+                    if(ratio > 0.8) {
+                        let bulge = (ratio - 0.8) * 50;
+                        ctx.beginPath();
+                        ctx.moveTo(cx-75, cy+95-h);
+                        ctx.quadraticCurveTo(cx, cy+95-h-(bulge*4), cx+75, cy+95-h);
+                        ctx.fill();
+                    }
+                } else if (mode === 'ROCKET') {
+                    let shake = Math.random() * ratio * 10;
+                    ctx.fillRect(cx-30+shake, cy-50, 60, 100);
+                    ctx.beginPath(); ctx.moveTo(cx-30+shake, cy-50); ctx.lineTo(cx+shake, cy-100); ctx.lineTo(cx+30+shake, cy-50); ctx.fill();
+                    ctx.fillStyle = '#f59e0b';
+                    let flame = ratio * 150;
+                    ctx.beginPath(); ctx.moveTo(cx-20+shake, cy+50); ctx.lineTo(cx+20+shake, cy+50); ctx.lineTo(cx+shake, cy+50+flame); ctx.fill();
+                } else {
+                    let wobble = Math.sin(Date.now()/50) * (ratio*10);
+                    ctx.ellipse(cx+wobble, cy, size, size, 0, 0, Math.PI*2);
+                    ctx.fill();
+                }
             }
 
-            const tension = ratio * 50;
-            const endY = cy + 100;
-            
-            ctx.strokeStyle = ratio > 0.9 ? '#FF3B30' : '#8E8E93';
-            ctx.lineWidth = 2;
-
-            ctx.beginPath();
-            ctx.moveTo(cx, cy - 150);
-            const cpX = cx + (Math.random()-0.5) * ratio * 10;
-            const cpY = cy + (50 * (1 - ratio));
-            
-            ctx.quadraticCurveTo(cpX, cpY, cx, endY);
-            ctx.stroke();
-
-            ctx.fillStyle = '#FF3B30';
-            ctx.beginPath();
-            ctx.arc(cx, endY, 10, 0, Math.PI*2);
-            ctx.fill();
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(cx, endY, 10, 0, Math.PI, true);
-            ctx.fill();
-
-            if (ratio < 0.5) {
-                ctx.strokeStyle = 'rgba(0,122,255,0.3)';
-                ctx.beginPath();
-                ctx.ellipse(cx, endY, 30 + Math.sin(Date.now()/200)*5, 10, 0, 0, Math.PI*2);
-                ctx.stroke();
-            }
-        }
-
-        function drawRocket(cx, cy, ratio, exploded) {
-            if (exploded) return;
-
-            const shake = (Math.random() - 0.5) * ratio * 10;
-            ctx.translate(cx + shake, cy);
-
-            ctx.fillStyle = '#E5E5EA';
-            ctx.beginPath();
-            ctx.ellipse(0, 0, 30, 70, 0, 0, Math.PI*2);
-            ctx.fill();
-            
-            ctx.fillStyle = '#FF3B30';
-            ctx.beginPath();
-            ctx.moveTo(-20, 40); ctx.lineTo(-40, 70); ctx.lineTo(-20, 60); ctx.fill();
-            ctx.beginPath();
-            ctx.moveTo(20, 40); ctx.lineTo(40, 70); ctx.lineTo(20, 60); ctx.fill();
-
-            ctx.fillStyle = '#5AC8FA';
-            ctx.beginPath(); ctx.arc(0, -20, 12, 0, Math.PI*2); ctx.fill();
-            
-            const thrust = ratio * 150;
-            ctx.fillStyle = '#FF9500';
-            ctx.beginPath();
-            ctx.moveTo(-15, 65);
-            ctx.lineTo(15, 65);
-            ctx.lineTo(0, 65 + thrust + Math.random()*20);
-            ctx.fill();
-        }
-
-        loop();
-
+            draw();
+        })();
     </script>
 </body>
 </html>
