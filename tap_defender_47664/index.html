@@ -5,14 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>TAP DEFENDER: 1000本ノック</title>
     
-    <!-- Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React & ReactDOM --><script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     
-    <!-- Babel --><script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Lucide Icons --><script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -123,7 +127,6 @@
                     osc.type = type;
                     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
                     
-                    // Ensure volume doesn't crash exponentialRamp
                     const safeVol = Math.max(vol, 0.001);
                     gain.gain.setValueAtTime(safeVol, this.ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
@@ -134,7 +137,7 @@
                     osc.start();
                     osc.stop(this.ctx.currentTime + duration);
                 } catch (e) {
-                    // Ignore audio errors to keep game running
+                    // Ignore audio errors
                 }
             }
 
@@ -182,6 +185,7 @@
 
         // --- Main Component ---
         const App = () => {
+            // UI State
             const [gameState, setGameState] = useState(GAME_STATE.MENU);
             const [score, setScore] = useState(0);
             const [health, setHealth] = useState(100);
@@ -190,8 +194,12 @@
             
             const canvasRef = useRef(null);
             const requestRef = useRef();
+            
+            // Game Logic Refs (Mutable state for game loop to avoid closures)
+            const gameStateRef = useRef(GAME_STATE.MENU); // FIX: Use ref for game loop state check
             const scoreRef = useRef(0);
-            const comboRef = useRef(0); // Ref for sync in loop
+            const comboRef = useRef(0);
+            const healthRef = useRef(100);
             
             // Game Objects
             const player = useRef({ x: 0, y: 0, radius: 30 });
@@ -201,10 +209,14 @@
             const difficultyMultiplier = useRef(1);
             const canvasShake = useRef(0);
 
+            // Sync Refs with State for UI updates
+            useEffect(() => {
+                gameStateRef.current = gameState;
+            }, [gameState]);
+
             // --- Game Loop Helper Functions ---
 
             const spawnEnemy = (width, height, time) => {
-                // Spawn from edge
                 const edge = Math.floor(Math.random() * 4); // 0:top, 1:right, 2:bottom, 3:left
                 let x, y;
                 const buffer = 50;
@@ -216,23 +228,23 @@
                     case 3: x = -buffer; y = Math.random() * height; break;
                 }
 
-                // Determine type based on randomness and difficulty
                 const typeRoll = Math.random();
                 let type = 'zzz';
                 let speed = 1 + (difficultyMultiplier.current * 0.5);
                 let icon = ICONS.zzz;
                 let hp = 1;
 
-                if (scoreRef.current > 20 && typeRoll > 0.6) {
+                // Difficulty Logic
+                if (scoreRef.current > 10 && typeRoll > 0.6) {
                     type = 'phone';
-                    speed *= 1.5; // Faster
+                    speed *= 1.5;
                     icon = ICONS.phone;
                 }
-                if (scoreRef.current > 50 && typeRoll > 0.85) {
+                if (scoreRef.current > 30 && typeRoll > 0.85) {
                     type = 'game';
                     speed *= 1.2;
                     icon = ICONS.game;
-                    hp = 2; // Takes 2 hits (conceptually, practically implemented as simple tap for now for flow)
+                    hp = 2;
                 }
 
                 enemies.current.push({
@@ -261,9 +273,13 @@
                 }
             };
 
-            const update = (time) => {
-                if (gameState !== GAME_STATE.PLAYING) {
-                    requestRef.current = requestAnimationFrame(() => update(Date.now())); // Keep running for menu/gameover
+            const update = useCallback((time) => {
+                // FIX: Use Ref to check state, preventing stale closure issues
+                if (gameStateRef.current !== GAME_STATE.PLAYING) {
+                    // Even if not playing, we request animation frame to keep loop alive for state changes
+                    // But we don't draw or update game logic
+                    // We can also draw a "background" effect here if we want
+                    requestRef.current = requestAnimationFrame(() => update(Date.now()));
                     return;
                 }
 
@@ -277,14 +293,17 @@
                 difficultyMultiplier.current = 1 + (scoreRef.current / 100);
 
                 // Spawn Logic
-                const spawnRate = Math.max(400, 2000 - (scoreRef.current * 10)); // Spawns get faster
+                // Reset spawn timer if it's the first frame of playing
+                if (lastSpawnTime.current === 0) lastSpawnTime.current = time;
+
+                const spawnRate = Math.max(400, 2000 - (scoreRef.current * 10));
                 if (time - lastSpawnTime.current > spawnRate) {
                     spawnEnemy(width, height, time);
                     lastSpawnTime.current = time;
                 }
 
-                // Clear Screen (with trail effect)
-                ctx.fillStyle = 'rgba(15, 23, 42, 0.3)'; // Low opacity for trails
+                // Clear Screen
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
                 ctx.fillRect(0, 0, width, height);
 
                 // Shake effect
@@ -292,25 +311,23 @@
                 if (canvasShake.current > 0) {
                     shakeX = (Math.random() - 0.5) * canvasShake.current;
                     shakeY = (Math.random() - 0.5) * canvasShake.current;
-                    canvasShake.current *= 0.9; // decay
+                    canvasShake.current *= 0.9;
                     if (canvasShake.current < 0.5) canvasShake.current = 0;
                 }
 
                 ctx.save();
                 ctx.translate(shakeX, shakeY);
 
-                // Draw Player (The Core/Brain)
+                // Draw Player
                 player.current.x = width / 2;
                 player.current.y = height / 2;
                 
-                // Player Aura
                 const pulse = Math.sin(time / 200) * 5;
                 ctx.beginPath();
                 ctx.arc(player.current.x, player.current.y, player.current.radius + pulse, 0, Math.PI * 2);
                 ctx.fillStyle = COLORS.playerGlow;
                 ctx.fill();
 
-                // Player Core
                 ctx.beginPath();
                 ctx.arc(player.current.x, player.current.y, player.current.radius - 5, 0, Math.PI * 2);
                 ctx.fillStyle = COLORS.player;
@@ -319,25 +336,20 @@
                 ctx.lineWidth = 2;
                 ctx.stroke();
                 
-                // Draw Player Icon (Brain metaphor)
                 ctx.font = '24px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('🧠', player.current.x, player.current.y + 2);
 
-
                 // Update & Draw Enemies
                 enemies.current.forEach(enemy => {
                     if (!enemy.active) return;
 
-                    // Recalculate angle to track player (homing)
                     enemy.angle = Math.atan2(player.current.y - enemy.y, player.current.x - enemy.x);
                     
-                    // Movement
                     let vx = Math.cos(enemy.angle) * enemy.speed;
                     let vy = Math.sin(enemy.angle) * enemy.speed;
 
-                    // Wobble for Zzz
                     if (enemy.type === 'zzz') {
                         enemy.wobble += 0.1;
                         vx += Math.cos(enemy.wobble) * 1;
@@ -347,11 +359,9 @@
                     enemy.x += vx;
                     enemy.y += vy;
 
-                    // Draw Enemy
                     ctx.shadowColor = enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech;
                     ctx.shadowBlur = 15;
                     
-                    // Circle bg
                     ctx.beginPath();
                     ctx.arc(enemy.x, enemy.y, enemy.radius, 0, Math.PI * 2);
                     ctx.fillStyle = enemy.type === 'zzz' ? 'rgba(167, 139, 250, 0.2)' : 'rgba(244, 114, 182, 0.2)';
@@ -360,13 +370,12 @@
                     ctx.strokeStyle = enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech;
                     ctx.stroke();
 
-                    // Icon
                     ctx.shadowBlur = 0;
                     ctx.fillStyle = '#fff';
                     ctx.font = '24px Arial';
                     ctx.fillText(enemy.icon, enemy.x, enemy.y + 2);
 
-                    // Hit Detection (Enemy hits Player)
+                    // Collision with Player
                     const dist = Math.hypot(player.current.x - enemy.x, player.current.y - enemy.y);
                     if (dist < player.current.radius + enemy.radius) {
                         enemy.active = false;
@@ -374,7 +383,7 @@
                     }
                 });
 
-                // Update & Draw Particles
+                // Particles
                 particles.current.forEach((p, index) => {
                     p.x += p.vx;
                     p.y += p.vy;
@@ -393,36 +402,32 @@
                     }
                 });
 
-                // Cleanup inactive enemies
                 enemies.current = enemies.current.filter(e => e.active);
-
                 ctx.restore();
+                
                 requestRef.current = requestAnimationFrame(() => update(Date.now()));
-            };
+            }, []); // Empty dependency array so 'update' function is stable
 
             const handlePlayerHit = () => {
                 audio.playDamage();
-                canvasShake.current = 20; // Screen shake
+                canvasShake.current = 20;
                 comboRef.current = 0;
                 setCombo(0);
                 
-                setHealth(prev => {
-                    const newHealth = prev - 20;
-                    if (newHealth <= 0) {
-                        endGame();
-                        return 0;
-                    }
-                    return newHealth;
-                });
+                healthRef.current -= 20;
+                setHealth(healthRef.current);
+
+                if (healthRef.current <= 0) {
+                    endGame();
+                }
             };
 
             const handleTap = (e) => {
-                if (gameState !== GAME_STATE.PLAYING) return;
+                if (gameStateRef.current !== GAME_STATE.PLAYING) return;
                 
                 const canvas = canvasRef.current;
                 const rect = canvas.getBoundingClientRect();
                 
-                // Normalize coordinates
                 const clientX = e.touches ? e.touches[0].clientX : e.clientX;
                 const clientY = e.touches ? e.touches[0].clientY : e.clientY;
                 
@@ -431,27 +436,23 @@
 
                 let hit = false;
 
-                // Check hits
                 enemies.current.forEach(enemy => {
                     if (!enemy.active) return;
-                    // Slightly generous hit box
                     const dist = Math.hypot(x - enemy.x, y - enemy.y);
                     if (dist < enemy.radius + 20) {
                         enemy.active = false;
                         hit = true;
                         
-                        // Effects
                         createExplosion(enemy.x, enemy.y, enemy.type === 'zzz' ? COLORS.enemyZzz : COLORS.enemyTech);
                         
-                        // Score Logic
                         scoreRef.current += 1;
                         comboRef.current += 1;
                         setScore(scoreRef.current);
                         setCombo(comboRef.current);
                         
-                        // Heal slightly on combo milestones
                         if (comboRef.current % 10 === 0) {
-                             setHealth(h => Math.min(h + 5, 100));
+                            healthRef.current = Math.min(healthRef.current + 5, 100);
+                            setHealth(healthRef.current);
                         }
                     }
                 });
@@ -465,28 +466,33 @@
                 audio.init();
                 audio.playStart();
                 
+                // Reset Refs
+                gameStateRef.current = GAME_STATE.PLAYING;
+                scoreRef.current = 0;
+                healthRef.current = 100;
+                comboRef.current = 0;
+                lastSpawnTime.current = 0;
+                difficultyMultiplier.current = 1;
+                enemies.current = [];
+                particles.current = [];
+
+                // Sync State
                 setGameState(GAME_STATE.PLAYING);
                 setScore(0);
                 setHealth(100);
                 setCombo(0);
-                scoreRef.current = 0;
-                comboRef.current = 0;
-                enemies.current = [];
-                particles.current = [];
-                lastSpawnTime.current = 0;
-                difficultyMultiplier.current = 1;
                 
-                if (requestRef.current) cancelAnimationFrame(requestRef.current);
-                update(Date.now());
+                // Loop is already running, but this state change (via Ref) will trigger updates in next frame
             };
 
             const endGame = () => {
+                gameStateRef.current = GAME_STATE.GAMEOVER;
                 setGameState(GAME_STATE.GAMEOVER);
+                
                 if (scoreRef.current > highScore) {
                     setHighScore(scoreRef.current);
                     localStorage.setItem('tapDefenderHighScore', scoreRef.current);
                 }
-                if (requestRef.current) cancelAnimationFrame(requestRef.current);
             };
 
             // Initial Setup
@@ -495,26 +501,25 @@
                 
                 const handleResize = () => {
                     if (canvas) {
-                        // FIX: Explicitly set canvas width and height for drawing context
                         canvas.width = window.innerWidth;
                         canvas.height = window.innerHeight;
                     }
                 };
                 
                 window.addEventListener('resize', handleResize);
-                handleResize(); // Call once initially
+                handleResize();
 
                 const storedScore = localStorage.getItem('tapDefenderHighScore');
                 if (storedScore) setHighScore(parseInt(storedScore));
 
-                // Start the game loop even in MENU state for background animation/rendering
+                // Start the loop once
                 requestRef.current = requestAnimationFrame(() => update(Date.now()));
 
                 return () => {
                     window.removeEventListener('resize', handleResize);
                     if (requestRef.current) cancelAnimationFrame(requestRef.current);
                 };
-            }, []);
+            }, [update]);
 
 
             // --- Render UI Components ---
@@ -530,7 +535,6 @@
 
                     {/* HUD Layer */}
                     <div className="ui-layer p-4 flex flex-col justify-between">
-                        {/* Top Bar */}
                         <div className="flex justify-between items-start">
                             <div className="flex flex-col">
                                 <h1 className="text-slate-400 text-xs font-bold tracking-widest uppercase">Focus Defense System</h1>
@@ -544,7 +548,6 @@
                             </div>
                         </div>
 
-                        {/* Combo Indicator */}
                         {combo > 1 && (
                              <div className="absolute top-20 left-1/2 transform -translate-x-1/2 text-center pointer-events-none">
                                 <div className="text-yellow-400 font-bold text-2xl animate-bounce">
@@ -553,7 +556,6 @@
                              </div>
                         )}
 
-                        {/* Bottom Bar (Health) */}
                         <div className="w-full max-w-md mx-auto mb-8">
                             <div className="flex justify-between text-xs text-slate-400 mb-1 font-bold tracking-widest">
                                 <span>MENTAL CAPACITY</span>
@@ -571,7 +573,7 @@
                         </div>
                     </div>
 
-                    {/* Start Screen Overlay */}
+                    {/* Start Screen */}
                     {gameState === GAME_STATE.MENU && (
                         <div className="ui-layer interactive-ui bg-slate-900/90 backdrop-blur-sm flex items-center justify-center z-50">
                             <div className="text-center p-8 max-w-sm w-full">
@@ -614,7 +616,7 @@
                         </div>
                     )}
 
-                    {/* Game Over Overlay */}
+                    {/* Game Over Screen */}
                     {gameState === GAME_STATE.GAMEOVER && (
                         <div className="ui-layer interactive-ui bg-red-900/80 backdrop-blur-md flex items-center justify-center z-50">
                             <div className="text-center p-8 animate-bounce-in">
