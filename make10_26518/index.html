@@ -6,22 +6,24 @@
     <title>Make 10: Neon Drop</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=JetBrains+Mono:wght@700&display=swap');
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #050505;
             color: #ffffff;
             overflow: hidden;
             touch-action: none;
+            /* 背景に微かなグラデーションを追加 */
+            background: radial-gradient(circle at 50% 10%, #1a1a2e 0%, #000000 100%);
         }
 
         .glass-panel {
-            background: rgba(20, 20, 20, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
         canvas {
@@ -30,20 +32,32 @@
             height: 100%;
         }
 
-        /* UI Overlay Transitions */
-        .fade-enter { opacity: 0; transform: scale(0.95); }
-        .fade-enter-active { opacity: 1; transform: scale(1); transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        .fade-exit { opacity: 1; transform: scale(1); }
-        .fade-exit-active { opacity: 0; transform: scale(0.95); transition: opacity 0.2s ease, transform 0.2s ease; }
-
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
-            transition: all 0.2s ease;
+            background: linear-gradient(135deg, #2997ff, #005ecb);
+            box-shadow: 0 0 20px rgba(41, 151, 255, 0.3);
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary:after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity 0.2s;
         }
         .btn-primary:active {
-            transform: scale(0.96);
-            box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+            transform: scale(0.94);
+            box-shadow: 0 0 10px rgba(41, 151, 255, 0.1);
+        }
+        .btn-primary:active:after {
+            opacity: 1;
+        }
+        
+        /* ネオンテキスト */
+        .neon-text {
+            text-shadow: 0 0 10px rgba(255,255,255,0.5), 0 0 20px rgba(41, 151, 255, 0.3);
         }
     </style>
 </head>
@@ -52,86 +66,110 @@
     <!-- Game Canvas -->
     <canvas id="gameCanvas"></canvas>
 
-    <!-- HUD (Heads Up Display) -->
-    <div id="hud" class="absolute top-0 left-0 w-full p-4 flex justify-between items-start pointer-events-none z-10">
+    <!-- HUD -->
+    <div id="hud" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start pointer-events-none z-10 select-none">
         <div class="flex flex-col gap-1">
-            <div class="text-xs text-gray-400 tracking-widest uppercase">SCORE</div>
-            <div id="scoreDisplay" class="text-2xl font-bold text-white tabular-nums">0</div>
+            <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">SCORE</div>
+            <div id="scoreDisplay" class="text-3xl font-bold text-white tabular-nums font-['JetBrains_Mono'] tracking-tighter neon-text">0</div>
         </div>
-        <div class="flex flex-col gap-1 items-end">
-            <div class="text-xs text-gray-400 tracking-widest uppercase">NEXT</div>
-            <div id="nextPieceDisplay" class="w-10 h-10 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">
-                <!-- Next number populated by JS -->
+        <div class="flex flex-col gap-2 items-end">
+            <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">NEXT</div>
+            <!-- Next Piece Preview Container -->
+            <div class="relative">
+                <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
+                <div id="nextPieceDisplay" class="relative w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-bold text-white shadow-2xl backdrop-blur-md">
+                    <!-- JS Populated -->
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Start Screen -->
-    <div id="startScreen" class="absolute inset-0 flex items-center justify-center z-20 bg-black/80 backdrop-blur-sm transition-all duration-300">
-        <div class="glass-panel p-8 rounded-2xl max-w-sm w-full text-center space-y-6 m-4">
-            <div>
-                <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500 mb-2">MAKE 10</h1>
-                <p class="text-gray-400 text-sm">Neon Drop</p>
+    <div id="startScreen" class="absolute inset-0 flex items-center justify-center z-20 bg-black/60 backdrop-blur-sm transition-all duration-500">
+        <div class="glass-panel p-10 rounded-3xl max-w-sm w-full text-center space-y-8 m-4 border-t border-white/10">
+            <div class="space-y-2">
+                <h1 class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-500 tracking-tight drop-shadow-lg">MAKE 10</h1>
+                <div class="h-1 w-12 bg-blue-500 mx-auto rounded-full opacity-80"></div>
+                <p class="text-gray-400 text-xs tracking-widest uppercase pt-2">Neon Drop Puzzle</p>
             </div>
             
-            <div class="space-y-2 text-left bg-white/5 p-4 rounded-lg text-sm text-gray-300">
-                <p><span class="text-blue-400 font-bold">ルール:</span></p>
-                <ul class="list-disc list-inside space-y-1">
-                    <li>レーンをタップして数字を落とします。</li>
-                    <li>縦に重なった数字の合計が <span class="text-green-400 font-bold">10</span> になると消えます。</li>
-                    <li>例: 「3」の上に「7」を落とす → 消滅！</li>
-                    <li>画面上部まで積み上がるとゲームオーバー。</li>
+            <div class="text-left bg-black/20 p-6 rounded-2xl text-sm text-gray-300 border border-white/5 leading-relaxed">
+                <p class="mb-3 text-white font-bold flex items-center gap-2">
+                    <span class="w-1 h-4 bg-blue-500 rounded-full"></span>
+                    HOW TO PLAY
+                </p>
+                <ul class="space-y-2 text-xs text-gray-400">
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-500 mt-0.5">●</span>
+                        <span>タップして数字を落とす</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-500 mt-0.5">●</span>
+                        <span>縦の合計が <strong class="text-white font-mono">10</strong> で消滅</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-blue-500 mt-0.5">●</span>
+                        <span>連鎖で高得点を狙え</span>
+                    </li>
                 </ul>
             </div>
 
-            <button id="startBtn" class="btn-primary w-full py-4 rounded-xl text-white font-bold text-lg tracking-wide uppercase">
-                Game Start
+            <button id="startBtn" class="btn-primary w-full py-4 rounded-2xl text-white font-bold text-sm tracking-[0.15em] uppercase shadow-lg hover:scale-[1.02] transition-transform">
+                System Start
             </button>
         </div>
     </div>
 
     <!-- Game Over Screen -->
-    <div id="gameOverScreen" class="hidden absolute inset-0 flex items-center justify-center z-20 bg-black/90 backdrop-blur-md transition-all duration-300">
-        <div class="glass-panel p-8 rounded-2xl max-w-xs w-full text-center space-y-6">
-            <div class="text-red-500 font-bold tracking-widest text-xl">SYSTEM FAILURE</div>
+    <div id="gameOverScreen" class="hidden absolute inset-0 flex items-center justify-center z-20 bg-black/80 backdrop-blur-md transition-all duration-500">
+        <div class="glass-panel p-10 rounded-3xl max-w-xs w-full text-center space-y-8 border-t border-red-500/20 shadow-red-900/20 shadow-2xl">
+            <div class="text-red-500 font-bold tracking-[0.3em] text-sm uppercase animate-pulse">Game Over</div>
             <div>
-                <div class="text-xs text-gray-400 uppercase">Final Score</div>
-                <div id="finalScore" class="text-5xl font-bold text-white my-2">0</div>
+                <div class="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Final Score</div>
+                <div id="finalScore" class="text-6xl font-bold text-white font-['JetBrains_Mono'] tracking-tighter text-shadow-lg">0</div>
             </div>
-            <button id="restartBtn" class="btn-primary w-full py-3 rounded-xl text-white font-bold tracking-wide">
-                TRY AGAIN
+            <button id="restartBtn" class="btn-primary w-full py-4 rounded-2xl text-white font-bold text-sm tracking-[0.15em] uppercase hover:scale-[1.02]">
+                Reboot
             </button>
         </div>
     </div>
 
     <script>
         /**
-         * MAKE 10: NEON DROP
-         * Developed with a focus on clean architecture and satisfying interaction.
+         * MAKE 10: NEON DROP (High-Res Edition)
          */
 
-        // --- Configuration ---
         const COLS = 6;
         const ROWS = 10;
-        // Removed CELL_SIZE_RATIO as we now calculate dynamically
+        // Colors updated for a more sophisticated look
         const COLORS = {
             bg: '#050505',
-            grid: '#1a1a1a',
+            grid: 'rgba(255, 255, 255, 0.03)',
+            gridBorder: 'rgba(255, 255, 255, 0.05)',
             text: '#ffffff',
-            accent: '#3b82f6',
-            particles: ['#60a5fa', '#34d399', '#f472b6', '#fbbf24']
+            // Palette: Red, Orange, Yellow, Green, Cyan, Blue, Purple, Magenta, Pink
+            palette: [
+                '#ff3b30', // 1 Red
+                '#ff9500', // 2 Orange
+                '#ffcc00', // 3 Yellow
+                '#30d158', // 4 Green
+                '#64d2ff', // 5 Cyan
+                '#0a84ff', // 6 Blue
+                '#5e5ce6', // 7 Indigo
+                '#bf5af2', // 8 Purple
+                '#ff375f', // 9 Pink
+            ]
         };
 
-        // --- Audio Manager (Web Audio API) ---
         class AudioManager {
             constructor() {
                 this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 this.masterGain = this.ctx.createGain();
-                this.masterGain.gain.value = 0.3;
+                this.masterGain.gain.value = 0.2; // Slightly quieter
                 this.masterGain.connect(this.ctx.destination);
             }
 
-            playTone(freq, type, duration, delay = 0) {
+            playTone(freq, type, duration, delay = 0, vol = 0.5) {
                 if (this.ctx.state === 'suspended') this.ctx.resume();
                 const osc = this.ctx.createOscillator();
                 const gain = this.ctx.createGain();
@@ -139,7 +177,8 @@
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, this.ctx.currentTime + delay);
                 
-                gain.gain.setValueAtTime(0.5, this.ctx.currentTime + delay);
+                gain.gain.setValueAtTime(0, this.ctx.currentTime + delay);
+                gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + delay + 0.02);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + delay + duration);
 
                 osc.connect(gain);
@@ -149,54 +188,59 @@
                 osc.stop(this.ctx.currentTime + delay + duration);
             }
 
-            playDrop() { this.playTone(300, 'sine', 0.1); }
-            playStack() { this.playTone(150, 'triangle', 0.1); }
+            playDrop() { this.playTone(400, 'sine', 0.15, 0, 0.3); }
+            playStack() { this.playTone(200, 'triangle', 0.1); }
             playClear() { 
-                this.playTone(600, 'sine', 0.2); 
-                this.playTone(900, 'sine', 0.2, 0.05); 
-                this.playTone(1200, 'sine', 0.3, 0.1); 
+                // Major chord arpeggio
+                this.playTone(523.25, 'sine', 0.3, 0);   // C5
+                this.playTone(659.25, 'sine', 0.3, 0.05); // E5
+                this.playTone(783.99, 'sine', 0.4, 0.1);  // G5
+                this.playTone(1046.50, 'sine', 0.6, 0.15); // C6
             }
             playGameOver() {
-                this.playTone(100, 'sawtooth', 0.5);
-                this.playTone(80, 'sawtooth', 0.5, 0.2);
+                this.playTone(150, 'sawtooth', 0.8, 0, 0.4);
+                this.playTone(100, 'sawtooth', 0.8, 0.2, 0.4);
             }
         }
 
-        // --- Particle System ---
         class Particle {
             constructor(x, y, color) {
                 this.x = x;
                 this.y = y;
-                this.vx = (Math.random() - 0.5) * 10;
-                this.vy = (Math.random() - 0.5) * 10;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 4 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
                 this.life = 1.0;
                 this.color = color;
-                this.size = Math.random() * 5 + 2;
+                this.size = Math.random() * 6 + 4; // Larger for high res
+                this.decay = Math.random() * 0.03 + 0.02;
             }
             update() {
                 this.x += this.vx;
                 this.y += this.vy;
-                this.life -= 0.03;
-                this.size *= 0.95;
+                this.vy += 0.1; // gravity
+                this.life -= this.decay;
+                this.size *= 0.92;
             }
             draw(ctx) {
+                ctx.save();
                 ctx.globalAlpha = this.life;
+                ctx.globalCompositeOperation = 'lighter'; // Additive blending for neon look
                 ctx.fillStyle = this.color;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
                 ctx.fill();
-                ctx.globalAlpha = 1.0;
+                ctx.restore();
             }
         }
 
-        // --- Game Logic ---
         class Game {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
+                this.ctx = this.canvas.getContext('2d', { alpha: false }); // Optimize
                 this.audio = new AudioManager();
                 
-                // Initialize grid robustly using Array.from to ensure independent arrays
                 this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
                 this.particles = [];
                 this.score = 0;
@@ -205,54 +249,57 @@
                 this.fallingPieces = []; 
                 this.nextPieceVal = this.randomNum();
 
+                // Resize handling including High DPI support
                 this.resize();
                 window.addEventListener('resize', () => this.resize());
                 
-                // Input
                 this.canvas.addEventListener('pointerdown', (e) => this.handleInput(e));
 
-                // Loop
                 this.lastTime = 0;
                 this.animate = this.animate.bind(this);
                 requestAnimationFrame(this.animate);
             }
 
             resize() {
-                this.canvas.width = window.innerWidth;
-                this.canvas.height = window.innerHeight;
+                // --- High DPI (Retina) Support ---
+                const dpr = window.devicePixelRatio || 1;
                 
-                // --- FIX: Responsiveness Logic ---
-                // 1. Calculate available height minus header (approx 100px) and bottom margin
-                const availableHeight = this.canvas.height - 120; 
-                const availableWidth = this.canvas.width - 20; // Small margin
+                // 1. Get display size (CSS pixels)
+                const displayWidth = window.innerWidth;
+                const displayHeight = window.innerHeight;
+
+                // 2. Set canvas buffer size (Physical pixels)
+                this.canvas.width = Math.floor(displayWidth * dpr);
+                this.canvas.height = Math.floor(displayHeight * dpr);
+
+                // 3. Set canvas CSS size
+                this.canvas.style.width = `${displayWidth}px`;
+                this.canvas.style.height = `${displayHeight}px`;
+
+                // 4. Normalize coordinate system to CSS pixels
+                this.ctx.resetTransform(); // Reset first
+                this.ctx.scale(dpr, dpr);
+
+                // --- Grid Calculation (Logical Coordinates) ---
+                const availableHeight = displayHeight - 140; // More space for HUD
+                const availableWidth = displayWidth - 30;
                 
-                // 2. Determine max cell size based on both constraints
                 const maxCellH = availableHeight / ROWS;
                 const maxCellW = availableWidth / COLS;
                 
-                // 3. Choose the smaller dimension to ensure it fits
-                // Also cap at 70px for large screens so it doesn't look comical
-                this.cellWidth = Math.min(maxCellW, maxCellH, 70);
-                this.cellHeight = this.cellWidth; // Keep square
+                this.cellWidth = Math.min(maxCellW, maxCellH, 65);
+                this.cellHeight = this.cellWidth;
 
-                // 4. Center the grid exactly
                 const gridPixelWidth = this.cellWidth * COLS;
                 const gridPixelHeight = this.cellHeight * ROWS;
                 
-                this.gridOffsetX = (this.canvas.width - gridPixelWidth) / 2;
-                
-                // Push grid down to avoid header (min 80px), but center vertically if lots of space
-                const idealY = (this.canvas.height - gridPixelHeight) / 2;
-                this.gridOffsetY = Math.max(idealY, 80); 
+                this.gridOffsetX = (displayWidth - gridPixelWidth) / 2;
+                this.gridOffsetY = Math.max((displayHeight - gridPixelHeight) / 2 + 30, 100);
             }
 
             reset() {
-                // Ensure dimensions are correct before starting (fixes issues if resized during idle)
                 this.resize();
-                
-                // Clear grid completely
                 this.grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
-                
                 this.score = 0;
                 this.particles = [];
                 this.fallingPieces = [];
@@ -273,14 +320,11 @@
 
             handleInput(e) {
                 if (!this.isPlaying) return;
-
                 const col = this.getColFromX(e.clientX);
                 if (col === -1) return;
 
-                // Check if column is full at the top
-                if (this.grid[0] && this.grid[0][col] !== null) {
-                    return; 
-                }
+                // Top row full check
+                if (this.grid[0] && this.grid[0][col] !== null) return; 
 
                 this.spawnPieceInColumn(col, this.nextPieceVal);
                 this.nextPieceVal = this.randomNum();
@@ -289,7 +333,6 @@
             }
 
             spawnPieceInColumn(col, val) {
-                // 1. Calculate lowest empty row based on STATIC grid
                 let staticTargetRow = ROWS - 1;
                 for (let r = 0; r < ROWS; r++) {
                     if (this.grid[r][col] !== null) {
@@ -298,11 +341,9 @@
                     }
                 }
 
-                // 2. Adjust for FALLING pieces in the same column
                 let finalTargetRow = staticTargetRow;
                 for (let p of this.fallingPieces) {
                     if (p.col === col) {
-                        // Stack on top of the highest falling piece
                         if (p.targetRow <= finalTargetRow) {
                             finalTargetRow = p.targetRow - 1;
                         }
@@ -314,16 +355,13 @@
                     return;
                 }
 
-                // Calculate exact Y pixels for target
                 const targetPixelY = this.gridOffsetY + (finalTargetRow * this.cellHeight);
 
-                // Add to falling animation list
                 this.fallingPieces.push({
                     col: col,
-                    row: -1, 
                     targetRow: finalTargetRow,
                     val: val,
-                    y: this.gridOffsetY - this.cellHeight, // Start above grid
+                    y: this.gridOffsetY - this.cellHeight,
                     targetY: targetPixelY,
                     speed: 0,
                     landed: false
@@ -333,48 +371,32 @@
             update(dt) {
                 if (!this.isPlaying) return;
 
-                // Update Falling Pieces
                 for (let i = this.fallingPieces.length - 1; i >= 0; i--) {
                     let p = this.fallingPieces[i];
-                    
-                    // Gravity simulation
-                    p.speed += 1.5; 
+                    p.speed += 1.8; // Stronger gravity feeling
                     p.y += p.speed;
 
-                    // Check collision (using >= to catch high speed overshoots)
-                    // Also clamp to prevent falling through floor if logic fails momentarily
                     const floorLimit = this.gridOffsetY + (ROWS - 1) * this.cellHeight;
-                    
-                    // Use explicit targetY, but safeguard with floorLimit for bottom row
                     let hit = false;
-                    if (p.y >= p.targetY) {
-                        hit = true;
-                    }
-                    
-                    // Additional safeguard: if it somehow passed target but targetRow is valid
+
+                    if (p.y >= p.targetY) hit = true;
                     if (p.y > floorLimit && p.targetRow === ROWS - 1) {
-                        hit = true; // 強制着地
-                        p.y = p.targetY; // 位置補正
+                        hit = true; 
+                        p.y = p.targetY;
                     }
 
                     if (hit) {
-                        p.y = p.targetY; // Snap to grid position
+                        p.y = p.targetY;
                         p.landed = true;
                         
-                        // Add to grid (Safe check)
                         if (this.grid[p.targetRow]) {
                             this.grid[p.targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
-                            
-                            // Logic Check
                             this.checkMatch(p.targetRow, p.col);
                         }
-                        
-                        // Remove from falling list
                         this.fallingPieces.splice(i, 1);
                     }
                 }
 
-                // Update Particles
                 for (let i = this.particles.length - 1; i >= 0; i--) {
                     this.particles[i].update();
                     if (this.particles[i].life <= 0) this.particles.splice(i, 1);
@@ -382,7 +404,6 @@
             }
 
             checkMatch(row, col) {
-                // Check number below
                 if (row < ROWS - 1) {
                     const below = this.grid[row + 1][col];
                     if (below) {
@@ -390,20 +411,17 @@
                         const sum = current.val + below.val;
 
                         if (sum === 10) {
-                            // MATCH!
                             setTimeout(() => {
-                                this.createExplosion(col, row, COLORS.particles[0]);
-                                this.createExplosion(col, row + 1, COLORS.particles[1]);
+                                this.createExplosion(col, row, this.getColor(current.val));
+                                this.createExplosion(col, row + 1, this.getColor(below.val));
                                 
                                 this.grid[row][col] = null;
                                 this.grid[row + 1][col] = null;
                                 this.score += 100;
                                 this.updateUI();
                                 this.audio.playClear();
-
-                                // Trigger gravity for anything above
                                 this.applyGravity(col);
-                            }, 50); 
+                            }, 60); 
                         } else {
                             this.audio.playStack();
                             if (row === 0) this.gameOver();
@@ -417,7 +435,6 @@
             }
 
             applyGravity(col) {
-                // Simple gravity: shift everything down if empty space exists
                 let writePtr = ROWS - 1;
                 for (let r = ROWS - 1; r >= 0; r--) {
                     if (this.grid[r][col] !== null) {
@@ -425,11 +442,9 @@
                             this.grid[writePtr][col] = this.grid[r][col];
                             this.grid[r][col] = null;
                             
-                            // Re-check for matches after falling (simple chain reaction)
                              if (writePtr < ROWS - 1 && this.grid[writePtr + 1][col]) {
                                 if (this.grid[writePtr][col].val + this.grid[writePtr + 1][col].val === 10) {
-                                    // Chain reaction logic could go here, 
-                                    // but kept simple for stability: just play sound or leave it
+                                    // Chain reaction simplified
                                 }
                             }
                         }
@@ -441,8 +456,8 @@
             createExplosion(c, r, color) {
                 const x = this.gridOffsetX + c * this.cellWidth + this.cellWidth / 2;
                 const y = this.gridOffsetY + r * this.cellHeight + this.cellHeight / 2;
-                for (let i = 0; i < 15; i++) {
-                    this.particles.push(new Particle(x, y, color || '#fff'));
+                for (let i = 0; i < 20; i++) {
+                    this.particles.push(new Particle(x, y, color));
                 }
             }
 
@@ -454,64 +469,112 @@
             }
 
             updateUI() {
-                document.getElementById('scoreDisplay').innerText = this.score;
-                document.getElementById('nextPieceDisplay').innerText = this.nextPieceVal;
+                const scoreEl = document.getElementById('scoreDisplay');
+                // Number scramble animation
+                let current = parseInt(scoreEl.innerText);
+                if (current !== this.score) {
+                    scoreEl.innerText = this.score;
+                    scoreEl.style.transform = 'scale(1.2)';
+                    scoreEl.style.color = '#64d2ff';
+                    setTimeout(() => {
+                        scoreEl.style.transform = 'scale(1)';
+                        scoreEl.style.color = 'white';
+                    }, 100);
+                }
+
+                this.nextPieceVal = this.nextPieceVal || this.randomNum();
                 const nextPiece = document.getElementById('nextPieceDisplay');
-                nextPiece.style.borderColor = this.getColor(this.nextPieceVal);
-                nextPiece.style.color = this.getColor(this.nextPieceVal);
-                nextPiece.style.boxShadow = `0 0 10px ${this.getColor(this.nextPieceVal)}40`;
+                nextPiece.innerText = this.nextPieceVal;
+                const color = this.getColor(this.nextPieceVal);
+                nextPiece.style.color = color;
+                nextPiece.style.borderColor = color;
+                nextPiece.style.boxShadow = `0 0 20px ${color}40`;
             }
 
             getColor(num) {
-                const palette = [
-                    '#ff3b30', '#ff9500', '#ffcc00', '#34c759', '#32ade6', 
-                    '#007aff', '#5856d6', '#af52de', '#ff2d55'
-                ];
-                return palette[num - 1] || '#fff';
+                return COLORS.palette[num - 1] || '#fff';
             }
 
+            // --- High Quality Rendering ---
             draw() {
+                // Background
                 this.ctx.fillStyle = COLORS.bg;
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                this.ctx.fillRect(0, 0, window.innerWidth, window.innerHeight); // Use logical size for fillRect as we scaled ctx
 
-                // Draw Grid Background
-                this.ctx.strokeStyle = '#151515';
-                this.ctx.lineWidth = 1;
-                for (let c = 0; c <= COLS; c++) {
-                    const x = this.gridOffsetX + c * this.cellWidth;
-                    this.ctx.beginPath(); this.ctx.moveTo(x, this.gridOffsetY); this.ctx.lineTo(x, this.gridOffsetY + ROWS * this.cellHeight); this.ctx.stroke();
-                }
-                this.ctx.strokeStyle = '#333';
-                this.ctx.beginPath(); 
-                this.ctx.moveTo(this.gridOffsetX, this.gridOffsetY + ROWS * this.cellHeight); 
-                this.ctx.lineTo(this.gridOffsetX + COLS * this.cellWidth, this.gridOffsetY + ROWS * this.cellHeight); 
+                // Grid Container (Glass look)
+                const boardH = ROWS * this.cellHeight;
+                const boardW = COLS * this.cellWidth;
+                
+                this.ctx.fillStyle = 'rgba(20, 20, 30, 0.5)';
+                this.ctx.roundRect(this.gridOffsetX - 4, this.gridOffsetY - 4, boardW + 8, boardH + 8, 12);
+                this.ctx.fill();
+                this.ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                this.ctx.lineWidth = 2;
                 this.ctx.stroke();
 
-                const drawCell = (val, r, c, yOffset = 0) => {
+                // Draw Grid Lines
+                this.ctx.beginPath();
+                this.ctx.strokeStyle = COLORS.grid;
+                this.ctx.lineWidth = 1;
+                for (let c = 1; c < COLS; c++) {
                     const x = this.gridOffsetX + c * this.cellWidth;
-                    const y = this.gridOffsetY + r * this.cellHeight + yOffset;
-                    const size = this.cellWidth * 0.8;
+                    this.ctx.moveTo(x, this.gridOffsetY);
+                    this.ctx.lineTo(x, this.gridOffsetY + boardH);
+                }
+                for (let r = 1; r < ROWS; r++) {
+                    const y = this.gridOffsetY + r * this.cellHeight;
+                    this.ctx.moveTo(this.gridOffsetX, y);
+                    this.ctx.lineTo(this.gridOffsetX + boardW, y);
+                }
+                this.ctx.stroke();
+
+                const drawCell = (val, r, c, yPixel = null) => {
+                    const x = this.gridOffsetX + c * this.cellWidth;
+                    const y = yPixel !== null ? yPixel : this.gridOffsetY + r * this.cellHeight;
+                    
+                    const size = this.cellWidth * 0.85;
                     const margin = (this.cellWidth - size) / 2;
                     const color = this.getColor(val);
 
-                    this.ctx.shadowBlur = 15;
-                    this.ctx.shadowColor = color;
-                    this.ctx.fillStyle = 'rgba(30,30,30,0.9)';
-                    this.ctx.strokeStyle = color;
-                    this.ctx.lineWidth = 2;
+                    // --- Sophisticated Block Rendering ---
                     
-                    this.ctx.beginPath();
-                    this.ctx.roundRect(x + margin, y + margin, size, size, 12);
-                    this.ctx.fill();
-                    this.ctx.stroke();
+                    // 1. Outer Glow
+                    this.ctx.shadowBlur = 20;
+                    this.ctx.shadowColor = color;
+                    
+                    // 2. Main Body (Gradient)
+                    const grad = this.ctx.createLinearGradient(x, y, x, y + size);
+                    grad.addColorStop(0, color);
+                    grad.addColorStop(1, adjustColor(color, -40)); // Darken bottom
 
+                    this.ctx.fillStyle = grad;
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(x + margin, y + margin, size, size, 10);
+                    this.ctx.fill();
+                    this.ctx.shadowBlur = 0; // Reset shadow for crisp details
+
+                    // 3. Inner Gloss (Top highlight)
+                    this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(x + this.cellWidth/2, y + margin + size*0.2, size*0.6, size*0.2, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
+
+                    // 4. Text
                     this.ctx.fillStyle = '#fff';
-                    this.ctx.shadowBlur = 0;
-                    this.ctx.font = `bold ${size * 0.5}px Inter`;
+                    this.ctx.font = `bold ${size * 0.5}px 'JetBrains Mono', monospace`;
                     this.ctx.textAlign = 'center';
                     this.ctx.textBaseline = 'middle';
+                    // Text shadow for readability
+                    this.ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                    this.ctx.shadowBlur = 4;
                     this.ctx.fillText(val, x + this.cellWidth/2, y + this.cellHeight/2 + 2);
+                    this.ctx.shadowBlur = 0;
                 };
+
+                // Helper for gradient
+                function adjustColor(color, amount) {
+                    return '#' + color.replace(/^#/, '').replace(/../g, color => ('0'+Math.min(255, Math.max(0, parseInt(color, 16) + amount)).toString(16)).substr(-2));
+                }
 
                 // Draw Static Grid
                 if (this.grid && this.grid.length === ROWS) {
@@ -526,26 +589,10 @@
 
                 // Draw Falling Pieces
                 for (let p of this.fallingPieces) {
-                    const size = this.cellWidth * 0.8;
-                    const margin = (this.cellWidth - size) / 2;
-                    const x = this.gridOffsetX + p.col * this.cellWidth;
-                    const color = this.getColor(p.val);
-                    
-                    this.ctx.shadowBlur = 20;
-                    this.ctx.shadowColor = color;
-                    this.ctx.fillStyle = color;
-                    this.ctx.beginPath();
-                    this.ctx.roundRect(x + margin, p.y + margin, size, size, 12);
-                    this.ctx.fill();
-
-                    this.ctx.fillStyle = '#000';
-                    this.ctx.shadowBlur = 0;
-                    this.ctx.font = `bold ${size * 0.5}px Inter`;
-                    this.ctx.textAlign = 'center';
-                    this.ctx.textBaseline = 'middle';
-                    this.ctx.fillText(p.val, x + this.cellWidth/2, p.y + this.cellHeight/2);
+                    drawCell(p.val, -1, p.col, p.y);
                 }
 
+                // Particles
                 for (let p of this.particles) {
                     p.draw(this.ctx);
                 }
@@ -565,6 +612,8 @@
 
         document.getElementById('startBtn').addEventListener('click', () => {
             document.getElementById('startScreen').classList.add('hidden');
+            document.getElementById('startScreen').style.opacity = 0;
+            document.getElementById('startScreen').style.pointerEvents = 'none';
             game.audio.ctx.resume();
             game.reset();
         });
@@ -573,6 +622,22 @@
             document.getElementById('gameOverScreen').classList.add('hidden');
             game.reset();
         });
+
+        // Polyfill for roundRect if needed (modern browsers support it)
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
 
     </script>
 </body>
