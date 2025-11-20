@@ -15,6 +15,7 @@
             overflow: hidden;
             touch-action: none;
             background: radial-gradient(circle at 50% 10%, #1a1a2e 0%, #000000 100%);
+            -webkit-tap-highlight-color: transparent; /* スマホでのタップハイライト削除 */
         }
 
         .glass-panel {
@@ -75,21 +76,21 @@
     <canvas id="gameCanvas"></canvas>
 
     <!-- HUD -->
-    <div id="hud" class="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start pointer-events-none z-10 select-none">
+    <div id="hud" class="absolute top-0 left-0 w-full p-4 md:p-6 flex justify-between items-start pointer-events-none z-10 select-none bg-transparent">
         <!-- Score -->
-        <div class="flex flex-col gap-1 w-20">
+        <div class="flex flex-col gap-1 w-20 bg-transparent">
             <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">SCORE</div>
             <div id="scoreDisplay" class="text-2xl md:text-3xl font-bold text-white tabular-nums font-['JetBrains_Mono'] tracking-tighter neon-text">0</div>
         </div>
 
         <!-- Target Display (Center) -->
-        <div class="flex flex-col gap-1 items-center transform translate-y-[-5px]">
+        <div class="flex flex-col gap-1 items-center transform translate-y-[-5px] bg-transparent">
             <div class="text-[10px] text-yellow-500/80 tracking-[0.3em] font-bold uppercase">TARGET</div>
             <div id="targetDisplay" class="text-5xl md:text-6xl font-black text-yellow-400 tabular-nums font-['JetBrains_Mono'] tracking-tighter drop-shadow-2xl" style="text-shadow: 0 0 30px rgba(250, 204, 21, 0.4);">10</div>
         </div>
 
         <!-- Next Piece -->
-        <div class="flex flex-col gap-2 items-end w-20">
+        <div class="flex flex-col gap-2 items-end w-20 bg-transparent">
             <div class="text-[10px] text-gray-400 tracking-[0.2em] font-bold uppercase opacity-70">NEXT</div>
             <div class="relative">
                 <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full"></div>
@@ -151,7 +152,7 @@
 
     <script>
         /**
-         * MAKE 10: NEON DROP (v2.1 - Dynamic Target & Initial Rows)
+         * MAKE 10: NEON DROP (v2.2 - Bug Fixes & Enhanced Target Logic)
          */
 
         const COLS = 6;
@@ -298,7 +299,6 @@
                 this.fallingPieces = [];
                 this.nextPieceVal = this.randomNum();
                 
-                // --- NEW: Initialize bottom 2 rows with random blocks ---
                 this.initializeRandomRows(2);
 
                 this.updateUI();
@@ -306,34 +306,27 @@
             }
 
             initializeRandomRows(rowCount) {
-                // Fill bottom 'rowCount' rows
                 for (let r = ROWS - 1; r >= ROWS - rowCount; r--) {
                     for (let c = 0; c < COLS; c++) {
                         let safe = false;
                         let val;
                         let attempts = 0;
                         
-                        // Try to find a value that doesn't immediately clear
                         while (!safe && attempts < 50) {
                             val = this.randomNum();
                             safe = true;
-
-                            // 1. Check if single value equals target (unlikely for 10, but possible for lower targets)
                             if (val === this.targetSum) safe = false;
-
-                            // 2. Check vertical match with block below
                             if (r < ROWS - 1) {
                                 const below = this.grid[r + 1][c];
                                 if (below && (val + below.val === this.targetSum)) {
                                     safe = false;
                                 }
-                                // Also check 3-block sum if we had 3 rows (not needed for 2 rows logic, but good practice)
                             }
                             attempts++;
                         }
                         
-                        // Add block directly to grid
-                        this.grid[r][c] = { val: val, color: this.getColor(val) };
+                        // isClearing flag added to prevent bugs
+                        this.grid[r][c] = { val: val, color: this.getColor(val), isClearing: false };
                     }
                 }
             }
@@ -388,7 +381,6 @@
                     let floorIndex = this.getTopRowIndex(p.col);
                     let targetRow = floorIndex - 1;
                     
-                    // Check against other falling pieces
                     let piecesBelow = 0;
                     for (let j = 0; j < this.fallingPieces.length; j++) {
                         if (i === j) continue;
@@ -408,7 +400,7 @@
                         }
                         p.y = targetPixelY;
                         p.landed = true;
-                        this.grid[targetRow][p.col] = { val: p.val, color: this.getColor(p.val) };
+                        this.grid[targetRow][p.col] = { val: p.val, color: this.getColor(p.val), isClearing: false };
                         this.checkMatch(p.col);
                         this.fallingPieces.splice(i, 1);
                     }
@@ -420,10 +412,13 @@
                 }
             }
 
+            // Check for matches in a specific column
             checkMatch(col) {
                 let stack = [];
                 for (let r = 0; r < ROWS; r++) {
-                    if (this.grid[r][col] !== null) {
+                    // CRITICAL FIX: Ignore blocks that are already marked for clearing
+                    // This prevents them from being counted again if target changes mid-animation
+                    if (this.grid[r][col] !== null && !this.grid[r][col].isClearing) {
                         stack.push({ val: this.grid[r][col].val, r: r });
                     }
                 }
@@ -439,7 +434,6 @@
                         currentSum += stack[j].val;
                         currentIndices.push(stack[j].r);
 
-                        // --- UPDATED: Check against current dynamic target ---
                         if (currentSum === this.targetSum) {
                             matchFound = true;
                             matchIndices = currentIndices;
@@ -450,16 +444,23 @@
                 }
 
                 if (matchFound) {
+                    // Mark as clearing IMMEDIATELY so they aren't reused
+                    matchIndices.forEach(r => {
+                        if(this.grid[r][col]) this.grid[r][col].isClearing = true;
+                    });
+
                     setTimeout(() => {
                         matchIndices.forEach(r => {
-                            const cellVal = this.grid[r][col].val;
-                            this.createExplosion(col, r, this.getColor(cellVal));
-                            this.grid[r][col] = null;
+                            // Double check existence just in case
+                            if (this.grid[r][col]) {
+                                const cellVal = this.grid[r][col].val;
+                                this.createExplosion(col, r, this.getColor(cellVal));
+                                this.grid[r][col] = null;
+                            }
                         });
 
                         this.score += 100 * matchIndices.length;
                         
-                        // --- NEW: Check Target Progression ---
                         this.checkLevelProgression();
                         
                         this.updateUI();
@@ -469,9 +470,8 @@
                 }
             }
 
-            // --- NEW: Dynamic Target Logic ---
             checkLevelProgression() {
-                const levelStep = 500; // Change target every 500 points
+                const levelStep = 1500; // FIX: Changed to 1500 as requested
                 const currentLevel = Math.floor(this.score / levelStep);
 
                 if (currentLevel > this.lastLevel) {
@@ -481,12 +481,11 @@
             }
 
             changeTarget() {
-                // Available targets: 7 to 15
-                const minT = 7;
-                const maxT = 15;
+                const minT = 10; // FIX: Changed to 10-19 range
+                const maxT = 19;
                 
-                // Ensure target actually changes
                 let newTarget = this.targetSum;
+                // Force change
                 while (newTarget === this.targetSum) {
                     newTarget = Math.floor(Math.random() * (maxT - minT + 1)) + minT;
                 }
@@ -494,15 +493,22 @@
                 this.targetSum = newTarget;
                 this.audio.playTargetChange();
 
-                // Trigger visual animation
                 const targetEl = document.getElementById('targetDisplay');
                 targetEl.classList.remove('target-change');
-                void targetEl.offsetWidth; // Trigger reflow
+                void targetEl.offsetWidth;
                 targetEl.classList.add('target-change');
                 
-                // Visual color change hint
                 targetEl.style.color = '#fff';
                 setTimeout(() => { targetEl.style.color = '#facc15'; }, 300);
+
+                // NEW: Check ALL columns for new matches immediately when target changes
+                this.checkAllColumnsMatches();
+            }
+
+            checkAllColumnsMatches() {
+                for (let c = 0; c < COLS; c++) {
+                    this.checkMatch(c);
+                }
             }
 
             applyGravity(col) {
@@ -546,7 +552,6 @@
                 const scoreEl = document.getElementById('scoreDisplay');
                 const targetEl = document.getElementById('targetDisplay');
                 
-                // Score Animation
                 let current = parseInt(scoreEl.innerText);
                 if (current !== this.score) {
                     scoreEl.innerText = this.score;
@@ -558,7 +563,6 @@
                     }, 100);
                 }
 
-                // Update Target Text
                 if (parseInt(targetEl.innerText) !== this.targetSum) {
                     targetEl.innerText = this.targetSum;
                 }
@@ -605,29 +609,40 @@
                 }
                 this.ctx.stroke();
 
-                const drawCell = (val, r, c, yPixel = null) => {
+                const drawCell = (val, r, c, yPixel = null, isClearing = false) => {
                     const x = this.gridOffsetX + c * this.cellWidth;
                     const y = yPixel !== null ? yPixel : this.gridOffsetY + r * this.cellHeight;
                     const size = this.cellWidth * 0.85;
                     const margin = (this.cellWidth - size) / 2;
                     const color = this.getColor(val);
 
-                    this.ctx.shadowBlur = 20;
+                    // Visual feedback for clearing blocks
+                    if (isClearing) {
+                        this.ctx.globalAlpha = 0.5;
+                        this.ctx.fillStyle = '#fff';
+                    } else {
+                        this.ctx.globalAlpha = 1.0;
+                    }
+
+                    this.ctx.shadowBlur = isClearing ? 30 : 20;
                     this.ctx.shadowColor = color;
                     const grad = this.ctx.createLinearGradient(x, y, x, y + size);
                     grad.addColorStop(0, color);
                     grad.addColorStop(1, adjustColor(color, -40));
 
-                    this.ctx.fillStyle = grad;
+                    if (!isClearing) this.ctx.fillStyle = grad;
+                    
                     this.ctx.beginPath();
                     this.ctx.roundRect(x + margin, y + margin, size, size, 10);
                     this.ctx.fill();
                     this.ctx.shadowBlur = 0;
 
-                    this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
-                    this.ctx.beginPath();
-                    this.ctx.ellipse(x + this.cellWidth/2, y + margin + size*0.2, size*0.6, size*0.2, 0, 0, Math.PI * 2);
-                    this.ctx.fill();
+                    if (!isClearing) {
+                        this.ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(x + this.cellWidth/2, y + margin + size*0.2, size*0.6, size*0.2, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
 
                     this.ctx.fillStyle = '#fff';
                     this.ctx.font = `bold ${size * 0.5}px 'JetBrains Mono', monospace`;
@@ -637,6 +652,7 @@
                     this.ctx.shadowBlur = 4;
                     this.ctx.fillText(val, x + this.cellWidth/2, y + this.cellHeight/2 + 2);
                     this.ctx.shadowBlur = 0;
+                    this.ctx.globalAlpha = 1.0;
                 };
 
                 function adjustColor(color, amount) {
@@ -647,7 +663,7 @@
                     for (let r = 0; r < ROWS; r++) {
                         for (let c = 0; c < COLS; c++) {
                             if (this.grid[r][c]) {
-                                drawCell(this.grid[r][c].val, r, c);
+                                drawCell(this.grid[r][c].val, r, c, null, this.grid[r][c].isClearing);
                             }
                         }
                     }
