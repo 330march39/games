@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chicken Race: Ultimate v2</title>
+    <title>Chicken Race: Ultimate v2.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;500;800&family=Noto+Sans+JP:wght@400;700&display=swap');
@@ -58,6 +58,8 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
+            /* Mobile tap highlight fix */
+            -webkit-tap-highlight-color: transparent;
         }
         .mode-card:active {
             transform: scale(0.94);
@@ -89,25 +91,6 @@
             50% { opacity: 1; transform: scale(1.02); }
         }
         .animate-pulse-soft { animation: pulse-soft 2s infinite ease-in-out; }
-
-        .fade-enter {
-            opacity: 0;
-            transform: scale(0.95);
-        }
-        .fade-enter-active {
-            opacity: 1;
-            transform: scale(1);
-            transition: opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .fade-exit {
-            opacity: 1;
-            transform: scale(1);
-        }
-        .fade-exit-active {
-            opacity: 0;
-            transform: scale(1.05);
-            transition: opacity 0.3s ease-in, transform 0.3s ease-in;
-        }
 
     </style>
 </head>
@@ -172,7 +155,6 @@
     <script>
         /**
          * GAME CONFIGURATION
-         * 9 Modes (Samurai removed)
          */
         const MODES = [
             { id: 'BALLOON', name: 'Balloon', icon: '🎈', desc: '風船の限界', color: 'text-blue-500' },
@@ -188,7 +170,6 @@
 
         /**
          * AUDIO SYSTEM
-         * Improved synthesis for smoother, "Apple-like" sound design
          */
         class AudioSynth {
             constructor() {
@@ -196,7 +177,7 @@
                 this.muted = false;
                 this.masterGain = this.ctx.createGain();
                 this.masterGain.connect(this.ctx.destination);
-                this.masterGain.gain.value = 0.4; // Prevent clipping
+                this.masterGain.gain.value = 0.4; 
                 this.activeNodes = [];
             }
 
@@ -210,7 +191,6 @@
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
                 
-                // Soft envelope
                 gain.gain.setValueAtTime(0, this.ctx.currentTime);
                 gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.02);
                 gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + dur);
@@ -221,7 +201,6 @@
                 osc.stop(this.ctx.currentTime + dur);
             }
 
-            // Procedural continuous sound (Tension builder)
             startContinuous(mode) {
                 if (this.muted) return;
                 this.resume();
@@ -237,9 +216,7 @@
 
                 gain.gain.value = 0;
                 
-                // Mode specifics
                 if (mode === 'WATER' || mode === 'TOAST') {
-                    // White Noise for organic textures
                     const bufferSize = this.ctx.sampleRate * 2;
                     const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
                     const data = buffer.getChannelData(0);
@@ -248,41 +225,34 @@
                     const noise = this.ctx.createBufferSource();
                     noise.buffer = buffer;
                     noise.loop = true;
-                    noise.connect(filter); // Connect noise instead of osc
+                    noise.connect(filter);
                     noise.start();
                     this.activeNodes.push(noise);
-                    
                     filter.type = 'lowpass';
                     filter.frequency.value = 100;
                 } else {
-                    // Oscillator for mechanical textures
                     osc.type = (mode === 'CLIFF' || mode === 'ROCKET') ? 'sawtooth' : 'sine';
                     osc.start();
                     this.activeNodes.push(osc);
-                    
                     filter.type = 'lowpass';
                     filter.frequency.value = 200;
                 }
 
                 this.activeGain = gain;
                 this.activeFilter = filter;
-                this.activeOsc = osc; // Might be unused if noise
+                this.activeOsc = osc; 
             }
 
             updateContinuous(ratio, mode) {
                 if (!this.activeGain) return;
                 const now = this.ctx.currentTime;
                 const safeRatio = Math.min(ratio, 1.1);
-
-                // Volume swells with progress
                 this.activeGain.gain.setTargetAtTime(0.3 * safeRatio, now, 0.1);
 
                 if (mode === 'WATER' || mode === 'TOAST') {
-                    // Filter opens up for noise
                     const freq = 100 + (Math.pow(safeRatio, 2) * 4000);
                     this.activeFilter.frequency.setTargetAtTime(freq, now, 0.1);
                 } else {
-                    // Pitch rises
                     const freq = 100 + (safeRatio * 800);
                     if(this.activeOsc) this.activeOsc.frequency.setTargetAtTime(freq, now, 0.1);
                     this.activeFilter.frequency.setTargetAtTime(freq * 2, now, 0.1);
@@ -303,8 +273,7 @@
             playWin(quality) {
                 if (this.muted) return;
                 this.stopContinuous();
-                // Major chord arpeggio, soft and bell-like
-                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major
+                const notes = [523.25, 659.25, 783.99, 1046.50];
                 notes.forEach((freq, i) => {
                     setTimeout(() => this.playTone(freq, 'sine', 0.8, 0.2), i * 60);
                 });
@@ -313,7 +282,6 @@
             playLose() {
                 if (this.muted) return;
                 this.stopContinuous();
-                // Low thud
                 this.playTone(100, 'square', 0.4, 0.3);
                 this.playTone(80, 'sawtooth', 0.5, 0.3);
             }
@@ -326,7 +294,6 @@
         const ctx = canvas.getContext('2d');
         const audio = new AudioSynth();
 
-        // Helper: High DPI Canvas
         function resizeCanvas() {
             const dpr = window.devicePixelRatio || 1;
             canvas.width = window.innerWidth * dpr;
@@ -337,46 +304,45 @@
         let dims = resizeCanvas();
         window.addEventListener('resize', () => dims = resizeCanvas());
 
-        // UI Refs
         const ui = {
             menu: document.getElementById('menu-screen'),
             grid: document.querySelector('#menu-screen .grid'),
             game: document.getElementById('game-ui'),
             resultPanel: document.getElementById('result-panel'),
             resultCard: document.getElementById('result-card'),
-            // Elements
             backBtn: document.getElementById('back-btn'),
             scoreWidget: document.getElementById('score-widget'),
             titleLabel: document.getElementById('game-title-label'),
             bestScore: document.getElementById('best-score'),
             instruction: document.getElementById('instruction'),
             muteBtn: document.getElementById('mute-btn'),
-            // Result Text
             resTitle: document.getElementById('result-title'),
             resScore: document.getElementById('result-score'),
             resComment: document.getElementById('result-comment'),
             resIcon: document.getElementById('result-icon')
         };
 
-        // Build Menu
         MODES.forEach(mode => {
             const card = document.createElement('div');
             card.className = 'mode-card glass-panel aspect-square flex flex-col items-center justify-center text-center p-4';
             card.innerHTML = `
-                <div class="text-4xl mb-3 filter drop-shadow-sm">${mode.icon}</div>
-                <div class="font-bold text-sm text-slate-800 leading-none mb-1">${mode.name}</div>
-                <div class="text-[10px] font-medium text-slate-400 uppercase tracking-wide">${mode.desc}</div>
+                <div class="text-4xl mb-3 filter drop-shadow-sm pointer-events-none">${mode.icon}</div>
+                <div class="font-bold text-sm text-slate-800 leading-none mb-1 pointer-events-none">${mode.name}</div>
+                <div class="text-[10px] font-medium text-slate-400 uppercase tracking-wide pointer-events-none">${mode.desc}</div>
             `;
-            card.onclick = () => game.init(mode);
+            // Use both onclick and touchend for redundancy, but handle duplication
+            card.onclick = (e) => { 
+                e.stopPropagation(); 
+                game.init(mode); 
+            };
             ui.grid.appendChild(card);
         });
 
-        // Game Logic
         const game = {
             config: null,
             state: 'MENU',
             val: 0,
-            limit: 100, // Normalized internally
+            limit: 100,
             particles: [],
             shake: 0,
             
@@ -384,10 +350,9 @@
                 this.config = config;
                 this.state = 'IDLE';
                 this.val = 0;
-                this.limit = 85 + Math.random() * 30; // Randomized Limit
+                this.limit = 85 + Math.random() * 30;
                 this.particles = [];
                 
-                // Transitions
                 ui.menu.classList.add('hidden');
                 ui.game.classList.remove('hidden');
                 ui.instruction.classList.remove('hidden');
@@ -429,18 +394,15 @@
                 let score = 0;
 
                 if (this.val > this.limit) {
-                    // Fail
                     audio.playLose();
                     if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
                     this.spawnParticles(true);
                 } else {
-                    // Win
                     isWin = true;
-                    score = Math.floor(Math.pow(ratio, 6) * 10000); // High risk curve
+                    score = Math.floor(Math.pow(ratio, 6) * 10000); 
                     audio.playWin(ratio);
                     this.spawnParticles(false);
 
-                    // Save
                     const key = `cr_v2_${this.config.id}`;
                     const best = parseInt(localStorage.getItem(key) || 0);
                     if (score > best) {
@@ -449,7 +411,6 @@
                     }
                 }
 
-                // Show Result
                 setTimeout(() => {
                     ui.resultPanel.classList.remove('hidden');
                     ui.resultCard.classList.remove('scale-90', 'opacity-0');
@@ -474,38 +435,30 @@
 
             update() {
                 if (this.state === 'CHARGING') {
-                    // Dynamic speed adjustment
                     const ratio = this.val / this.limit;
-                    const speed = 0.3 + (ratio * 0.5); // Speeds up
+                    const speed = 0.3 + (ratio * 0.5);
                     this.val += speed;
-
-                    // Audio & Haptics
                     audio.updateContinuous(ratio, this.config.id);
                     
-                    // Shake calculation (Exponential)
                     if (ratio > 0.8) {
-                        const severity = (ratio - 0.8) * 5; // 0 to 1
+                        const severity = (ratio - 0.8) * 5;
                         this.shake = Math.pow(severity, 2) * 10;
                         if (navigator.vibrate && Math.random() < 0.2) navigator.vibrate(10);
                     } else {
                         this.shake = 0;
                     }
 
-                    // Auto-fail visually slightly after limit
-                    // Actually, for water, we want to show the spill. 
-                    // Let's allow going slightly over visually before forcing result screen logic.
                     if (this.val > this.limit * 1.2) {
-                        this.endCharge(); // Force stop if user fell asleep
+                        this.endCharge();
                     }
                 } else {
                     this.shake *= 0.9;
                 }
 
-                // Physics update
                 this.particles.forEach(p => {
                     p.x += p.vx;
                     p.y += p.vy;
-                    p.vy += 0.6; // Gravity
+                    p.vy += 0.6;
                     p.life -= 0.015;
                 });
                 this.particles = this.particles.filter(p => p.life > 0);
@@ -535,28 +488,39 @@
             }
         };
 
-        // Input Handlers
+        // --- IMPROVED INPUT HANDLING FOR MOBILE ---
         function handleInput(e) {
-            if (e.target.closest('button')) return;
-            e.preventDefault();
+            // 1. Allow direct interaction with specific UI elements
+            // "closest" checks if the target itself or any parent matches the selector
+            if (e.target.closest('button') || e.target.closest('.mode-card')) {
+                // Allow default browser action (click) to pass through
+                return;
+            }
+
+            // 2. Prevent scrolling/zooming on the game area
+            if (e.cancelable) e.preventDefault();
             
+            // 3. Game Logic
             if (game.state === 'RESULT') {
-                // Retry
-                game.init(game.config);
+                game.init(game.config); // Retry on tapping background
             } else {
                 game.startCharge();
             }
         }
 
         function handleRelease(e) {
+            // No preventDefault here to avoid getting stuck
             game.endCharge();
         }
 
+        // Add listeners with passive: false to allow preventDefault
         window.addEventListener('mousedown', handleInput);
         window.addEventListener('touchstart', handleInput, {passive: false});
+        
         window.addEventListener('mouseup', handleRelease);
         window.addEventListener('touchend', handleRelease);
         
+        // Button event listeners (click handles both mouse and touch taps correctly if propagated)
         ui.backBtn.onclick = (e) => { e.stopPropagation(); game.back(); };
         ui.muteBtn.onclick = (e) => { 
             e.stopPropagation(); 
@@ -571,14 +535,12 @@
             requestAnimationFrame(loop);
             game.update();
 
-            // Clear & Setup
             ctx.clearRect(0, 0, dims.w, dims.h);
             
             if (game.state === 'MENU') return;
 
             ctx.save();
 
-            // Camera Shake
             if (game.shake > 0) {
                 const sx = (Math.random() - 0.5) * game.shake;
                 const sy = (Math.random() - 0.5) * game.shake;
@@ -587,11 +549,9 @@
 
             const cx = dims.w / 2;
             const cy = dims.h / 2;
-            const ratio = game.val / game.limit; // 1.0 is limit
+            const ratio = game.val / game.limit;
             const isFail = game.state === 'RESULT' && game.val > game.limit;
 
-            // --- DRAW MODES ---
-            // Common Shadow for depth
             ctx.shadowBlur = 20;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
 
@@ -607,9 +567,8 @@
                 case 'ROCKET':  drawRocket(cx, cy, ratio, isFail); break;
             }
 
-            ctx.shadowBlur = 0; // Reset shadow for particles
+            ctx.shadowBlur = 0;
 
-            // Draw Particles
             game.particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
@@ -621,16 +580,12 @@
             ctx.restore();
         }
 
-        /**
-         * DRAWING FUNCTIONS
-         */
+        // --- DRAWING FUNCTIONS (Identical to v2.0) ---
         
         function drawBalloon(cx, cy, ratio, popped) {
             if (popped) return;
-            // Smooth easing for size
             const size = 60 + (ratio * 180);
             
-            // String
             ctx.beginPath();
             ctx.moveTo(cx, cy + size);
             ctx.quadraticCurveTo(cx + Math.sin(Date.now()/200)*20, cy + size + 100, cx, cy + size + 200);
@@ -638,17 +593,12 @@
             ctx.lineWidth = 3;
             ctx.stroke();
 
-            // Balloon Body
             const grad = ctx.createRadialGradient(cx - size*0.3, cy - size*0.3, size*0.1, cx, cy, size);
-            
-            // Color shift based on tension
-            const hue = 210 - (Math.min(ratio, 1.1) * 210); // Blue -> Red
+            const hue = 210 - (Math.min(ratio, 1.1) * 210);
             grad.addColorStop(0, `hsla(${hue}, 100%, 80%, 0.9)`);
             grad.addColorStop(1, `hsla(${hue}, 80%, 50%, 0.9)`);
             
             ctx.fillStyle = grad;
-            
-            // Wobble
             const wX = Math.sin(Date.now()/60) * (ratio * 10);
             const wY = Math.cos(Date.now()/70) * (ratio * 10);
             
@@ -656,7 +606,6 @@
             ctx.ellipse(cx + wX, cy + wY, size, size * 1.1, 0, 0, Math.PI*2);
             ctx.fill();
             
-            // Specular Highlight
             ctx.fillStyle = 'rgba(255,255,255,0.4)';
             ctx.beginPath();
             ctx.ellipse(cx - size*0.3 + wX, cy - size*0.3 + wY, size*0.2, size*0.1, -0.5, 0, Math.PI*2);
@@ -668,13 +617,11 @@
             const h = 220;
             const glassY = cy + 50;
 
-            // Glass Body (Back)
             ctx.fillStyle = 'rgba(230, 240, 255, 0.3)';
             ctx.beginPath();
             ctx.roundRect(cx - w/2, glassY - h, w, h, 8);
             ctx.fill();
             
-            // Glass Border
             ctx.strokeStyle = 'rgba(255,255,255, 0.8)';
             ctx.lineWidth = 6;
             ctx.beginPath();
@@ -686,32 +633,22 @@
             ctx.lineTo(cx + w/2, glassY - h);
             ctx.stroke();
 
-            // Water Calculation
-            // 0.0 -> 0.85 : Filling up
-            // 0.85 -> 1.0 : Surface Tension (Bulge)
-            
             const rimY = glassY - h;
             let waterY = glassY;
             let bulgeH = 0;
 
             if (ratio <= 0.85) {
-                // Filling
                 const fillRatio = ratio / 0.85;
                 waterY = glassY - (fillRatio * h);
             } else {
-                // Full + Bulge
                 waterY = rimY;
-                // Bulge grows exponentially near 1.0
-                const tensionRatio = (ratio - 0.85) / 0.15; // 0 to 1
-                bulgeH = tensionRatio * 40; // Max bulge height
+                const tensionRatio = (ratio - 0.85) / 0.15;
+                bulgeH = tensionRatio * 40;
             }
 
-            // If spilled, water cascades down
             if (spilled) {
                 bulgeH = 0;
                 waterY = rimY;
-                
-                // Spill Streams
                 ctx.fillStyle = '#007AFF';
                 ctx.beginPath();
                 ctx.roundRect(cx - w/2 - 15, rimY, 15, h + 50, 5);
@@ -719,29 +656,24 @@
                 ctx.fill();
             }
 
-            // Draw Water Content
             ctx.fillStyle = 'rgba(0, 122, 255, 0.8)';
             ctx.beginPath();
-            ctx.moveTo(cx - w/2 + 4, glassY - 4); // Bottom Left
-            ctx.lineTo(cx + w/2 - 4, glassY - 4); // Bottom Right
+            ctx.moveTo(cx - w/2 + 4, glassY - 4);
+            ctx.lineTo(cx + w/2 - 4, glassY - 4);
             
             if (waterY === rimY) {
-                // At rim or bulging
                 ctx.lineTo(cx + w/2 - 4, rimY);
-                // Surface Curve (Bulge)
                 ctx.bezierCurveTo(
                     cx + w/4, rimY - bulgeH, 
                     cx - w/4, rimY - bulgeH, 
                     cx - w/2 + 4, rimY
                 );
             } else {
-                // Filling
                 ctx.lineTo(cx + w/2 - 4, waterY);
                 ctx.lineTo(cx - w/2 + 4, waterY);
             }
             ctx.fill();
 
-            // Surface highlight line if bulging
             if (bulgeH > 0) {
                 ctx.strokeStyle = 'rgba(255,255,255,0.6)';
                 ctx.lineWidth = 3;
@@ -757,34 +689,26 @@
         }
 
         function drawCliff(cx, cy, ratio, fallen) {
-            // Minimalist abstract visuals
             const groundY = cy + 100;
             const edgeX = cx + 100;
             
-            // Ground
             ctx.fillStyle = '#3A3A3C';
             ctx.fillRect(0, groundY, edgeX, 400);
-            
-            // Warning Strip
             ctx.fillStyle = '#FFD60A';
             ctx.fillRect(edgeX - 30, groundY, 30, 10);
 
-            // Car Position
-            // Start from left (-200) to edge (0 relative to edgeX)
             const startX = cx - 250;
             const dist = edgeX - startX;
             
             let carX = startX + (Math.min(ratio, 1.2) * dist);
-            let carY = groundY - 20; // Wheel bottom
+            let carY = groundY - 20;
             let angle = 0;
 
             if (fallen) {
-                // Animation handled by particles largely, but draw falling car
                 carX = edgeX + 50;
                 carY += 150;
                 angle = 1.0;
             } else {
-                 // Engine vibration
                  carX += (Math.random()-0.5) * (ratio * 4);
                  carY += (Math.random()-0.5) * (ratio * 4);
             }
@@ -793,7 +717,6 @@
             ctx.translate(carX, carY);
             ctx.rotate(angle);
 
-            // Car Body (Porsche-esque silhouette)
             ctx.fillStyle = '#FF3B30';
             ctx.beginPath();
             ctx.moveTo(-40, 0);
@@ -803,7 +726,6 @@
             ctx.quadraticCurveTo(-40, -20, -40, 0);
             ctx.fill();
             
-            // Wheels
             ctx.fillStyle = '#1C1C1E';
             ctx.beginPath(); ctx.arc(-25, 0, 8, 0, Math.PI*2); ctx.fill();
             ctx.beginPath(); ctx.arc(25, 0, 8, 0, Math.PI*2); ctx.fill();
@@ -812,28 +734,22 @@
         }
 
         function drawToast(cx, cy, ratio, burnt) {
-            // Toaster
             ctx.fillStyle = '#AEAEB2';
             ctx.beginPath();
             ctx.roundRect(cx - 80, cy - 40, 160, 100, 16);
             ctx.fill();
-            
-            // Slot
             ctx.fillStyle = '#1C1C1E';
             ctx.fillRect(cx - 60, cy - 40, 120, 10);
 
-            // Toast
-            const popUp = ratio * 30; // Rises slightly
-            
-            // Color interpolation: White -> Golden -> Brown -> Black
+            const popUp = ratio * 30;
             let r, g, b;
-            if (ratio < 0.5) { // White to Golden
+            if (ratio < 0.5) { 
                 const p = ratio / 0.5;
                 r=255; g=255 - (p*50); b=240 - (p*100);
-            } else if (ratio < 1.0) { // Golden to Brown
+            } else if (ratio < 1.0) { 
                 const p = (ratio - 0.5) / 0.5;
                 r=255 - (p*100); g=205 - (p*100); b=140 - (p*100);
-            } else { // Brown to Black
+            } else { 
                 r=50; g=30; b=10;
             }
             
@@ -844,7 +760,6 @@
             ctx.roundRect(cx - 45, cy - 40 - 80 + (30 - popUp), 90, 80, 8);
             ctx.fill();
 
-            // Smoke
             if (ratio > 0.7) {
                 ctx.globalAlpha = (ratio - 0.7) / 0.3;
                 ctx.fillStyle = '#8E8E93';
@@ -858,29 +773,24 @@
 
         function drawPump(cx, cy, ratio, exploded) {
             if (exploded) return;
-
             const tireR = 80 + (ratio * 20);
             
-            // Tire
             ctx.fillStyle = '#1C1C1E';
             ctx.beginPath();
             ctx.arc(cx, cy, tireR, 0, Math.PI*2);
             ctx.fill();
             
-            // Rim
             ctx.fillStyle = '#D1D1D6';
             ctx.beginPath();
             ctx.arc(cx, cy, 50, 0, Math.PI*2);
             ctx.fill();
 
-            // Pump Gauge (Overlay)
             ctx.fillStyle = 'rgba(255,255,255,0.9)';
             ctx.beginPath();
             ctx.arc(cx, cy + 140, 60, 0, Math.PI*2);
             ctx.fill();
             
-            // Needle
-            const angle = -Math.PI + (ratio * Math.PI * 1.5); // -180 to +90
+            const angle = -Math.PI + (ratio * Math.PI * 1.5);
             ctx.strokeStyle = '#FF3B30';
             ctx.lineWidth = 4;
             ctx.beginPath();
@@ -890,15 +800,13 @@
         }
 
         function drawIce(cx, cy, ratio, fallen) {
-            // Cone
-            ctx.fillStyle = '#FFD60A'; // Waffle color
+            ctx.fillStyle = '#FFD60A';
             ctx.beginPath();
             ctx.moveTo(cx, cy + 150);
             ctx.lineTo(cx - 30, cy + 50);
             ctx.lineTo(cx + 30, cy + 50);
             ctx.fill();
 
-            // Detail lines
             ctx.strokeStyle = 'rgba(0,0,0,0.1)';
             ctx.lineWidth = 1;
             ctx.beginPath(); ctx.moveTo(cx, cy+150); ctx.lineTo(cx-20, cy+50); ctx.stroke();
@@ -906,23 +814,21 @@
 
             if (fallen) return;
 
-            // Stack
             const count = 1 + Math.floor(ratio * 8);
             const lean = Math.sin(Date.now()/300) * ratio * 40;
 
             ctx.save();
             ctx.translate(cx, cy + 50);
-            ctx.rotate(lean * 0.01); // Slight lean for whole stack
+            ctx.rotate(lean * 0.01);
 
             for(let i=0; i<count; i++) {
-                // Colors
                 const flavor = i % 3;
-                if (flavor === 0) ctx.fillStyle = '#FFDBF0'; // Strawberry
-                else if (flavor === 1) ctx.fillStyle = '#FEFBE0'; // Vanilla
-                else ctx.fillStyle = '#C0F2D8'; // Mint
+                if (flavor === 0) ctx.fillStyle = '#FFDBF0'; 
+                else if (flavor === 1) ctx.fillStyle = '#FEFBE0'; 
+                else ctx.fillStyle = '#C0F2D8'; 
                 
                 const y = -20 - (i*35);
-                const xOff = Math.sin((Date.now()/200) + i) * (ratio * 5); // Wobbly stack
+                const xOff = Math.sin((Date.now()/200) + i) * (ratio * 5);
 
                 ctx.beginPath();
                 ctx.arc(xOff, y, 28, 0, Math.PI*2);
@@ -933,22 +839,18 @@
 
         function drawBattery(cx, cy, ratio, exploded) {
             if (exploded) return;
-            
-            // Battery Outline
             ctx.strokeStyle = '#8E8E93';
             ctx.lineWidth = 6;
             ctx.strokeRect(cx - 50, cy - 80, 100, 160);
             ctx.fillStyle = '#8E8E93';
-            ctx.fillRect(cx - 30, cy - 95, 60, 15); // Terminal
+            ctx.fillRect(cx - 30, cy - 95, 60, 15);
 
-            // Fill
             const h = 150 * ratio;
             const color = ratio > 1.0 ? '#FF3B30' : (ratio > 0.7 ? '#FFCC00' : '#34C759');
             
             ctx.fillStyle = color;
             ctx.fillRect(cx - 44, cy + 74 - h, 88, h);
 
-            // Lightning Icon
             if (ratio > 0.1) {
                 ctx.fillStyle = 'rgba(255,255,255,0.8)';
                 ctx.font = '40px sans-serif';
@@ -956,7 +858,6 @@
                 ctx.fillText('⚡', cx, cy + 10);
             }
 
-            // Glow
             if (ratio > 0.8) {
                 ctx.shadowBlur = (ratio - 0.8) * 50;
                 ctx.shadowColor = color;
@@ -969,7 +870,6 @@
 
         function drawFishing(cx, cy, ratio, snapped) {
             if (snapped) {
-                // Broken line
                 ctx.strokeStyle = '#8E8E93';
                 ctx.beginPath();
                 ctx.moveTo(cx, cy - 100);
@@ -978,26 +878,20 @@
                 return;
             }
 
-            // Rod Handle (offscreen mostly)
-            
-            // Line Tension
-            const tension = ratio * 50; // Sag reduction
+            const tension = ratio * 50;
             const endY = cy + 100;
             
-            // Line color turns red
             ctx.strokeStyle = ratio > 0.9 ? '#FF3B30' : '#8E8E93';
             ctx.lineWidth = 2;
 
             ctx.beginPath();
-            ctx.moveTo(cx, cy - 150); // Rod tip
-            // Bezier curve simulates tension (straightens out)
-            const cpX = cx + (Math.random()-0.5) * ratio * 10; // Vibration
-            const cpY = cy + (50 * (1 - ratio)); // Control point moves up as tension increases
+            ctx.moveTo(cx, cy - 150);
+            const cpX = cx + (Math.random()-0.5) * ratio * 10;
+            const cpY = cy + (50 * (1 - ratio));
             
             ctx.quadraticCurveTo(cpX, cpY, cx, endY);
             ctx.stroke();
 
-            // Bobber / Lure
             ctx.fillStyle = '#FF3B30';
             ctx.beginPath();
             ctx.arc(cx, endY, 10, 0, Math.PI*2);
@@ -1007,7 +901,6 @@
             ctx.arc(cx, endY, 10, 0, Math.PI, true);
             ctx.fill();
 
-            // Ripples
             if (ratio < 0.5) {
                 ctx.strokeStyle = 'rgba(0,122,255,0.3)';
                 ctx.beginPath();
@@ -1022,24 +915,20 @@
             const shake = (Math.random() - 0.5) * ratio * 10;
             ctx.translate(cx + shake, cy);
 
-            // Rocket
             ctx.fillStyle = '#E5E5EA';
             ctx.beginPath();
             ctx.ellipse(0, 0, 30, 70, 0, 0, Math.PI*2);
             ctx.fill();
             
-            // Fins
             ctx.fillStyle = '#FF3B30';
             ctx.beginPath();
             ctx.moveTo(-20, 40); ctx.lineTo(-40, 70); ctx.lineTo(-20, 60); ctx.fill();
             ctx.beginPath();
             ctx.moveTo(20, 40); ctx.lineTo(40, 70); ctx.lineTo(20, 60); ctx.fill();
 
-            // Window
             ctx.fillStyle = '#5AC8FA';
             ctx.beginPath(); ctx.arc(0, -20, 12, 0, Math.PI*2); ctx.fill();
             
-            // Thrust
             const thrust = ratio * 150;
             ctx.fillStyle = '#FF9500';
             ctx.beginPath();
@@ -1049,7 +938,6 @@
             ctx.fill();
         }
 
-        // Start
         loop();
 
     </script>
