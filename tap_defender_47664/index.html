@@ -370,26 +370,30 @@
                 if (rankUpEffectRef.current.active) {
                     const effect = rankUpEffectRef.current;
                     effect.timer -= 0.02;
-                    if (effect.timer <= 0) effect.active = false;
-
-                    const scale = 1 + (1.0 - effect.timer) * 4; // Expand outward
-                    const alpha = effect.timer;
                     
-                    ctx.save();
-                    ctx.globalAlpha = alpha;
-                    ctx.strokeStyle = '#fbbf24'; // Amber/Gold
-                    ctx.lineWidth = 8 * screenScaleRef.current;
-                    ctx.beginPath();
-                    ctx.arc(player.current.x, player.current.y, player.current.radius * scale, 0, Math.PI * 2);
-                    ctx.stroke();
-                    
-                    // Text Popup
-                    ctx.font = `bold ${40 * screenScaleRef.current}px Orbitron`;
-                    ctx.fillStyle = '#fbbf24';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.fillText(`RANK ${effect.text}!`, player.current.x, player.current.y - (60 * screenScaleRef.current * scale));
-                    ctx.restore();
+                    // FIX: Ensure drawing only happens when timer > 0 to prevent alpha glitch
+                    if (effect.timer <= 0) {
+                        effect.active = false;
+                    } else {
+                        const scale = 1 + (1.0 - effect.timer) * 4; // Expand outward
+                        const alpha = Math.max(0, effect.timer); // Ensure alpha doesn't go negative
+                        
+                        ctx.save();
+                        ctx.globalAlpha = alpha;
+                        ctx.strokeStyle = '#fbbf24'; // Amber/Gold
+                        ctx.lineWidth = 8 * screenScaleRef.current;
+                        ctx.beginPath();
+                        ctx.arc(player.current.x, player.current.y, player.current.radius * scale, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        // Text Popup
+                        ctx.font = `bold ${40 * screenScaleRef.current}px Orbitron`;
+                        ctx.fillStyle = '#fbbf24';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.fillText(`RANK ${effect.text}!`, player.current.x, player.current.y - (60 * screenScaleRef.current * scale));
+                        ctx.restore();
+                    }
                 }
 
                 const pulseRate = healthRef.current < 30 ? 50 : 150;
