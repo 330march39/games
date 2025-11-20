@@ -38,11 +38,13 @@
             flex: 1;
             overflow: hidden;
             background-color: #ffffff;
+            /* 背景画像の設定（スクロールはJSで制御） */
             background-image: 
                 linear-gradient(#e2e8f0 1px, transparent 1px),
                 linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
             background-size: 40px 40px;
             cursor: crosshair;
+            will-change: background-position; /* パフォーマンス最適化 */
         }
 
         canvas {
@@ -207,10 +209,12 @@
     
     // 紙吹雪用
     let confettis = [];
+    let canvasWrapper; // 背景操作用
 
     // --- 4. システム初期化 ---
     window.onload = () => {
         const container = document.getElementById('game-canvas-container');
+        canvasWrapper = document.getElementById('canvas-wrapper');
         width = container.clientWidth;
         height = container.clientHeight;
 
@@ -251,10 +255,7 @@
             height = newH;
             
             if (isGameActive) {
-                Render.lookAt(render, {
-                    min: { x: 0, y: cameraY },
-                    max: { x: width, y: cameraY + height }
-                });
+                updateCamera(true); // 強制更新
             }
         });
     };
@@ -296,14 +297,14 @@
         score = 0;
         stack = [];
         cameraY = 0;
-        confettis = []; // 紙吹雪リセット
+        confettis = [];
         updateScoreDisplay();
+        updateBackground(); // 背景リセット
 
         document.getElementById('menu-overlay').classList.add('opacity-0', 'pointer-events-none');
         document.getElementById('result-panel').classList.add('hidden');
         document.getElementById('drop-btn').classList.remove('disabled');
         
-        // 新記録表示リセット
         document.getElementById('new-record-badge').classList.add('hidden');
         document.getElementById('new-record-text').classList.add('hidden');
 
@@ -326,11 +327,7 @@
 
         Composite.add(engine.world, [platformBody, killZone]);
 
-        Render.lookAt(render, {
-            min: { x: 0, y: 0 },
-            max: { x: width, y: height }
-        });
-
+        updateCamera(true);
         spawnPreview();
     }
 
@@ -347,7 +344,7 @@
             localStorage.setItem('eraser_stack_best', bestScore);
             document.getElementById('best-score-display').innerText = bestScore;
             isNewRecord = true;
-            spawnConfetti(); // 紙吹雪発射
+            spawnConfetti();
             playSound('win');
         }
 
@@ -370,7 +367,6 @@
     function spawnPreview() {
         if (!isGameActive) return;
 
-        // 画面上部から25%の位置
         const previewY = cameraY + (height * 0.25);
 
         currentPreview = {
@@ -394,7 +390,7 @@
             render: { visible: false },
             plugin: { 
                 color: color,
-                hasLanded: false // 【重要】最初は未着地状態
+                hasLanded: false 
             } 
         });
 
@@ -421,7 +417,7 @@
             currentPreview.y = cameraY + (height * 0.25);
         }
 
-        // カメラ追従
+        // カメラロジック
         if (stack.length > 0) {
             let highestY = platformBody.position.y;
             
@@ -434,13 +430,38 @@
             const targetCameraY = highestY - (height * 0.55);
             
             if (targetCameraY < cameraY) {
+                // Lerpでスムーズに
                 cameraY += (targetCameraY - cameraY) * 0.05;
                 
-                Render.lookAt(render, {
-                    min: { x: 0, y: cameraY },
-                    max: { x: width, y: cameraY + height }
-                });
+                // 整数に丸めて微細な振動を防ぐ
+                if (Math.abs(targetCameraY - cameraY) < 0.5) {
+                    // ほぼ到達したら微調整をやめる
+                    // cameraY = targetCameraY; 
+                    // ただしピタッと止めすぎるとガクッとなるので、描画側で整数化する
+                }
+                
+                updateCamera();
             }
+        }
+    }
+    
+    function updateCamera(force = false) {
+        // カメラ座標を整数に丸める（ジッター防止の鍵）
+        const renderY = Math.floor(cameraY);
+        
+        Render.lookAt(render, {
+            min: { x: 0, y: renderY },
+            max: { x: width, y: renderY + height }
+        });
+
+        // 背景も連動してスクロール
+        updateBackground();
+    }
+
+    function updateBackground() {
+        if (canvasWrapper) {
+            // カメラYの逆方向に背景を動かす
+            canvasWrapper.style.backgroundPositionY = `${-Math.floor(cameraY)}px`;
         }
     }
 
@@ -489,10 +510,8 @@
         const ctx = render.context;
         const bounds = render.bounds;
 
-        // 【重要修正】
-        // カメラ移動(Render.lookAt)によるboundsの変化に合わせて、
-        // 描画コンテキストをずらす。これで台座や消しゴムがスクロールするようになる。
         ctx.save();
+        // Render.lookAtで設定されたboundsに基づいて描画全体をずらす
         ctx.translate(-bounds.min.x, -bounds.min.y);
         
         // --- 描画開始 ---
@@ -524,8 +543,8 @@
             drawEraser(ctx, x, y, CONFIG.eraser.w, CONFIG.eraser.h, 0, color, 0.5);
         }
 
-        // 紙吹雪の描画
-        updateAndDrawConfetti(ctx, bounds);
+        // 紙吹雪の描画（座標変換の影響を受けるので、カメラ相対位置からワールド座標に変換して描画）
+        updateAndDrawConfetti(ctx);
 
         // --- 描画終了 ---
         ctx.restore();
@@ -616,32 +635,33 @@
 
     // --- 9. 紙吹雪 (Confetti) ---
     function spawnConfetti() {
-        // 画面の中央（現在のカメラ位置基準）
+        // 画面上部（リザルト画面の上あたり）から発生
         const centerX = width / 2;
-        const centerY = cameraY + height / 2;
+        const startY = cameraY + height * 0.2; // 画面上部20%付近
         
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < 100; i++) {
             confettis.push({
                 x: centerX,
-                y: centerY,
-                vx: (Math.random() - 0.5) * 20,
-                vy: (Math.random() - 1) * 20 - 10, // 上方向に吹き出す
+                y: startY,
+                vx: (Math.random() - 0.5) * 25,
+                vy: (Math.random() - 0.5) * 25 - 5, // 上方向への初速成分
                 angle: Math.random() * 360,
                 vAngle: (Math.random() - 0.5) * 10,
-                color: `hsl(${Math.random() * 360}, 100%, 50%)`,
-                life: 150
+                color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                life: 200
             });
         }
     }
 
-    function updateAndDrawConfetti(ctx, bounds) {
+    function updateAndDrawConfetti(ctx) {
         if (confettis.length === 0) return;
 
         for (let i = confettis.length - 1; i >= 0; i--) {
             const p = confettis[i];
             p.x += p.vx;
             p.y += p.vy;
-            p.vy += 0.5; // 重力
+            p.vy += 0.4; // 重力
+            p.vx *= 0.95; // 空気抵抗
             p.angle += p.vAngle;
             p.life--;
 
@@ -654,7 +674,7 @@
             ctx.translate(p.x, p.y);
             ctx.rotate(p.angle * Math.PI / 180);
             ctx.fillStyle = p.color;
-            ctx.fillRect(-4, -4, 8, 8);
+            ctx.fillRect(-5, -5, 10, 10);
             ctx.restore();
         }
     }
