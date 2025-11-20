@@ -26,7 +26,6 @@
             background-color: #f0f4f8;
             user-select: none;
             -webkit-user-select: none;
-            cursor: pointer; /* クリック可能であることを示す */
         }
 
         /* 背景の方眼紙パターン */
@@ -116,8 +115,13 @@
             </div>
         </div>
 
+        <!-- DROP Button (Always visible during game) -->
+        <button id="drop-action-btn" class="hidden pointer-events-auto absolute bottom-10 left-1/2 -translate-x-1/2 bg-rose-500 hover:bg-rose-600 text-white text-2xl font-black py-6 px-16 rounded-2xl shadow-[0_10px_20px_rgba(225,29,72,0.4)] active:scale-95 active:shadow-sm transition-all z-20 tracking-widest border-b-8 border-rose-700">
+            DROP
+        </button>
+
         <!-- Start / Game Over Screen -->
-        <div id="menu-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-50 transition-opacity duration-300 pointer-events-auto">
+        <div id="menu-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-50 transition-opacity duration-300 pointer-events-auto">
             <div class="text-center space-y-6">
                 <div class="space-y-2 animate-float">
                     <h2 class="text-6xl font-black text-slate-800 tracking-tighter">STACK</h2>
@@ -129,12 +133,10 @@
                     <div class="text-5xl font-black text-slate-800" id="final-score">0</div>
                 </div>
 
-                <button id="start-btn" class="group relative px-8 py-4 bg-slate-900 text-white rounded-full font-bold text-lg shadow-xl hover:bg-slate-800 transition-all active:scale-95 animate-pulse-scale">
+                <button id="start-btn" class="group relative px-10 py-5 bg-slate-900 text-white rounded-full font-bold text-xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 animate-pulse-scale">
                     <span id="start-text">START GAME</span>
                     <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
                 </button>
-                
-                <p class="text-xs text-slate-400 font-medium mt-8">Tap screen to drop</p>
             </div>
         </div>
     </div>
@@ -243,19 +245,31 @@
             Events.on(engine, 'collisionStart', handleCollisions);
             Events.on(engine, 'beforeUpdate', updateGameLoop);
 
-            // --- Input Handling (FIXED) ---
-            const inputHandler = (e) => {
-                // ボタンやUI操作時はゲーム入力を無視
-                if (e.target.closest('.pointer-events-auto') || e.target.tagName === 'BUTTON') return;
-                
+            // --- Input Handling ---
+            // DROPボタン
+            const dropBtn = document.getElementById('drop-action-btn');
+            dropBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleInput();
+            });
+            // スマホ等での連打防止
+            dropBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault(); 
+                e.stopPropagation();
+                handleInput();
+            }, {passive: false});
+
+
+            // 念のため、画面全体のクリックでも落ちるように残しておくが、ボタン推奨
+            const bgInputHandler = (e) => {
+                // UI要素の上なら無視
+                if (e.target.closest('.pointer-events-auto')) return;
                 handleInput();
             };
+            window.addEventListener('pointerdown', bgInputHandler);
             
-            // 修正: window全体でイベントをリッスンし、どこをタップしても反応するようにする
-            // pointerdown はマウス、タッチ、ペン全てに対応
-            window.addEventListener('pointerdown', inputHandler);
-            
-            // スペースキーでも操作可能に
+            // スペースキー
             window.addEventListener('keydown', (e) => {
                 if (e.code === 'Space') handleInput();
             });
@@ -290,22 +304,27 @@
             
             // Reset World
             Composite.clear(engine.world);
-            Engine.clear(engine); // キャッシュクリア等
+            Engine.clear(engine); 
             
             gameActive = true;
             score = 0;
+            // 修正: 画面表示を強制的に0にする
+            document.getElementById('score-display').innerText = '0';
+            
             stack = [];
             cameraY = 0;
-            updateScore(0);
             
             document.getElementById('menu-screen').classList.add('opacity-0', 'pointer-events-none');
             document.getElementById('final-score-container').classList.add('hidden');
+            
+            // DROPボタンを表示
+            document.getElementById('drop-action-btn').classList.remove('hidden');
 
             // Create Platform
             platform = Bodies.rectangle(width / 2, height - 100, CONFIG.platformWidth, CONFIG.platformHeight, { 
                 isStatic: true,
                 friction: 1.0,
-                render: { visible: false }, // カスタム描画のみにする
+                render: { visible: false }, 
                 label: 'platform'
             });
             
@@ -318,7 +337,7 @@
 
             Composite.add(engine.world, [platform, floor]);
             
-            // カメラ位置をリセット
+            // Reset Camera
              Render.lookAt(render, {
                 min: { x: 0, y: 0 },
                 max: { x: width, y: height }
@@ -454,6 +473,9 @@
 
             const menu = document.getElementById('menu-screen');
             menu.classList.remove('opacity-0', 'pointer-events-none');
+            
+            // Hide DROP button on game over
+            document.getElementById('drop-action-btn').classList.add('hidden');
             
             document.getElementById('final-score').innerText = score;
             document.getElementById('final-score-container').classList.remove('hidden');
