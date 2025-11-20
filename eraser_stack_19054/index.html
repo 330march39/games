@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja" class="touch-none">
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Eraser Stack - 消しゴムタワー</title>
-    <meta name="description" content="物理演算パズルゲーム">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,33 +13,37 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+JP:wght@400;700;900&display=swap');
 
-        /* htmlにもtouch-noneを設定してスクロールを完全に防ぐ */
         html, body {
-            touch-action: none;
-            overscroll-behavior: none;
-        }
-
-        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* スクロール禁止 */
+            touch-action: none; /* モバイルでのピンチズームなどを禁止 */
+            background-color: #f8fafc;
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
-            overflow: hidden;
-            background-color: #f0f4f8;
             user-select: none;
             -webkit-user-select: none;
         }
 
-        /* 背景の方眼紙パターン */
-        #game-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
+        /* ゲームエリアとコントロールエリアを分けるレイアウト */
+        #app-root {
+            display: flex;
+            flex-direction: column;
             height: 100%;
+            width: 100%;
+        }
+
+        /* キャンバスエリア */
+        #canvas-wrapper {
+            position: relative;
+            flex: 1; /* 残りのスペースを埋める */
+            overflow: hidden;
             background-color: #ffffff;
             background-image: 
-                linear-gradient(#e5e7eb 1px, transparent 1px),
-                linear-gradient(90deg, #e5e7eb 1px, transparent 1px);
+                linear-gradient(#e2e8f0 1px, transparent 1px),
+                linear-gradient(90deg, #e2e8f0 1px, transparent 1px);
             background-size: 40px 40px;
-            z-index: 1;
+            cursor: crosshair;
         }
 
         canvas {
@@ -49,557 +52,616 @@
             height: 100%;
         }
 
-        /* UI Overlay */
-        .ui-layer {
+        /* コントロールエリア（画面下部固定） */
+        #controls-area {
+            height: 120px; /* 固定高さ */
+            background-color: #ffffff;
+            border-top: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 20px;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            z-index: 20;
+        }
+
+        /* UI Overlay (Score, Start Screen) */
+        .ui-overlay {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            pointer-events: none; /* 下のCanvasをクリック可能に（今回はボタン操作メインだが念のため） */
             z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
         }
 
         .pointer-events-auto {
             pointer-events: auto;
         }
 
-        /* アニメーション */
+        /* アニメーション類 */
         @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-6px); }
         }
-        .animate-float {
-            animation: float 3s ease-in-out infinite;
-        }
+        .animate-float { animation: float 3s ease-in-out infinite; }
 
-        @keyframes pulse-scale {
+        @keyframes pop {
             0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+            50% { transform: scale(1.2); }
             100% { transform: scale(1); }
         }
-        .animate-pulse-scale {
-            animation: pulse-scale 2s ease-in-out infinite;
-        }
+        .animate-pop { animation: pop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 
-        #score-display {
-            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        /* ボタンのスタイル */
+        .btn-push {
+            background: #ef4444;
+            border-bottom: 6px solid #b91c1c;
+            color: white;
+            transition: all 0.1s;
         }
-        .score-bump {
-            transform: scale(1.5);
+        .btn-push:active {
+            transform: translateY(4px);
+            border-bottom: 2px solid #b91c1c;
+        }
+        .btn-push.disabled {
+            background: #cbd5e1;
+            border-bottom: 6px solid #94a3b8;
+            cursor: not-allowed;
+            transform: none;
         }
     </style>
 </head>
 <body>
 
-    <div id="game-container"></div>
+<div id="app-root">
+    <!-- ゲーム描画エリア -->
+    <div id="canvas-wrapper">
+        <div id="game-canvas-container" class="w-full h-full"></div>
 
-    <!-- UI Layer -->
-    <div class="ui-layer p-6">
-        <!-- Top HUD -->
-        <div class="flex justify-between items-start">
-            <div class="text-slate-800">
-                <h1 class="text-sm font-bold tracking-widest opacity-50 uppercase">Eraser Stack</h1>
-                <div class="flex items-baseline gap-2">
-                    <span class="text-4xl font-black" id="score-display">0</span>
-                    <span class="text-sm font-bold text-slate-500">個</span>
+        <!-- スコア表示 -->
+        <div class="ui-overlay p-4 flex justify-between items-start">
+            <div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">SCORE</div>
+                <div class="flex items-baseline">
+                    <span id="score-display" class="text-4xl font-black text-slate-800">0</span>
+                    <span class="text-sm font-bold text-slate-500 ml-1">個</span>
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">Best</div>
-                <div class="text-xl font-bold text-slate-600" id="best-score-display">0</div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-widest">BEST</div>
+                <div id="best-score-display" class="text-2xl font-bold text-slate-600">0</div>
             </div>
         </div>
 
-        <!-- DROP Button (Always visible during game) -->
-        <button id="drop-action-btn" class="hidden pointer-events-auto absolute bottom-10 left-1/2 -translate-x-1/2 bg-rose-500 hover:bg-rose-600 text-white text-2xl font-black py-6 px-16 rounded-2xl shadow-[0_10px_20px_rgba(225,29,72,0.4)] active:scale-95 active:shadow-sm transition-all z-20 tracking-widest border-b-8 border-rose-700">
-            DROP
-        </button>
-
-        <!-- Start / Game Over Screen -->
-        <div id="menu-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm z-50 transition-opacity duration-300 pointer-events-auto">
-            <div class="text-center space-y-6">
-                <div class="space-y-2 animate-float">
-                    <h2 class="text-6xl font-black text-slate-800 tracking-tighter">STACK</h2>
-                    <p class="text-slate-500 font-bold tracking-widest">消しゴムタワー</p>
-                </div>
-                
-                <div id="final-score-container" class="hidden bg-slate-100 rounded-2xl p-6 border border-slate-200">
-                    <div class="text-sm text-slate-500 font-bold mb-1">RESULT</div>
-                    <div class="text-5xl font-black text-slate-800" id="final-score">0</div>
+        <!-- スタート / ゲームオーバー画面 -->
+        <div id="menu-overlay" class="ui-overlay flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm pointer-events-auto transition-opacity duration-300">
+            <div class="text-center">
+                <div class="mb-8 animate-float">
+                    <h1 class="text-5xl font-black text-slate-800 tracking-tighter mb-2">STACK</h1>
+                    <p class="text-slate-500 font-bold text-sm tracking-[0.3em]">ERASER TOWER</p>
                 </div>
 
-                <button id="start-btn" class="group relative px-10 py-5 bg-slate-900 text-white rounded-full font-bold text-xl shadow-xl hover:bg-slate-800 transition-all active:scale-95 animate-pulse-scale">
-                    <span id="start-text">START GAME</span>
-                    <div class="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
+                <!-- リザルト表示 -->
+                <div id="result-panel" class="hidden mb-8 bg-white p-6 rounded-2xl shadow-lg border border-slate-100">
+                    <div class="text-xs font-bold text-slate-400 mb-1">RECORD</div>
+                    <div class="text-4xl font-black text-slate-800" id="final-score">0</div>
+                </div>
+
+                <button id="start-btn" class="bg-slate-900 text-white px-10 py-4 rounded-full font-bold text-xl shadow-xl hover:bg-slate-800 transition-transform active:scale-95">
+                    START GAME
                 </button>
             </div>
         </div>
     </div>
 
-    <script>
-        // --- Game Constants & Config ---
-        const CONFIG = {
-            eraserWidth: 120,
-            eraserHeight: 40,
-            platformWidth: 220,
-            platformHeight: 30,
-            swingSpeed: 0.003, 
-            swingRange: 0.85, 
-            colors: {
-                sleeve: '#3b82f6', 
-                rubber: '#ffffff', 
-                accent: '#1d4ed8',
-                platform: '#334155'
+    <!-- コントロールエリア（ボタン配置） -->
+    <div id="controls-area">
+        <button id="drop-btn" class="btn-push w-full max-w-md h-16 rounded-xl text-2xl font-black tracking-widest flex items-center justify-center gap-2 disabled">
+            <span>DROP</span>
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+        </button>
+    </div>
+</div>
+
+<script>
+    // --- 1. 設定と定数 ---
+    const CONFIG = {
+        eraser: { w: 120, h: 40 },
+        platform: { w: 220, h: 40 },
+        swing: { speed: 0.0035, rangeRatio: 0.85 },
+        colors: {
+            sleeve: '#3b82f6',
+            rubber: '#ffffff',
+            platform: '#475569'
+        }
+    };
+
+    // --- 2. Matter.js エイリアス ---
+    const Engine = Matter.Engine,
+          Render = Matter.Render,
+          Runner = Matter.Runner,
+          Bodies = Matter.Bodies,
+          Composite = Matter.Composite,
+          Events = Matter.Events,
+          Vector = Matter.Vector;
+
+    // --- 3. グローバル変数 ---
+    let engine, render, runner;
+    let width, height;
+    let isGameActive = false;
+    let score = 0;
+    let bestScore = localStorage.getItem('eraser_stack_best') || 0;
+    
+    // ゲームオブジェクト参照
+    let platformBody;
+    let currentPreview = null; // 落下前の消しゴム情報
+    let stack = []; // 積まれた消しゴムのBodyリスト
+    let cameraY = 0;
+
+    // --- 4. システム初期化 (window.onload) ---
+    window.onload = () => {
+        const container = document.getElementById('game-canvas-container');
+        width = container.clientWidth;
+        height = container.clientHeight;
+
+        // ベストスコア表示更新
+        document.getElementById('best-score-display').innerText = bestScore;
+
+        // エンジン作成
+        engine = Engine.create();
+        // 安定性を高める設定
+        engine.positionIterations = 8;
+        engine.velocityIterations = 8;
+
+        // レンダラー作成
+        render = Render.create({
+            element: container,
+            engine: engine,
+            options: {
+                width: width,
+                height: height,
+                wireframes: false, // 画像を使わずカスタム描画するためfalse
+                background: 'transparent',
+                pixelRatio: window.devicePixelRatio
             }
+        });
+
+        // 物理演算とレンダリングのループ開始
+        runner = Runner.create();
+        Runner.run(runner, engine);
+        Render.run(render);
+
+        // イベントリスナー登録
+        Events.on(render, 'afterRender', renderGame); // 描画ループ
+        Events.on(engine, 'beforeUpdate', updateGameLogic); // 計算ループ
+        Events.on(engine, 'collisionStart', handleCollisions); // 衝突判定
+
+        // UIイベント設定
+        setupUI();
+        
+        // リサイズ対応
+        window.addEventListener('resize', () => {
+            const newW = container.clientWidth;
+            const newH = container.clientHeight;
+            render.canvas.width = newW * window.devicePixelRatio;
+            render.canvas.height = newH * window.devicePixelRatio;
+            width = newW;
+            height = newH;
+            // リサイズ時はカメラ位置のみ調整（ゲームリセットはしない）
+        });
+    };
+
+    // --- 5. UI入力設定 ---
+    function setupUI() {
+        const startBtn = document.getElementById('start-btn');
+        const dropBtn = document.getElementById('drop-btn');
+        const menuOverlay = document.getElementById('menu-overlay');
+
+        // スタートボタン
+        startBtn.onclick = () => {
+            startGame();
         };
 
-        // --- Matter.js Modules ---
-        const Engine = Matter.Engine,
-              Render = Matter.Render,
-              Runner = Matter.Runner,
-              Bodies = Matter.Bodies,
-              Composite = Matter.Composite,
-              Events = Matter.Events,
-              Body = Matter.Body,
-              Vector = Matter.Vector;
-
-        // --- Global Variables ---
-        let engine, render, runner;
-        let width, height;
-        let currentEraserBody = null;
-        let platform;
-        let gameActive = false;
-        let score = 0;
-        let stack = [];
-        let cameraY = 0;
-
-        // --- Audio ---
-        const playSound = (type) => {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            if (!AudioContext) return;
-            const ctx = new AudioContext();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            const now = ctx.currentTime;
-            
-            if (type === 'drop') {
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(500, now);
-                osc.frequency.exponentialRampToValueAtTime(100, now + 0.15);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-                osc.start(now);
-                osc.stop(now + 0.15);
-            } else if (type === 'hit') {
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(150, now);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-                osc.start(now);
-                osc.stop(now + 0.05);
-            } else if (type === 'over') {
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.linearRampToValueAtTime(50, now + 0.5);
-                gain.gain.setValueAtTime(0.1, now);
-                gain.gain.linearRampToValueAtTime(0.01, now + 0.5);
-                osc.start(now);
-                osc.stop(now + 0.5);
-            }
-        };
-
-        // --- Initialization ---
-        function init() {
-            const container = document.getElementById('game-container');
-            width = container.clientWidth;
-            height = container.clientHeight;
-
-            // Engine Setup
-            engine = Engine.create();
-            engine.positionIterations = 10; // 精度向上
-            engine.velocityIterations = 10;
-
-            // Renderer Setup
-            render = Render.create({
-                element: container,
-                engine: engine,
-                options: {
-                    width: width,
-                    height: height,
-                    wireframes: false,
-                    background: 'transparent',
-                    pixelRatio: window.devicePixelRatio
-                }
-            });
-
-            // Custom Rendering Hook
-            Events.on(render, 'afterRender', renderCustomGraphics);
-            Events.on(engine, 'collisionStart', handleCollisions);
-            Events.on(engine, 'beforeUpdate', updateGameLoop);
-
-            // --- Input Handling ---
-            // DROPボタン
-            const dropBtn = document.getElementById('drop-action-btn');
-            dropBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleInput();
-            });
-            // スマホ等での連打防止
-            dropBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault(); 
-                e.stopPropagation();
-                handleInput();
-            }, {passive: false});
-
-
-            // 念のため、画面全体のクリックでも落ちるように残しておくが、ボタン推奨
-            const bgInputHandler = (e) => {
-                // UI要素の上なら無視
-                if (e.target.closest('.pointer-events-auto')) return;
-                handleInput();
-            };
-            window.addEventListener('pointerdown', bgInputHandler);
-            
-            // スペースキー
-            window.addEventListener('keydown', (e) => {
-                if (e.code === 'Space') handleInput();
-            });
-
-            // Resize Handler
-            window.addEventListener('resize', () => {
-                width = container.clientWidth;
-                height = container.clientHeight;
-                render.canvas.width = width * window.devicePixelRatio;
-                render.canvas.height = height * window.devicePixelRatio;
-            });
-
-            document.getElementById('start-btn').addEventListener('click', startGame);
-
-            // Start Systems
-            runner = Runner.create();
-            Runner.run(runner, engine);
-            Render.run(render);
-
-            // Load Best Score
-            const best = localStorage.getItem('eraser_stack_best') || 0;
-            document.getElementById('best-score-display').innerText = best;
-        }
-
-        // --- Game Logic ---
-
-        function startGame(e) {
-            if(e) {
-                e.preventDefault();
+        // ドロップボタン (タッチとクリックの両対応)
+        const handleDrop = (e) => {
+            if (e) {
+                e.preventDefault(); // タッチ時のズームなどを防止
                 e.stopPropagation();
             }
+            if (!isGameActive || !currentPreview) return;
             
-            // Reset World
-            Composite.clear(engine.world);
-            Engine.clear(engine); 
-            
-            gameActive = true;
-            score = 0;
-            // 修正: 画面表示を強制的に0にする
-            document.getElementById('score-display').innerText = '0';
-            
-            stack = [];
-            cameraY = 0;
-            
-            document.getElementById('menu-screen').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('final-score-container').classList.add('hidden');
-            
-            // DROPボタンを表示
-            document.getElementById('drop-action-btn').classList.remove('hidden');
+            // ボタンアニメーション（視覚フィードバック）
+            dropBtn.classList.add('scale-95');
+            setTimeout(() => dropBtn.classList.remove('scale-95'), 100);
 
-            // Create Platform
-            platform = Bodies.rectangle(width / 2, height - 100, CONFIG.platformWidth, CONFIG.platformHeight, { 
-                isStatic: true,
-                friction: 1.0,
-                render: { visible: false }, 
-                label: 'platform'
-            });
-            
-            // Invisible floor
-            const floor = Bodies.rectangle(width / 2, height + 500, width * 4, 100, {
-                isStatic: true,
-                isSensor: true,
-                label: 'floor'
-            });
-
-            Composite.add(engine.world, [platform, floor]);
-            
-            // Reset Camera
-             Render.lookAt(render, {
-                min: { x: 0, y: 0 },
-                max: { x: width, y: height }
-            });
-
-            spawnNewEraserPreview();
-        }
-
-        function spawnNewEraserPreview() {
-            if (!gameActive) return;
-
-            currentEraserBody = {
-                x: width / 2,
-                y: 120, 
-                angle: 0,
-                width: CONFIG.eraserWidth,
-                height: CONFIG.eraserHeight,
-                color: CONFIG.colors.sleeve
-            };
-        }
-
-        function handleInput() {
-            if (!gameActive || !currentEraserBody) return;
             dropEraser();
+        };
+
+        // addEventListenerで確実に登録
+        dropBtn.addEventListener('mousedown', handleDrop);
+        dropBtn.addEventListener('touchstart', handleDrop, { passive: false });
+        
+        // スペースキー対応
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') handleDrop(e);
+        });
+    }
+
+    // --- 6. ゲームサイクル制御 ---
+
+    function startGame() {
+        isGameActive = true;
+        score = 0;
+        stack = [];
+        cameraY = 0;
+        updateScoreDisplay();
+
+        // メニューを隠す
+        const menu = document.getElementById('menu-overlay');
+        menu.classList.add('opacity-0', 'pointer-events-none');
+        document.getElementById('result-panel').classList.add('hidden');
+        
+        // ボタン有効化
+        const dropBtn = document.getElementById('drop-btn');
+        dropBtn.classList.remove('disabled');
+
+        // 物理ワールドのリセット（重要）
+        Composite.clear(engine.world);
+        Engine.clear(engine); // キャッシュ等のクリア
+
+        // 台座の作成
+        // 台座位置: 画面下から少し浮かせた位置 (ボタンエリアがあるので、Canvasの下端付近でもOKだが、少し余白を持たせる)
+        const platformY = height - 60; 
+        platformBody = Bodies.rectangle(width / 2, platformY, CONFIG.platform.w, CONFIG.platform.h, {
+            isStatic: true,
+            friction: 1.0,
+            label: 'platform',
+            render: { visible: false } // カスタム描画
+        });
+
+        // ゲームオーバー判定用の床（画面外）
+        const killZone = Bodies.rectangle(width / 2, height + 200, width * 5, 50, {
+            isStatic: true,
+            isSensor: true, // 物理衝突はしないが検知はする
+            label: 'killZone'
+        });
+
+        Composite.add(engine.world, [platformBody, killZone]);
+
+        // カメラリセット
+        Render.lookAt(render, {
+            min: { x: 0, y: 0 },
+            max: { x: width, y: height }
+        });
+
+        // 最初の消しゴム生成準備
+        spawnPreview();
+    }
+
+    function gameOver() {
+        if (!isGameActive) return;
+        isGameActive = false;
+        playSound('over');
+
+        // ボタン無効化
+        document.getElementById('drop-btn').classList.add('disabled');
+
+        // ベストスコア更新
+        if (score > bestScore) {
+            bestScore = score;
+            localStorage.setItem('eraser_stack_best', bestScore);
+            document.getElementById('best-score-display').innerText = bestScore;
         }
 
-        function dropEraser() {
-            const { x, y, width: w, height: h, color } = currentEraserBody;
+        // リザルト画面表示
+        const menu = document.getElementById('menu-overlay');
+        menu.classList.remove('opacity-0', 'pointer-events-none');
+        
+        document.getElementById('result-panel').classList.remove('hidden');
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('start-btn').innerText = "RETRY";
+    }
 
-            // Create Physics Body
-            const eraser = Bodies.rectangle(x, y, w, h, {
-                restitution: 0.05, // あまり跳ねない
-                friction: 0.9,     // よく止まる
-                frictionStatic: 1.0,
-                density: 0.004,    // 重め
-                label: 'eraser',
-                render: { visible: false }, // カスタム描画
-                plugin: { color: color }
-            });
+    // --- 7. ゲームロジック (落下と生成) ---
 
-            Composite.add(engine.world, eraser);
-            stack.push(eraser);
+    function spawnPreview() {
+        if (!isGameActive) return;
+
+        // プレビュー用のデータオブジェクトを作成（物理ボディではない）
+        currentPreview = {
+            x: width / 2,
+            y: cameraY + 100, // カメラ位置に追従して上部に表示
+            angle: 0,
+            color: CONFIG.colors.sleeve
+        };
+    }
+
+    function dropEraser() {
+        if (!currentPreview) return;
+
+        // プレビューの位置に物理ボディを生成
+        const { x, y, color } = currentPreview;
+
+        const eraser = Bodies.rectangle(x, y, CONFIG.eraser.w, CONFIG.eraser.h, {
+            restitution: 0.1, // 少し跳ねる
+            friction: 0.8,    // 滑りにくい
+            density: 0.002,
+            label: 'eraser',
+            plugin: { color: color } // 描画用に色を保存
+        });
+
+        Composite.add(engine.world, eraser);
+        stack.push(eraser);
+        playSound('drop');
+
+        // プレビューを消して、次を待機
+        currentPreview = null;
+
+        // 0.8秒後に次を生成（ゲームオーバーしてなければ）
+        setTimeout(() => {
+            if (isGameActive) spawnPreview();
+        }, 800);
+    }
+
+    function updateGameLogic() {
+        if (!isGameActive) return;
+        
+        const time = engine.timing.timestamp;
+
+        // 1. プレビューの揺れ (Swing)
+        if (currentPreview) {
+            // sin波で左右移動
+            const offsetX = Math.sin(time * CONFIG.swing.speed) * (width * CONFIG.swing.rangeRatio / 2);
+            currentPreview.x = (width / 2) + offsetX;
+            currentPreview.y = cameraY + 120; // 常に画面上部に維持
+        }
+
+        // 2. カメラ追従 (Camera Follow)
+        // 積み上がった消しゴムの最高到達点を探す
+        if (stack.length > 0) {
+            let highestY = platformBody.position.y; // スタート地点
             
-            playSound('drop');
-            currentEraserBody = null;
-
-            setTimeout(() => {
-                if (gameActive) spawnNewEraserPreview();
-            }, 800);
-        }
-
-        function updateGameLoop() {
-            if (!gameActive) return;
-            const time = engine.timing.timestamp;
-
-            // 1. Preview Swing
-            if (currentEraserBody) {
-                const swingX = Math.sin(time * CONFIG.swingSpeed) * (width * CONFIG.swingRange / 2);
-                currentEraserBody.x = (width / 2) + swingX;
-                currentEraserBody.y = cameraY + 150;
-            }
-
-            // 2. Camera Follow
-            if (stack.length > 0) {
-                let highestY = height;
-                stack.forEach(body => {
-                    if (body.position.y < highestY) highestY = body.position.y;
-                });
-
-                const targetY = highestY - (height * 0.6);
-                
-                if (targetY < cameraY) {
-                    cameraY += (targetY - cameraY) * 0.08; // Smoothness
-                    
-                    Render.lookAt(render, {
-                        min: { x: 0, y: cameraY },
-                        max: { x: width, y: cameraY + height }
-                    });
-                }
-            }
-        }
-
-        function handleCollisions(event) {
-            const pairs = event.pairs;
-
-            pairs.forEach(pair => {
-                const { bodyA, bodyB } = pair;
-                
-                // Game Over Check
-                if (bodyA.label === 'floor' || bodyB.label === 'floor') {
-                    const fallingBody = bodyA.label === 'floor' ? bodyB : bodyA;
-                    if (fallingBody.label === 'eraser') {
-                        gameOver();
-                    }
-                }
-
-                // Sound Effect & Scoring
-                if ((bodyA.label === 'eraser' && bodyB.label === 'platform') ||
-                    (bodyA.label === 'eraser' && bodyB.label === 'eraser')) {
-                    
-                    const speed = Vector.magnitude(bodyA.velocity) + Vector.magnitude(bodyB.velocity);
-                    if (speed > 0.5) {
-                        playSound('hit');
-                    }
-                    
-                    // 更新: スタック数でスコア更新
-                    updateScore(stack.length);
-                }
-            });
-        }
-
-        function updateScore(val) {
-            if (val === score) return;
-            score = val;
-            const el = document.getElementById('score-display');
-            el.innerText = score;
-            
-            el.classList.remove('score-bump');
-            void el.offsetWidth; 
-            el.classList.add('score-bump');
-        }
-
-        function gameOver() {
-            if (!gameActive) return;
-            gameActive = false;
-            playSound('over');
-
-            const currentBest = parseInt(localStorage.getItem('eraser_stack_best') || 0);
-            if (score > currentBest) {
-                localStorage.setItem('eraser_stack_best', score);
-                document.getElementById('best-score-display').innerText = score;
-            }
-
-            const menu = document.getElementById('menu-screen');
-            menu.classList.remove('opacity-0', 'pointer-events-none');
-            
-            // Hide DROP button on game over
-            document.getElementById('drop-action-btn').classList.add('hidden');
-            
-            document.getElementById('final-score').innerText = score;
-            document.getElementById('final-score-container').classList.remove('hidden');
-            document.getElementById('start-text').innerText = "RETRY";
-        }
-
-        // --- Custom Rendering ---
-        function renderCustomGraphics() {
-            const ctx = render.context;
-
-            // 0. Draw Platform (Static)
-            if (gameActive && platform) {
-                const { x, y } = platform.position;
-                const w = CONFIG.platformWidth;
-                const h = CONFIG.platformHeight;
-                
-                ctx.fillStyle = CONFIG.colors.platform;
-                ctx.beginPath();
-                ctx.roundRect(x - w/2, y - h/2, w, h, 4);
-                ctx.fill();
-                
-                // Simple desk texture lines
-                ctx.strokeStyle = "rgba(255,255,255,0.1)";
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(x - w/2 + 10, y - h/2 + 5);
-                ctx.lineTo(x + w/2 - 10, y - h/2 + 5);
-                ctx.stroke();
-            }
-            
-            // 1. Draw Spawner Preview
-            if (currentEraserBody) {
-                const { x, y, width: w, height: h, color } = currentEraserBody;
-                
-                ctx.save();
-                ctx.translate(x, y); 
-                
-                // Crane Line
-                ctx.beginPath();
-                ctx.moveTo(0, -2000); 
-                ctx.lineTo(0, 0);
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#94a3b8';
-                ctx.setLineDash([6, 4]);
-                ctx.stroke();
-
-                // Eraser Ghost
-                drawEraserVisual(ctx, 0, 0, w, h, 0, color, 0.6);
-                
-                ctx.restore();
-            }
-
-            // 2. Draw Active Erasers
             stack.forEach(body => {
-                const { x, y } = body.position;
-                const w = CONFIG.eraserWidth;
-                const h = CONFIG.eraserHeight;
-                const angle = body.angle;
-                const color = body.plugin.color || CONFIG.colors.sleeve;
-
-                ctx.save();
-                ctx.translate(x, y);
-                ctx.rotate(angle);
-                drawEraserVisual(ctx, 0, 0, w, h, angle, color, 1.0);
-                ctx.restore();
+                if (body.position.y < highestY) highestY = body.position.y;
             });
+
+            // 目標：最高地点が画面の60%くらいの位置に来るように
+            const targetCameraY = highestY - (height * 0.6);
+            
+            // カメラは上にしか行かない（または現在の位置より高ければ移動）
+            if (targetCameraY < cameraY) {
+                // スムーズに移動 (Linear Interpolation)
+                cameraY += (targetCameraY - cameraY) * 0.05;
+                
+                // Renderのビューポートを更新
+                Render.lookAt(render, {
+                    min: { x: 0, y: cameraY },
+                    max: { x: width, y: cameraY + height }
+                });
+            }
+        }
+    }
+
+    function handleCollisions(event) {
+        const pairs = event.pairs;
+
+        pairs.forEach(pair => {
+            const { bodyA, bodyB } = pair;
+
+            // ゲームオーバー判定 (killZoneに触れたら)
+            if (bodyA.label === 'killZone' || bodyB.label === 'killZone') {
+                // 落ちたのが消しゴムなら終了
+                if (bodyA.label === 'eraser' || bodyB.label === 'eraser') {
+                    gameOver();
+                }
+            }
+
+            // スコア判定と音
+            // 消しゴム同士、または消しゴムと台座が衝突
+            const isEraserContact = (bodyA.label === 'eraser' && bodyB.label === 'eraser') ||
+                                    (bodyA.label === 'eraser' && bodyB.label === 'platform') ||
+                                    (bodyB.label === 'eraser' && bodyA.label === 'platform');
+
+            if (isEraserContact) {
+                // 衝突速度が一定以上なら音を鳴らす
+                const speed = Vector.magnitude(Vector.sub(bodyA.velocity, bodyB.velocity));
+                if (speed > 1) playSound('hit');
+
+                // スコア更新：単純に「現在ワールドに存在する消しゴムの数」とする
+                // (killZoneに落ちたものは後で削除されるロジックを入れるとより正確だが、今回はstack数で簡易管理)
+                const currentStackCount = stack.length;
+                if (currentStackCount > score) {
+                    score = currentStackCount;
+                    updateScoreDisplay();
+                }
+            }
+        });
+    }
+
+    function updateScoreDisplay() {
+        const el = document.getElementById('score-display');
+        el.innerText = score;
+        // ポップアニメーション
+        el.classList.remove('animate-pop');
+        void el.offsetWidth; // Reflow
+        el.classList.add('animate-pop');
+    }
+
+    // --- 8. カスタム描画 ---
+
+    function renderGame() {
+        const ctx = render.context;
+        
+        // 背景はCSSで描画済みなので省略
+
+        // --- 台座の描画 ---
+        if (platformBody) {
+            const { x, y } = platformBody.position;
+            drawFancyRect(ctx, x, y, CONFIG.platform.w, CONFIG.platform.h, 0, CONFIG.colors.platform, true);
         }
 
-        function drawEraserVisual(ctx, x, y, w, h, angle, color, opacity) {
-            const sleeveRatio = 0.6; 
-            const r = 3; 
+        // --- 消しゴム（実体）の描画 ---
+        stack.forEach(body => {
+            const { x, y } = body.position;
+            const angle = body.angle;
+            const color = body.plugin.color || CONFIG.colors.sleeve;
+            drawEraser(ctx, x, y, CONFIG.eraser.w, CONFIG.eraser.h, angle, color, 1.0);
+        });
 
-            ctx.globalAlpha = opacity;
-
-            // Shadow
-            ctx.shadowColor = "rgba(0,0,0,0.1)";
-            ctx.shadowBlur = 8;
-            ctx.shadowOffsetY = 4;
-
-            // 1. White Rubber
-            ctx.fillStyle = CONFIG.colors.rubber;
-            ctx.beginPath();
-            ctx.roundRect(-w/2, -h/2, w, h, r);
-            ctx.fill();
-
-            ctx.shadowColor = "transparent";
-
-            // 2. Blue Sleeve
-            const sleeveW = w * sleeveRatio;
+        // --- プレビュー（幽霊）の描画 ---
+        if (currentPreview) {
+            const { x, y, color } = currentPreview;
             
-            ctx.save();
+            // クレーンの紐を描画
             ctx.beginPath();
-            ctx.roundRect(-w/2, -h/2, w, h, r);
-            ctx.clip(); // Clip to rounded shape
-            
-            ctx.fillStyle = color;
-            ctx.fillRect(-w/2, -h/2, sleeveW, h);
-            
-            // Sleeve Details
-            ctx.fillStyle = "rgba(255,255,255,0.2)";
-            ctx.fillRect(-w/2 + 12, -h/2, 4, h); 
-
-            // "ERASER" Text
-            ctx.fillStyle = "white";
-            ctx.font = "700 12px Inter, sans-serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.letterSpacing = "1px";
-            ctx.fillText("ERASER", -w/2 + sleeveW/2, 1);
-
-            ctx.restore();
-
-            // 3. Outline (Subtle)
-            ctx.strokeStyle = "rgba(0,0,0,0.05)";
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.roundRect(-w/2, -h/2, w, h, r);
+            ctx.moveTo(x, y); // 消しゴム中心
+            ctx.lineTo(x, cameraY - 200); // 画面上へ
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#94a3b8"; // slate-400
+            ctx.setLineDash([5, 5]);
             ctx.stroke();
+            ctx.setLineDash([]);
 
-            ctx.globalAlpha = 1.0;
+            drawEraser(ctx, x, y, CONFIG.eraser.w, CONFIG.eraser.h, 0, color, 0.5);
+        }
+    }
+
+    function drawEraser(ctx, x, y, w, h, angle, color, opacity) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        ctx.globalAlpha = opacity;
+
+        // 影
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 5;
+
+        // 消しゴムの白い部分（全体）
+        ctx.fillStyle = CONFIG.colors.rubber;
+        roundRect(ctx, -w/2, -h/2, w, h, 4);
+        ctx.fill();
+        
+        ctx.shadowColor = "transparent";
+
+        // 青いケース部分（左側60%）
+        const sleeveW = w * 0.6;
+        ctx.fillStyle = color;
+        
+        // クリップして角丸を維持
+        ctx.save();
+        roundRect(ctx, -w/2, -h/2, w, h, 4);
+        ctx.clip();
+        ctx.fillRect(-w/2, -h/2, sleeveW, h);
+        ctx.restore();
+
+        // ディテール（MONO風の白いストライプ）
+        ctx.fillStyle = "rgba(255,255,255,0.3)";
+        ctx.fillRect(-w/2 + 15, -h/2, 5, h);
+
+        // テキスト
+        ctx.fillStyle = "white";
+        ctx.font = "bold 12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("ERASER", -w/2 + sleeveW/2, 0);
+
+        // 枠線（輪郭をはっきりさせる）
+        ctx.strokeStyle = "rgba(0,0,0,0.1)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, -w/2, -h/2, w, h, 4);
+        ctx.stroke();
+
+        ctx.restore();
+    }
+
+    function drawFancyRect(ctx, x, y, w, h, angle, color, isPlatform) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle);
+        
+        ctx.fillStyle = color;
+        
+        // 台座なら少しリッチに
+        if (isPlatform) {
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            ctx.shadowBlur = 15;
+            ctx.shadowOffsetY = 5;
         }
 
-        window.onload = init;
+        roundRect(ctx, -w/2, -h/2, w, h, 6);
+        ctx.fill();
+        
+        // 木目っぽいライン
+        if (isPlatform) {
+            ctx.shadowColor = "transparent";
+            ctx.strokeStyle = "rgba(255,255,255,0.1)";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-w/2 + 10, -h/2 + 5);
+            ctx.lineTo(w/2 - 10, -h/2 + 5);
+            ctx.stroke();
+        }
 
-    </script>
+        ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+        if (w < 2 * r) r = w / 2;
+        if (h < 2 * r) r = h / 2;
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    // --- 9. 簡易サウンドシンセサイザー ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        const now = audioCtx.currentTime;
+
+        if (type === 'drop') {
+            // シュッという音
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(600, now);
+            osc.frequency.exponentialRampToValueAtTime(100, now + 0.1);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.1);
+            osc.start(now);
+            osc.stop(now + 0.1);
+        } else if (type === 'hit') {
+            // コツッという音
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(200, now);
+            gain.gain.setValueAtTime(0.05, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+            osc.start(now);
+            osc.stop(now + 0.05);
+        } else if (type === 'over') {
+            // 崩れる音
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.linearRampToValueAtTime(50, now + 0.5);
+            gain.gain.setValueAtTime(0.1, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.5);
+            osc.start(now);
+            osc.stop(now + 0.5);
+        }
+    }
+
+</script>
 </body>
 </html>
