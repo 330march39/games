@@ -63,7 +63,6 @@
             const map = {'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ'};
             if (map[last]) return map[last];
             if (last === 'ー') {
-                // 長音の場合、その前の文字の母音をとる簡易実装（厳密なルールは複雑なので簡易化：前の文字をそのまま返す）
                 const prev = word.slice(-2, -1);
                 if (map[prev]) return map[prev];
                 return prev;
@@ -130,26 +129,26 @@
             const [myId, setMyId] = useState('');
             const [targetId, setTargetId] = useState('');
             
-            // Game State: 'lobby', 'setup', 'playing', 'result'
+            // Game State
             const [gameState, setGameState] = useState('lobby');
             const [statusMsg, setStatusMsg] = useState('');
+            const [isConnecting, setIsConnecting] = useState(false); // 接続中フラグを追加
 
             // Setup Data
-            const [ngWords, setNgWords] = useState({ 3: '', 2: '', 1: '' }); // My defined NG words
+            const [ngWords, setNgWords] = useState({ 3: '', 2: '', 1: '' });
             const [opponentReady, setOpponentReady] = useState(false);
             const [iAmReady, setIAmReady] = useState(false);
 
             // Gameplay Data
-            const [history, setHistory] = useState([]); // { word, player: 'me'|'opponent', damage: num, reason: str }
-            const [currentTurn, setCurrentTurn] = useState('host'); // 'host' or 'guest'
-            const [role, setRole] = useState(null); // 'host' or 'guest'
+            const [history, setHistory] = useState([]);
+            const [currentTurn, setCurrentTurn] = useState('host');
+            const [role, setRole] = useState(null);
             const [myScore, setMyScore] = useState(0);
             const [oppScore, setOppScore] = useState(0);
             const [timer, setTimer] = useState(15);
             const [inputWord, setInputWord] = useState('');
-            const [lastChar, setLastChar] = useState(''); // The character the next word must start with
+            const [lastChar, setLastChar] = useState('');
 
-            // Timer Ref
             const timerRef = useRef(null);
 
             // Initialize Peer
@@ -164,10 +163,22 @@
                     setupConnection(connection, 'host');
                 });
 
+                // ★ エラーハンドリングを追加
+                newPeer.on('error', (err) => {
+                    console.error("Peer Error:", err);
+                    setIsConnecting(false);
+                    if (err.type === 'peer-unavailable') {
+                        alert('エラー: 指定されたIDの部屋が見つかりません。\n・IDが正しいか確認してください\n・相手がまだ「部屋を作る」画面にいるか確認してください');
+                    } else if (err.type === 'network') {
+                        alert('ネットワークエラーが発生しました。接続を確認してください。');
+                    } else {
+                        alert(`エラーが発生しました: ${err.type}`);
+                    }
+                });
+
                 return () => newPeer.destroy();
             }, []);
 
-            // Lucide icons
             useEffect(() => {
                 if (window.lucide) window.lucide.createIcons();
             });
@@ -176,9 +187,7 @@
             useEffect(() => {
                 if (gameState === 'playing' && !checkGameOver(myScore, oppScore)) {
                     if (timerRef.current) clearInterval(timerRef.current);
-                    
-                    setTimer(15); // Reset timer on turn change
-                    
+                    setTimer(15);
                     timerRef.current = setInterval(() => {
                         setTimer((prev) => {
                             if (prev <= 1) {
@@ -199,6 +208,7 @@
                 setRole(myRole);
                 
                 connection.on('open', () => {
+                    setIsConnecting(false); // 接続完了でローディング解除
                     setGameState('setup');
                     setStatusMsg('接続完了！ NGワードを設定してください');
                 });
@@ -211,30 +221,35 @@
                     alert('相手との接続が切れました');
                     location.reload();
                 });
+
+                connection.on('error', (err) => {
+                    console.error("Connection Error:", err);
+                    setIsConnecting(false);
+                });
             };
 
             const joinGame = () => {
                 if (!peer || !targetId) return;
+                setIsConnecting(true); // 接続中表示
+                // 接続を試みる
                 const connection = peer.connect(targetId);
+                if (!connection) {
+                    setIsConnecting(false);
+                    alert("接続の作成に失敗しました");
+                    return;
+                }
                 setupConnection(connection, 'guest');
             };
 
             const handleData = (data) => {
-                console.log("Received:", data);
-                
                 switch (data.type) {
                     case 'READY':
                         setOpponentReady(true);
                         break;
                     case 'MOVE':
-                        // 相手が言葉を送ってきた
-                        // 1. こちらのNGワードリストと照合してダメージ判定を行う
-                        // 2. 結果を双方に反映（DAMAGEイベントを送り返すか、ここで処理して同期するか）
-                        // シンプルにするため、受信側（NGワードを知っている側）が判定して結果をブロードキャストする
                         processReceivedWord(data.word);
                         break;
                     case 'RESULT':
-                        // 判定結果を受信 (自分が送った言葉の結果、またはタイムアウトなどの通知)
                         applyResult(data);
                         break;
                     case 'RESTART':
@@ -257,29 +272,23 @@
             useEffect(() => {
                 if (iAmReady && opponentReady && gameState === 'setup') {
                     setGameState('playing');
-                    setLastChar(''); // Initial state, any word is fine or set a starting word?
-                    // Let's create a starting word for 'host' to follow, or just 'Start free'
-                    // Standard shiritori: Start with 'Shiritori' -> ends in 'ri'
                     setLastChar('り'); 
                     setHistory([{ word: 'しりとり', player: 'system', damage: 0 }]);
-                    setCurrentTurn('host'); // Host starts first
+                    setCurrentTurn('host'); 
                 }
             }, [iAmReady, opponentReady, gameState]);
 
 
             // Gameplay Logic
             const processReceivedWord = (word) => {
-                // Opponent sent a word. I need to check if it hits MY NG words.
                 let damage = 0;
                 let reasons = [];
 
-                // 1. Check Standard NG ('N' ending) - usually sender checks, but double check
                 if (getLastChar(word) === 'ん') {
                     damage += 3;
                     reasons.push('「ん」がついた！(即死)');
                 }
 
-                // 2. Check My Trap NG Words
                 if (word === ngWords[3]) {
                     damage += 3;
                     reasons.push(`★3pt NGワード「${word}」を踏んだ！`);
@@ -291,21 +300,19 @@
                     reasons.push(`★1pt NGワード「${word}」を踏んだ！`);
                 }
 
-                // 3. Check History (Repetition)
                 const isRepeated = history.some(h => h.word === word);
                 if (isRepeated) {
                     damage += 1;
                     reasons.push('既出ワード！');
                 }
 
-                // Send result back to opponent (and self)
                 const resultData = {
                     type: 'RESULT',
                     word: word,
-                    player: 'opponent', // It was opponent's move
+                    player: 'opponent',
                     damage: damage,
                     reasons: reasons,
-                    nextTurn: role === 'host' ? 'guest' : 'host' // Should be my turn now
+                    nextTurn: role === 'host' ? 'guest' : 'host'
                 };
 
                 conn.send(resultData);
@@ -316,33 +323,28 @@
                 const word = inputWord.trim();
                 if (!word) return;
                 
-                // Basic Validation (Local)
                 const hira = toHiragana(word);
                 
-                // Hiragana check
                 if (!/^[\u3040-\u309f]+$/.test(hira)) {
                     setStatusMsg('ひらがなのみ有効です');
                     return;
                 }
-                // Chain check
                 if (lastChar && hira.charAt(0) !== lastChar) {
                     setStatusMsg(`「${lastChar}」から始まる言葉を入れてください`);
                     return;
                 }
 
-                // If valid, send to opponent for adjudication
                 conn.send({ type: 'MOVE', word: hira });
                 setInputWord('');
                 setStatusMsg('判定中...');
             };
 
             const handleTimeOut = () => {
-                // If it's MY turn and timer runs out
                 if (currentTurn === role) {
                     const resultData = {
                         type: 'RESULT',
                         word: '(時間切れ)',
-                        player: 'me', // My fault
+                        player: 'me',
                         damage: 1,
                         reasons: ['時間切れ！'],
                         nextTurn: role === 'host' ? 'guest' : 'host'
@@ -353,43 +355,29 @@
             };
 
             const applyResult = (data) => {
-                // Update History
                 setHistory(prev => [
                     { 
                         word: data.word, 
                         player: data.player === 'me' ? (role === data.player ? 'me' : 'opponent') : (role === data.player ? 'me' : 'opponent'),
-                        // Logic fix: data.player is from the perspective of the sender of RESULT.
-                        // If I processed the word (opponent sent it), I set player='opponent'.
-                        // If I receive this RESULT, 'opponent' means the other guy.
-                        isMe: (data.player === 'opponent' && role !== 'host') || (data.player === 'me' && role === 'host') ? false : true, // Simplified below
+                        isMe: (data.player === 'opponent' && role !== 'host') || (data.player === 'me' && role === 'host') ? false : true,
                         damage: data.damage,
                         reasons: data.reasons
                     }, 
                     ...prev
                 ]);
-
-                // Who took damage?
-                // If data.player was 'opponent' (from perspective of judge), that means the person who played the word takes damage.
-                // Wait, easier logic: The person whose turn it was takes damage if any.
-                
-                const isMyTurnWas = currentTurn === role;
                 
                 if (data.damage > 0) {
                      if (currentTurn === role) {
-                         // I took damage
                          setOppScore(prev => Math.min(prev + data.damage, 3));
                      } else {
-                         // Opponent took damage (I get points)
                          setMyScore(prev => Math.min(prev + data.damage, 3));
                      }
                 }
 
-                // Next Turn Setup
                 if (data.word !== '(時間切れ)') {
                     setLastChar(getLastChar(data.word));
                 }
                 
-                // If game over, stop turn rotation
                 const newMyScore = currentTurn !== role ? myScore + data.damage : myScore;
                 const newOppScore = currentTurn === role ? oppScore + data.damage : oppScore;
                 
@@ -409,7 +397,7 @@
                 setHistory([{ word: 'しりとり', player: 'system', damage: 0 }]);
                 setLastChar('り');
                 setCurrentTurn('host');
-                setGameState('setup'); // Go back to setup to change NG words
+                setGameState('setup');
                 setIAmReady(false);
                 setOpponentReady(false);
                 setNgWords({ 3: '', 2: '', 1: '' });
@@ -454,7 +442,10 @@
                                 onChange={(e) => setTargetId(e.target.value.toUpperCase())}
                                 placeholder="相手のIDを入力"
                             />
-                            <Button onClick={joinGame} disabled={!myId || !targetId}>参加</Button>
+                            {/* 修正: 接続中ステータスを反映 */}
+                            <Button onClick={joinGame} disabled={!myId || !targetId || isConnecting}>
+                                {isConnecting ? <span className="animate-pulse">接続中...</span> : '参加'}
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -573,10 +564,6 @@
                             <div className="flex-1 overflow-y-auto space-y-2 mb-4 pr-2">
                                 {history.map((h, i) => {
                                     const isMe = (h.player === 'host' && role === 'host') || (h.player === 'guest' && role === 'guest') || (h.player === 'me');
-                                    // 修正: プレイヤー判定ロジックを簡素化
-                                    // history保存時にすでに正規化するのがベストだが、表示時に補正
-                                    // h.playerが 'me' かどうかで判定
-                                    // systemの場合は中央
                                     if (h.player === 'system') {
                                         return (
                                             <div key={i} className="text-center text-slate-500 text-xs my-2">
@@ -585,7 +572,7 @@
                                         );
                                     }
 
-                                    const isSelf = (currentTurn === role && i === 0) ? !isMe : isMe; // ターン履歴の表示ロジックは少し複雑なので、単純に保存時のisMeを使う
+                                    const isSelf = (currentTurn === role && i === 0) ? !isMe : isMe;
 
                                     return (
                                         <div key={i} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
