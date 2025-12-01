@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON WORD BATTLE: V6 ULTIMATE</title>
+    <title>NEON WORD BATTLE: V7 SYNC FIX</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -131,8 +131,8 @@
         // --- CONSTANTS ---
         const SAMPLE_TOPICS = ["アニメキャラ", "学校にあるもの", "コンビニの商品", "4文字の言葉", "緑色のもの", "歴史上の人物"];
         const MAX_HP = 5;
-        const TIMER_SETUP = 60;
-        const TIMER_GAME = 60;
+        const TIMER_SETUP = 60; // Topic selection & NG Input
+        const TIMER_GAME = 60; // Per turn
         const DISCONNECT_TIMEOUT = 30000;
         const CONNECTION_WARNING_TIMEOUT = 3000;
         
@@ -204,6 +204,9 @@
             // Data
             const [myTopic, setMyTopic] = useState('');
             const [oppTopic, setOppTopic] = useState('');
+            const [isMyTopicConfirmed, setIsMyTopicConfirmed] = useState(false);
+            const [isOppTopicConfirmed, setIsOppTopicConfirmed] = useState(false);
+            
             const [rouletteData, setRouletteData] = useState({ candidates: [], winner: null });
             const [rouletteDisplay, setRouletteDisplay] = useState('');
             const [selectedTopic, setSelectedTopic] = useState(null);
@@ -218,12 +221,15 @@
             const [oppHp, setOppHp] = useState(MAX_HP);
             const [input, setInput] = useState('');
             const [lastChar, setLastChar] = useState('');
+            
+            // Timer Logic
             const [displayTimer, setDisplayTimer] = useState(0); 
-            const [turnStartTime, setTurnStartTime] = useState(0);
+            const [phaseStartTime, setPhaseStartTime] = useState(0); // Absolute time when phase started
+            const [turnStartTime, setTurnStartTime] = useState(0); // For playing phase
             
             const stateRef = useRef({ 
                 phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
-                turnStartTime, lastActiveTime
+                turnStartTime, phaseStartTime, lastActiveTime, isMyTopicConfirmed, isOppTopicConfirmed
             });
             const connRef = useRef(null); 
             const scrollRef = useRef(null);
@@ -233,9 +239,9 @@
             useEffect(() => {
                 stateRef.current = { 
                     phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
-                    turnStartTime, lastActiveTime
+                    turnStartTime, phaseStartTime, lastActiveTime, isMyTopicConfirmed, isOppTopicConfirmed
                 };
-            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, lastActiveTime]);
+            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, lastActiveTime, isMyTopicConfirmed, isOppTopicConfirmed]);
 
             // Load/Save Name
             useEffect(() => { const saved = localStorage.getItem('nwb_username'); if(saved) setUserName(saved); }, []);
@@ -277,16 +283,36 @@
                 return () => { document.removeEventListener('visibilitychange', handleVisibilityChange); clearInterval(heartbeat); };
             }, [isUnstable]);
 
-            // Timer Loop
+            // Unified Timer Loop (Absolute Time)
             useEffect(() => {
                 const loop = () => {
                     const s = stateRef.current;
-                    if (s.phase === 'playing' && s.turnStartTime > 0) {
-                        const now = Date.now();
-                        const elapsedSec = (now - s.turnStartTime) / 1000;
-                        const remain = Math.max(0, Math.ceil(TIMER_GAME - elapsedSec));
+                    const now = Date.now();
+                    let targetTime = 0;
+                    let duration = 0;
+
+                    if (s.phase === 'topic_input') {
+                        targetTime = s.phaseStartTime;
+                        duration = TIMER_SETUP;
+                    } else if (s.phase === 'ng_input') {
+                        targetTime = s.phaseStartTime;
+                        duration = TIMER_SETUP;
+                    } else if (s.phase === 'playing' && s.turnStartTime > 0) {
+                        targetTime = s.turnStartTime;
+                        duration = TIMER_GAME;
+                    }
+
+                    if (targetTime > 0) {
+                        const elapsedSec = (now - targetTime) / 1000;
+                        const remain = Math.max(0, Math.ceil(duration - elapsedSec));
                         setDisplayTimer(remain);
-                        if (s.isHost && remain <= 0) handleTimeout();
+
+                        // Host enforces timeout
+                        if (s.isHost && remain <= 0) {
+                            if (s.phase === 'playing') handleTimeout();
+                            else if (s.phase === 'ng_input') forceStartGame(); // Force start if NG setup times out
+                            // topic_input timeout is less critical, usually allow wait
+                        }
                     }
                     loopRef.current = requestAnimationFrame(loop);
                 };
@@ -304,8 +330,7 @@
                     setLastActiveTime(Date.now());
                     setPhase('vs');
                     setTimeout(() => {
-                        setPhase('topic_input');
-                        startSimpleSetupTimer();
+                        startPhase('topic_input');
                     }, 4000);
                 });
                 c.on('data', handleData);
@@ -314,14 +339,13 @@
 
             const send = (data) => { if(connRef.current?.open) connRef.current.send(data); };
 
-            const startSimpleSetupTimer = () => {
-                setDisplayTimer(TIMER_SETUP);
-                let t = TIMER_SETUP;
-                const id = setInterval(() => {
-                    t--;
-                    if(stateRef.current.phase !== 'playing') setDisplayTimer(t);
-                    if(t<=0) clearInterval(id);
-                }, 1000);
+            const startPhase = (newPhase) => {
+                const now = Date.now();
+                setPhase(newPhase);
+                setPhaseStartTime(now);
+                if (stateRef.current.isHost) {
+                    send({ type: 'PHASE_CHANGE', phase: newPhase, startTime: now });
+                }
             };
 
             const handleData = (data) => {
@@ -337,34 +361,46 @@
                             turnStartTime: s.turnStartTime, history: s.history, lastChar: s.lastChar
                         });
                         break;
-                    
                     case 'SYNC_FULL':
-                        // CONFLICT RESOLUTION: Lowest HP is truth
-                        // data.myHp is RIVAL'S hp (so it maps to oppHp for me)
-                        // data.oppHp is MY hp (so it maps to myHp for me)
                         setOppHp(prev => Math.min(prev, data.myHp));
                         setMyHp(prev => Math.min(prev, data.oppHp));
                         setTurn(data.turn);
                         setTurnStartTime(data.turnStartTime);
-                        // Merge history if needed, but usually full replace is safer for simplicity
                         if(data.history.length > s.history.length) setHistory(data.history);
                         setLastChar(data.lastChar);
                         break;
-
                     case 'NAME_SYNC':
                         setOppName(data.name || 'RIVAL');
                         if(s.isHost) send({ type: 'NAME_SYNC', name: s.userName || 'PLAYER' });
                         break;
+                    case 'PHASE_CHANGE':
+                        setPhase(data.phase);
+                        setPhaseStartTime(data.startTime);
+                        break;
 
-                    case 'TOPIC_SUBMIT':
-                        if(s.isHost) { setOppTopic(data.topic); if(s.myTopic) startRoulette(s.myTopic, data.topic); }
+                    // TOPIC PHASE
+                    case 'TOPIC_CONFIRM':
+                        setOppTopic(data.topic);
+                        setIsOppTopicConfirmed(true);
+                        // If I am host and both confirmed, start
+                        if (s.isHost && s.isMyTopicConfirmed) {
+                             startRoulette(s.myTopic, data.topic);
+                        }
                         break;
                     case 'ROULETTE_START':
                         setOppTopic(data.hostTopic); playRouletteAnimation(data.candidates, data.winner);
                         break;
+                        
+                    // NG PHASE
                     case 'NG_READY':
                         setOppNgReady(true); if(s.isHost && s.phase === 'ng_wait') startCoinToss();
                         break;
+                    case 'FORCE_NG_COMPLETE':
+                        // Host forced completion (timeout)
+                        setOppNgReady(true); // Treat as ready
+                        if(s.isHost) startCoinToss(); // Host proceeds
+                        break;
+
                     case 'COIN_TOSS_START':
                         setCoinResult(data.result); setLastChar(data.initialChar); setPhase('coin');
                         setTimeout(() => {
@@ -379,12 +415,10 @@
                         break;
                     case 'TURN_CHANGE':
                         setTurn(data.nextTurn); setTurnStartTime(data.startTime);
-                        // Sync HP on turn change too
                         setMyHp(prev => Math.min(prev, data.oppHp)); 
                         setOppHp(prev => Math.min(prev, data.myHp));
                         break;
                     case 'DAMAGE_REPORT':
-                        // Apply damage logic, then enforce the "lowest HP" rule
                         applyDamage('me', data.amount, data.reason);
                         if(data.remainingHp !== undefined) setMyHp(prev => Math.min(prev, data.remainingHp));
                         break;
@@ -395,8 +429,14 @@
             // --- GAME LOGIC ---
             const submitTopic = () => {
                 if(!myTopic) return showError("お題を入力せよ");
-                if(isHost) { if(oppTopic) startRoulette(myTopic, oppTopic); else setPhase('topic_wait'); } 
-                else { send({ type: 'TOPIC_SUBMIT', topic: myTopic }); setPhase('topic_wait'); }
+                setIsMyTopicConfirmed(true);
+                send({ type: 'TOPIC_CONFIRM', topic: myTopic });
+                
+                // If I am host and I already have opponent's topic
+                const s = stateRef.current;
+                if (isHost && s.isOppTopicConfirmed) {
+                    startRoulette(myTopic, s.oppTopic);
+                }
             };
 
             const startRoulette = (hostT, guestT) => {
@@ -415,7 +455,9 @@
                     if(count < 20) setTimeout(spin, 50 + count * 10);
                     else {
                         setRouletteDisplay(winner.text); setSelectedTopic(winner);
-                        setTimeout(() => { setPhase('ng_input'); startSimpleSetupTimer(); }, 2000);
+                        setTimeout(() => { 
+                            startPhase('ng_input');
+                        }, 2000);
                     }
                 };
                 spin();
@@ -425,6 +467,19 @@
                 if(!ngWords.high) return showError("3pt NGワードは必須だ");
                 setPhase('ng_wait'); send({ type: 'NG_READY' });
                 if(isHost && oppNgReady) startCoinToss();
+            };
+
+            // Force start if timeout in NG phase
+            const forceStartGame = () => {
+                const s = stateRef.current;
+                // If I haven't submitted NG, fill with garbage
+                if (s.phase === 'ng_input') {
+                    if (!ngWords.high) setNgWords({high:'あ', mid:'い', low:'う'}); // Fallback
+                    setPhase('ng_wait');
+                    // Treat everyone as ready
+                    send({ type: 'FORCE_NG_COMPLETE' }); 
+                    startCoinToss();
+                }
             };
 
             const startCoinToss = () => {
@@ -456,20 +511,15 @@
                 if (lastChar && hira[0] !== lastChar) return showError(`「${lastChar}」から開始せよ`);
                 if (history.some(h => h.word === hira)) return showError('既出ワード');
                 
-                // IMPORTANT: Add to local history first so user sees their own word even if they die
                 const newHistory = [...history, { word: hira, owner: isHost?'host':'guest', damage: 0 }];
                 setHistory(newHistory);
                 setInput('');
 
-                // Check Suicide
                 if(hira.slice(-1) === 'ん') {
-                    // Force update history with damage
                     const suicideHist = [...history, { word: hira, owner: isHost?'host':'guest', damage: MAX_HP }];
                     setHistory(suicideHist);
                     applyDamage('me', MAX_HP, '自爆:「ん」');
-                    
                     send({ type: 'MOVE', word: hira });
-                    // Send SYNC immediately with death state
                     send({ type: 'SYNC_FULL', myHp: 0, oppHp: oppHp, turn: turn, history: suicideHist, turnStartTime: Date.now(), lastChar: getLastChar(hira) });
                     return;
                 }
@@ -490,20 +540,16 @@
                 if(word.slice(-1) === 'ん') { dmg = MAX_HP; reason = '自爆:「ん」'; }
 
                 const owner = !s.isHost ? 'host' : 'guest';
-                
-                // Add to history FIRST
                 const newHistory = [...s.history, { word, owner, damage: dmg }];
                 setHistory(newHistory);
                 setLastChar(getLastChar(word));
 
                 if(dmg > 0) {
                     applyDamage('opp', dmg, reason);
-                    // Force Sync the point reduction
                     const newOppHp = Math.max(0, s.oppHp - dmg);
                     send({ type: 'DAMAGE_REPORT', amount: dmg, reason, remainingHp: newOppHp });
                 }
 
-                // If host, coordinate turn change. If guest, follow local logic but respect host sync later
                 if (s.isHost) changeTurnInternal(s.isHost ? 'host' : 'guest');
                 else setTurn(s.isHost ? 'host' : 'guest');
             };
@@ -519,18 +565,12 @@
             const applyDamage = (target, amount, msg) => {
                 setDamageAlert({ target, amount, reason: msg });
                 setTimeout(() => setDamageAlert(null), 2000);
-                
                 let setHp = target === 'me' ? setMyHp : setOppHp;
                 let currentHp = target === 'me' ? stateRef.current.myHp : stateRef.current.oppHp;
-
-                // Ensure we don't heal by accident, strictly reduce
                 const nextHp = Math.max(0, currentHp - amount);
                 setHp(nextHp);
-                
-                // Update history to show damage on the last item if applicable
                 setHistory(prev => {
                     if(prev.length === 0) return prev;
-                    // Only mark damage on the word itself if it was a word move (not timeout)
                     if(msg.includes('NG') || msg.includes('自爆')) {
                         const last = prev[prev.length - 1];
                         if(last.damage === 0) {
@@ -541,7 +581,6 @@
                     }
                     return prev;
                 });
-
                 if(nextHp <= 0) setTimeout(() => setPhase('result'), 2500);
             };
 
@@ -550,8 +589,9 @@
             const resetGame = () => {
                 setPhase('lobby'); setMyTopic(''); setOppTopic(''); setSelectedTopic(null);
                 setNgWords({ high:'', mid:'', low:'' }); setOppNgReady(false);
+                setIsMyTopicConfirmed(false); setIsOppTopicConfirmed(false);
                 setHistory([]); setMyHp(MAX_HP); setOppHp(MAX_HP); setDamageAlert(null);
-                setTurnStartTime(0); setIsUnstable(false);
+                setTurnStartTime(0); setPhaseStartTime(0); setIsUnstable(false);
             };
             const copyId = () => {
                  const t = document.createElement("textarea"); t.value = myId;
@@ -568,7 +608,7 @@
                     <div className="scanlines"></div>
                     <div className="crt-glow"></div>
 
-                    {error && <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] bg-rose-600 px-6 py-2 rounded shadow-[0_0_20px_#e11d48] font-bold border border-white animate-bounce whitespace-nowrap">{error}</div>}
+                    {error && <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[100] w-full max-w-sm px-4 flex justify-center"><div className="bg-rose-600 px-6 py-4 rounded shadow-[0_0_20px_#e11d48] font-bold border border-white animate-bounce text-center text-lg">{error}</div></div>}
 
                     {isUnstable && phase !== 'lobby' && phase !== 'result' && (
                         <div className="fixed inset-0 z-[999] pointer-events-none flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -618,34 +658,19 @@
                         </div>
                     )}
 
-                    {/* SUPER ENHANCED VS SCREEN */}
+                    {/* VS SCREEN */}
                     {phase === 'vs' && (
                         <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
                             <div className="absolute inset-0 vs-bg opacity-30"></div>
-                            
                             <div className="relative w-full h-full flex items-center justify-center">
-                                {/* Player 1 (Left) */}
                                 <div className="absolute left-0 top-1/4 w-1/2 h-48 bg-cyan-900/30 border-r-4 border-cyan-500 transform skew-x-12 -ml-10 flex items-center justify-end pr-10 slide-in-left">
-                                    <div className="text-right transform -skew-x-12">
-                                        <div className="text-cyan-300 text-sm tracking-[0.5em] mb-2">CHALLENGER</div>
-                                        <div className="text-5xl font-black text-white">{userName || 'YOU'}</div>
-                                    </div>
+                                    <div className="text-right transform -skew-x-12"><div className="text-cyan-300 text-sm tracking-[0.5em] mb-2">CHALLENGER</div><div className="text-5xl font-black text-white">{userName || 'YOU'}</div></div>
                                 </div>
-
-                                {/* Player 2 (Right) */}
                                 <div className="absolute right-0 bottom-1/4 w-1/2 h-48 bg-rose-900/30 border-l-4 border-rose-500 transform skew-x-12 -mr-10 flex items-center justify-start pl-10 slide-in-right">
-                                    <div className="text-left transform -skew-x-12">
-                                        <div className="text-rose-300 text-sm tracking-[0.5em] mb-2">OPPONENT</div>
-                                        <div className="text-5xl font-black text-white">{oppName || 'RIVAL'}</div>
-                                    </div>
+                                    <div className="text-left transform -skew-x-12"><div className="text-rose-300 text-sm tracking-[0.5em] mb-2">OPPONENT</div><div className="text-5xl font-black text-white">{oppName || 'RIVAL'}</div></div>
                                 </div>
-                                
-                                {/* VS Logo */}
-                                <div className="z-10 text-9xl font-black italic text-transparent bg-clip-text bg-gradient-to-t from-white to-slate-400 drop-shadow-[0_0_25px_rgba(255,255,255,0.8)] slam-in" style={{fontFamily: 'Black Ops One'}}>
-                                    VS
-                                </div>
+                                <div className="z-10 text-9xl font-black italic text-transparent bg-clip-text bg-gradient-to-t from-white to-slate-400 drop-shadow-[0_0_25px_rgba(255,255,255,0.8)] slam-in" style={{fontFamily: 'Black Ops One'}}>VS</div>
                             </div>
-                            
                             <div className="absolute bottom-10 text-xs tracking-[1em] text-slate-500 animate-pulse">NEURAL LINK ESTABLISHED</div>
                         </div>
                     )}
@@ -679,8 +704,8 @@
                     {/* TOPIC INPUT */}
                     {(phase === 'topic_input' || phase === 'topic_wait') && (
                         <div className="flex flex-col h-full z-10 p-6 items-center justify-center space-y-8 bg-black/80">
-                            {phase === 'topic_wait' ? (
-                                <div className="text-center animate-pulse"><div className="text-2xl font-black text-cyan-400 mb-2">WAITING FOR RIVAL</div><div className="text-xs text-slate-500">同期中...</div></div>
+                            {(isMyTopicConfirmed && !isHost) || (isHost && isMyTopicConfirmed && !isOppTopicConfirmed) ? (
+                                <div className="text-center animate-pulse"><div className="text-2xl font-black text-cyan-400 mb-2">WAITING FOR RIVAL</div><div className="text-xs text-slate-500">お題決定待ち...</div></div>
                             ) : (
                                 <div className="w-full max-w-md space-y-6 animate-enter">
                                     <div className="flex justify-between items-end border-b border-cyan-900 pb-2"><h2 className="text-2xl font-black text-white">TOPIC PHASE</h2><div className="text-xl font-mono text-cyan-400">{displayTimer}s</div></div>
