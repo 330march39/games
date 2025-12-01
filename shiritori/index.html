@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON WORD BATTLE: GENESIS</title>
+    <title>NEON WORD BATTLE: OVERDRIVE</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- React & ReactDOM -->
@@ -18,94 +18,114 @@
     
     <!-- Fonts & Styles -->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Zen+Maru+Gothic:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
         
+        :root {
+            --neon-cyan: #06b6d4;
+            --neon-pink: #f43f5e;
+            --bg-dark: #020617;
+        }
+
         body {
             font-family: 'Zen Maru Gothic', sans-serif;
-            background-color: #030712;
+            background-color: var(--bg-dark);
             color: #e2e8f0;
-            overflow: hidden;
+            overflow: hidden; /* Prevent scrolling of body */
             touch-action: manipulation;
+        }
+
+        /* App Container Fix for Mobile */
+        .app-container {
+            height: 100dvh; /* Dynamic Viewport Height */
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
         }
 
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #111827; }
-        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 2px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
         /* Animations */
-        @keyframes scanline {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan) inset; }
+            50% { box-shadow: 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-cyan) inset; }
         }
-        .scanline::after {
-            content: "";
+        @keyframes pulse-glow-pink {
+            0%, 100% { box-shadow: 0 0 10px var(--neon-pink), 0 0 20px var(--neon-pink) inset; }
+            50% { box-shadow: 0 0 20px var(--neon-pink), 0 0 40px var(--neon-pink) inset; }
+        }
+
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake-anim { animation: shake 0.5s; }
+
+        @keyframes pop-in {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop-in { animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-enter { animation: slide-up 0.4s ease-out forwards; }
+
+        /* CRT Scanline Effect */
+        .scanlines {
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(0,0,0,0.1) 50%,
+                rgba(0,0,0,0.1)
+            );
+            background-size: 100% 4px;
             position: absolute;
-            inset: 0;
-            background: linear-gradient(to bottom, transparent, rgba(6, 182, 212, 0.1), transparent);
-            animation: scanline 2s linear infinite;
+            top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
+            z-index: 50;
+            opacity: 0.3;
         }
 
-        @keyframes glitch {
-            0% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(-2px, -2px); }
-            60% { transform: translate(2px, 2px); }
-            80% { transform: translate(2px, -2px); }
-            100% { transform: translate(0); }
-        }
-        .glitch-effect { animation: glitch 0.2s cubic-bezier(.25, .46, .45, .94) both; }
+        .neon-text-cyan { text-shadow: 0 0 5px #06b6d4, 0 0 10px #06b6d4; }
+        .neon-text-pink { text-shadow: 0 0 5px #f43f5e, 0 0 10px #f43f5e; }
 
-        .neon-text { text-shadow: 0 0 5px rgba(6, 182, 212, 0.5), 0 0 10px rgba(6, 182, 212, 0.3); }
-        .neon-box { box-shadow: 0 0 10px rgba(6, 182, 212, 0.2), inset 0 0 5px rgba(6, 182, 212, 0.1); }
-        
-        .bg-grid {
-            background-image: 
-                linear-gradient(rgba(6, 182, 212, 0.05) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(6, 182, 212, 0.05) 1px, transparent 1px);
-            background-size: 40px 40px;
-        }
-
-        .chat-bubble {
-            position: relative;
-            max-width: 85%;
-            padding: 12px 18px;
-            border-radius: 16px;
-            font-weight: bold;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-        .chat-bubble.mine {
-            background: linear-gradient(135deg, #0891b2, #2563eb);
-            color: white;
-            border-bottom-right-radius: 2px;
-            margin-left: auto;
-        }
-        .chat-bubble.opponent {
-            background: linear-gradient(135deg, #334155, #1e293b);
-            color: #e2e8f0;
-            border: 1px solid #475569;
-            border-bottom-left-radius: 2px;
-            margin-right: auto;
+        .glass-morphism {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
     </style>
 </head>
-<body class="bg-grid min-h-screen flex flex-col">
-    <div id="root" class="flex-1 flex flex-col h-full relative"></div>
+<body>
+    <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef, useMemo, useReducer } = React;
 
-        // --- CONSTANTS & UTILS ---
-        const SAMPLE_TOPICS = [
-            "ノーマルしりとり (何でもOK)",
-            "食べ物・飲み物",
-            "3文字の言葉",
-            "カタカナ語",
-            "生き物 (動物・虫・魚)",
-            "家の中にあるもの"
-        ];
+        // --- GAME CONSTANTS ---
+        const SAMPLE_TOPICS = ["アニメキャラ", "食べ物", "国名・都市名", "3文字の言葉", "赤いもの", "家にあるもの", "職業"];
+        const MAX_HP = 3;
+        const TURN_TIME = 20;
 
+        // --- UTILS ---
         const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
         
         const toHiragana = (str) => {
@@ -125,163 +145,205 @@
             return last;
         };
 
+        // --- PARTICLE BACKGROUND ---
+        const ParticleBackground = () => {
+            const canvasRef = useRef(null);
+            
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let width = canvas.width = window.innerWidth;
+                let height = canvas.height = window.innerHeight;
+                
+                const particles = [];
+                for(let i=0; i<50; i++) {
+                    particles.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2,
+                        alpha: Math.random()
+                    });
+                }
+
+                const animate = () => {
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.fillStyle = '#ffffff';
+                    
+                    particles.forEach(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        if(p.x < 0) p.x = width;
+                        if(p.x > width) p.x = 0;
+                        if(p.y < 0) p.y = height;
+                        if(p.y > height) p.y = 0;
+                        
+                        ctx.globalAlpha = p.alpha * 0.5;
+                        ctx.beginPath();
+                        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    });
+                    requestAnimationFrame(animate);
+                };
+                animate();
+
+                const handleResize = () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                };
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            return <canvas ref={canvasRef} className="absolute inset-0 z-0 opacity-40 pointer-events-none" />;
+        };
+
         // --- COMPONENTS ---
 
         const Button = ({ onClick, children, className = "", disabled = false, variant = "primary", icon }) => {
+            const baseClass = "relative overflow-hidden font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2";
             const variants = {
-                primary: "bg-cyan-600 hover:bg-cyan-500 text-white border-b-4 border-cyan-800 active:border-b-0 active:translate-y-1 shadow-[0_0_15px_rgba(8,145,178,0.4)]",
-                danger: "bg-rose-600 hover:bg-rose-500 text-white border-b-4 border-rose-800 active:border-b-0 active:translate-y-1 shadow-[0_0_15px_rgba(225,29,72,0.4)]",
-                secondary: "bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600",
-                ghost: "bg-transparent hover:bg-white/5 text-slate-400"
+                primary: "bg-cyan-500 text-black hover:bg-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.5)] border-2 border-cyan-300",
+                danger: "bg-rose-500 text-white hover:bg-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.5)] border-2 border-rose-300",
+                secondary: "bg-slate-800 text-slate-300 border border-slate-600 hover:bg-slate-700",
+                ghost: "bg-transparent text-slate-400 hover:text-white"
             };
 
             return (
                 <button 
                     onClick={onClick} 
                     disabled={disabled}
-                    className={`
-                        relative px-6 py-3 rounded-xl font-black uppercase tracking-wider transition-all 
-                        flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-                        ${variants[variant]} ${className}
-                    `}
+                    className={`${baseClass} ${variants[variant]} rounded-lg px-6 py-3 ${className}`}
                 >
                     {icon && <i data-lucide={icon} className="w-5 h-5"></i>}
-                    {children}
+                    <span className="relative z-10">{children}</span>
                 </button>
             );
         };
 
-        const StatusBadge = ({ label, animate = false, color = "cyan" }) => (
-            <div className={`
-                inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border
-                ${color === 'cyan' ? 'bg-cyan-950/50 border-cyan-500/50 text-cyan-400' : 'bg-rose-950/50 border-rose-500/50 text-rose-400'}
-                ${animate ? 'animate-pulse' : ''}
-            `}>
-                <div className={`w-1.5 h-1.5 rounded-full ${color === 'cyan' ? 'bg-cyan-400' : 'bg-rose-500'}`}></div>
-                {label}
+        const HealthBar = ({ hp, max, isLeft, color }) => (
+            <div className={`flex flex-col ${isLeft ? 'items-start' : 'items-end'} w-32`}>
+                <div className={`text-[10px] font-black tracking-widest mb-1 ${color === 'cyan' ? 'text-cyan-400' : 'text-rose-500'}`}>
+                    {isLeft ? 'PLAYER 1' : 'PLAYER 2'}
+                </div>
+                <div className="flex gap-1 w-full bg-slate-900/80 p-1 rounded border border-slate-700">
+                    {[...Array(max)].map((_, i) => (
+                        <div 
+                            key={i} 
+                            className={`h-2 flex-1 rounded-sm transition-all duration-300 ${
+                                i < hp 
+                                    ? (color === 'cyan' ? 'bg-cyan-400 shadow-[0_0_8px_#22d3ee]' : 'bg-rose-500 shadow-[0_0_8px_#f43f5e]') 
+                                    : 'bg-slate-800 opacity-20'
+                            }`}
+                        />
+                    ))}
+                </div>
             </div>
         );
 
-        // --- MAIN APP ---
+        // --- MAIN APPLICATION ---
 
         const App = () => {
-            // -- Network & Identity --
+            // Network & ID
             const [peer, setPeer] = useState(null);
             const [conn, setConn] = useState(null);
             const [myId, setMyId] = useState('');
             const [targetId, setTargetId] = useState('');
             const [isHost, setIsHost] = useState(false);
             
-            // -- Game State --
-            const [phase, setPhase] = useState('lobby'); // lobby, topic_input, topic_decide, playing, result
-            const [status, setStatus] = useState('');
+            // Game Phase: lobby, topic, vs_anim, playing, result
+            const [phase, setPhase] = useState('lobby'); 
             const [error, setError] = useState('');
-            
-            // -- Topic Logic --
+
+            // Topic State
             const [myTopic, setMyTopic] = useState('');
             const [oppTopic, setOppTopic] = useState(null);
-            const [selectedTopicObj, setSelectedTopicObj] = useState(null); // { text: string, owner: 'host'|'guest'|'system' }
-            const [topicTimer, setTopicTimer] = useState(60);
+            const [selectedTopic, setSelectedTopic] = useState(null);
             const [isVetoed, setIsVetoed] = useState(false);
+            const [topicTimer, setTopicTimer] = useState(60);
 
-            // -- Play Logic --
+            // Gameplay State
             const [history, setHistory] = useState([]);
             const [turn, setTurn] = useState('host');
-            const [myHp, setMyHp] = useState(3);
-            const [oppHp, setOppHp] = useState(3);
+            const [myHp, setMyHp] = useState(MAX_HP);
+            const [oppHp, setOppHp] = useState(MAX_HP);
             const [input, setInput] = useState('');
             const [lastChar, setLastChar] = useState('');
-            const [gameTimer, setGameTimer] = useState(20);
-            const [damageAnim, setDamageAnim] = useState(null); // 'me' or 'opp'
+            const [gameTimer, setGameTimer] = useState(TURN_TIME);
+            
+            // Objection State (New Logic)
+            const [objectionTargetIndex, setObjectionTargetIndex] = useState(-1); // Index of message that can be objected
+            const [shake, setShake] = useState(false); // Screen shake
 
-            const stateRef = useRef({ phase, turn, myHp, oppHp, history, selectedTopicObj, isHost, myTopic, oppTopic });
-            const timerRef = useRef(null);
+            const stateRef = useRef({ phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic });
+            const scrollRef = useRef(null);
 
-            // Update ref for stale closure prevention
+            // Ref updates
             useEffect(() => {
-                stateRef.current = { phase, turn, myHp, oppHp, history, selectedTopicObj, isHost, myTopic, oppTopic };
-            }, [phase, turn, myHp, oppHp, history, selectedTopicObj, isHost, myTopic, oppTopic]);
+                stateRef.current = { phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic };
+            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic]);
 
-            // --- PEER JS SETUP ---
+            // --- INITIALIZATION ---
             useEffect(() => {
                 const id = generateId();
                 const p = new Peer(`NWG-${id}`, { debug: 1 });
-                
-                p.on('open', () => {
-                    setMyId(id);
-                    setPeer(p);
+                p.on('open', () => { setMyId(id); setPeer(p); });
+                p.on('connection', c => setupConnection(c, true));
+                p.on('error', e => {
+                    if(e.type === 'peer-unavailable') showError('IDが見つかりません');
                 });
-
-                p.on('connection', (c) => {
-                    setupConnection(c, true); // I am Host
-                });
-
-                p.on('error', (err) => {
-                    console.error(err);
-                    // Don't show non-fatal errors
-                    if(err.type === 'peer-unavailable') setError('IDが見つかりません');
-                });
-
                 return () => p.destroy();
             }, []);
 
-            // --- LUCIDE ICONS ---
             useEffect(() => {
                 if(window.lucide) window.lucide.createIcons();
             });
 
+            // Auto-scroll chat
+            useEffect(() => {
+                if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }, [history, objectionTargetIndex]);
+
             // --- TIMERS ---
             useEffect(() => {
-                // Game Timer
+                let interval;
                 if (phase === 'playing') {
-                    const timer = setInterval(() => {
+                    interval = setInterval(() => {
                         setGameTimer(prev => {
-                            if (prev <= 1) {
-                                handleTimeout();
-                                return 0;
-                            }
+                            if (prev <= 1) { handleTimeout(); return 0; }
                             return prev - 1;
                         });
                     }, 1000);
-                    return () => clearInterval(timer);
-                }
-                // Topic Timer
-                if (phase === 'topic_input' || phase === 'topic_decide') {
-                    const timer = setInterval(() => {
+                } else if (phase === 'topic') {
+                    interval = setInterval(() => {
                         setTopicTimer(prev => {
-                            if (prev <= 0) {
-                                // Default to sample if time runs out
-                                if (phase === 'topic_input' && !myTopic) setMyTopic("おまかせ");
-                                return 0;
-                            }
+                            if (prev <= 0) { if (!myTopic) setMyTopic("おまかせ"); return 0; }
                             return prev - 1;
                         });
                     }, 1000);
-                    return () => clearInterval(timer);
                 }
+                return () => clearInterval(interval);
             }, [phase, turn]);
 
-            // --- CONNECTION LOGIC ---
+            // --- NETWORK ---
             const connect = () => {
-                if (!targetId || !peer) return;
+                if(!targetId || !peer) return;
                 const c = peer.connect(`NWG-${targetId.toUpperCase()}`);
-                setupConnection(c, false); // I am Guest
+                setupConnection(c, false);
             };
 
-            const setupConnection = (c, amHost) => {
+            const setupConnection = (c, isHostRole) => {
                 setConn(c);
-                setIsHost(amHost);
-                
+                setIsHost(isHostRole);
                 c.on('open', () => {
-                    setPhase('topic_input');
-                    setStatus('');
+                    setPhase('topic');
                     setTopicTimer(60);
                 });
-
-                c.on('data', (data) => handleData(data));
+                c.on('data', handleData);
                 c.on('close', () => {
-                    setError('接続が切れました');
-                    setPhase('lobby');
+                    showError('接続が切れました');
+                    resetGame();
                 });
             };
 
@@ -289,495 +351,428 @@
                 if (conn && conn.open) conn.send(data);
             };
 
-            // --- DATA HANDLER ---
             const handleData = (data) => {
                 const s = stateRef.current;
-
                 switch (data.type) {
-                    // TOPIC PHASE
                     case 'TOPIC_SUBMIT':
                         setOppTopic(data.topic);
-                        if (s.isHost && s.myTopic) {
-                            // Host decides topic once both are ready
-                            decideTopic(s.myTopic, data.topic);
-                        }
+                        if (s.isHost && s.myTopic) decideTopic(s.myTopic, data.topic);
                         break;
-                    
                     case 'TOPIC_DECIDED':
-                        setOppTopic(data.oppTopic); // Sync what opponent wrote
-                        setSelectedTopicObj(data.selected);
-                        setPhase('topic_decide');
-                        setTopicTimer(10); // 10s to Veto
+                        setOppTopic(data.oppTopic);
+                        setSelectedTopic(data.selected);
+                        if (data.selected.owner === 'system') setIsVetoed(true);
                         break;
-
                     case 'VETO':
                         setIsVetoed(true);
-                        setSelectedTopicObj({ text: data.newTopic, owner: 'system' });
-                        setStatus('拒否権発動！サンプルお題に変更されました。');
+                        setSelectedTopic({ text: data.newTopic, owner: 'system' });
                         break;
-                    
-                    case 'GAME_START':
-                        startGame(data.topicObj);
+                    case 'START_MATCH':
+                        triggerVsAnim(data.topic);
                         break;
-
-                    // GAME PHASE
                     case 'MOVE':
                         receiveMove(data.word);
                         break;
-
                     case 'OBJECTION':
-                        handleObjection(data.damage);
+                        applyDamage('me', data.damage, '異議あり！(お題不一致)');
                         break;
-
                     case 'TIMEOUT':
-                        handleTimeoutReceived(data.player);
+                        applyDamage('opp', 1, '時間切れ');
+                        changeTurn(s.isHost ? 'host' : 'guest');
                         break;
-                    
                     case 'REMATCH':
-                        resetGame(false);
+                        resetGame();
+                        setPhase('topic');
                         break;
                 }
             };
 
-            // --- TOPIC LOGIC ---
-            const submitTopic = () => {
-                if (!myTopic.trim()) return;
-                send({ type: 'TOPIC_SUBMIT', topic: myTopic });
-                
-                // If I am guest, I just wait. If Host, check if opponent already sent.
-                if (isHost && oppTopic) {
-                    decideTopic(myTopic, oppTopic);
-                }
-            };
-
+            // --- GAME LOGIC ---
+            
             const decideTopic = (hostTopic, guestTopic) => {
-                // Shuffle logic
                 const isHostChosen = Math.random() > 0.5;
                 const chosen = isHostChosen 
                     ? { text: hostTopic, owner: 'host' }
                     : { text: guestTopic, owner: 'guest' };
                 
-                const payload = {
-                    type: 'TOPIC_DECIDED',
-                    selected: chosen,
-                    oppTopic: hostTopic // Send back to guest what host wrote
-                };
-                
-                // Host updates self
-                setSelectedTopicObj(chosen);
-                setPhase('topic_decide');
-                setTopicTimer(10);
-                
-                // Send to guest
+                const payload = { type: 'TOPIC_DECIDED', selected: chosen, oppTopic: hostTopic };
+                setSelectedTopic(chosen);
                 send(payload);
             };
 
             const handleVeto = () => {
-                // Random sample
                 const sample = SAMPLE_TOPICS[Math.floor(Math.random() * SAMPLE_TOPICS.length)];
                 const newObj = { text: sample, owner: 'system' };
-                
                 setIsVetoed(true);
-                setSelectedTopicObj(newObj);
+                setSelectedTopic(newObj);
                 send({ type: 'VETO', newTopic: sample });
             };
 
-            const confirmTopic = () => {
-                // Only host triggers start, but needs to wait for Veto window theoretically.
-                // For simplicity, if user clicks OK or timer ends.
-                if (isHost) {
-                    const finalTopic = selectedTopicObj;
-                    send({ type: 'GAME_START', topicObj: finalTopic });
-                    startGame(finalTopic);
+            const startMatch = () => {
+                if(isHost) {
+                    send({ type: 'START_MATCH', topic: selectedTopic });
+                    triggerVsAnim(selectedTopic);
                 }
             };
 
-            // --- GAME PLAY LOGIC ---
-            const startGame = (topic) => {
-                setSelectedTopicObj(topic);
-                setPhase('playing');
-                setHistory([{ word: 'しりとり', owner: 'system', damage: 0 }]);
-                setLastChar('り');
-                setTurn('host');
-                setGameTimer(20);
-                setMyHp(3);
-                setOppHp(3);
-                setIsVetoed(false);
+            const triggerVsAnim = (finalTopic) => {
+                setSelectedTopic(finalTopic);
+                setPhase('vs_anim');
+                setTimeout(() => {
+                    setPhase('playing');
+                    setHistory([{ word: 'しりとり', owner: 'system', damage: 0 }]);
+                    setLastChar('り');
+                    setTurn('host');
+                    setGameTimer(TURN_TIME);
+                    setMyHp(MAX_HP);
+                    setOppHp(MAX_HP);
+                }, 2500);
             };
 
             const submitWord = () => {
                 if (!input.trim()) return;
                 const hira = toHiragana(input);
                 
-                // Basic Validation
-                if (!/^[\u3040-\u309fー]+$/.test(hira)) {
-                    setError('ひらがなのみ有効です');
-                    setTimeout(() => setError(''), 2000);
-                    return;
-                }
-                if (lastChar && hira[0] !== lastChar) {
-                    setError(`「${lastChar}」から始めてください`);
-                    setTimeout(() => setError(''), 2000);
-                    return;
-                }
-                if (history.some(h => h.word === hira)) {
-                    setError('既出の単語です');
-                    setTimeout(() => setError(''), 2000);
-                    return;
-                }
+                // Validation checks...
+                if (!/^[\u3040-\u309fー]+$/.test(hira)) return showError('ひらがなのみ有効です');
+                if (lastChar && hira[0] !== lastChar) return showError(`「${lastChar}」から始めてください`);
+                if (history.some(h => h.word === hira)) return showError('既出の単語です');
+                
                 if (hira.slice(-1) === 'ん') {
-                    // Instant Death logic can be handled as max damage
                     applyDamage('me', 3, '「ん」がつきました');
-                    send({ type: 'MOVE', word: hira }); // Send final word
+                    send({ type: 'MOVE', word: hira }); 
                     return;
                 }
 
-                // Send Move
                 send({ type: 'MOVE', word: hira });
                 
-                // Update Local State
                 const newHistory = [...history, { word: hira, owner: isHost ? 'host' : 'guest', damage: 0 }];
                 setHistory(newHistory);
                 setLastChar(getLastChar(hira));
                 setInput('');
-                setTurn(isHost ? 'guest' : 'host');
-                setGameTimer(20);
+                changeTurn(isHost ? 'guest' : 'host');
+                
+                // Reset objection window because I played
+                setObjectionTargetIndex(-1);
             };
 
             const receiveMove = (word) => {
                 const s = stateRef.current;
-                
-                // Check "ん"
                 if (word.slice(-1) === 'ん') {
                     applyDamage('opp', 3, '「ん」がつきました');
                 }
 
-                const newHistory = [...s.history, { word: word, owner: !s.isHost ? 'host' : 'guest', damage: 0 }];
+                const owner = !s.isHost ? 'host' : 'guest';
+                const newHistory = [...s.history, { word: word, owner: owner, damage: 0 }];
                 setHistory(newHistory);
                 setLastChar(getLastChar(word));
-                setTurn(s.isHost ? 'host' : 'guest');
-                setGameTimer(20);
+                changeTurn(s.isHost ? 'host' : 'guest');
+
+                // OBJECTION LOGIC START
+                // Enable objection on this received message (which is at index length-1)
+                const newIndex = newHistory.length - 1;
+                setObjectionTargetIndex(newIndex);
+
+                // Auto hide objection after 5 seconds
+                setTimeout(() => {
+                    setObjectionTargetIndex(prev => prev === newIndex ? -1 : prev);
+                }, 5000);
             };
 
-            const sendObjection = () => {
-                // You object to the LAST word played by opponent
-                const lastMove = history[history.length - 1];
-                if (lastMove.owner === (isHost ? 'host' : 'guest')) return; // Can't object self
-                if (lastMove.damage > 0) return; // Already damaged
-
+            const sendObjection = (targetIndex) => {
+                if (targetIndex !== objectionTargetIndex) return;
                 const damage = 1;
                 send({ type: 'OBJECTION', damage });
-                
-                // Apply locally (Opponent takes damage)
-                applyDamage('opp', damage, 'お題不一致 (異議あり)');
+                applyDamage('opp', damage, '異議あり！(お題不一致)');
+                setObjectionTargetIndex(-1); // Hide button immediately
             };
 
-            const handleObjection = (dmg) => {
-                // I received an objection -> I take damage
-                applyDamage('me', dmg, 'お題不一致 (異議あり)');
+            const changeTurn = (nextTurn) => {
+                setTurn(nextTurn);
+                setGameTimer(TURN_TIME);
             };
 
             const handleTimeout = () => {
-                // Current turn player timed out.
-                // If it's my turn and I timed out:
-                if (turn === (isHost ? 'host' : 'guest')) {
+                const currentIsMe = turn === (isHost ? 'host' : 'guest');
+                if (currentIsMe) {
                     applyDamage('me', 1, '時間切れ');
                     send({ type: 'TIMEOUT', player: isHost ? 'host' : 'guest' });
-                    // Pass turn? Or just damage? Let's pass turn to keep flow
-                    setTurn(isHost ? 'guest' : 'host');
-                    setGameTimer(20);
+                    changeTurn(isHost ? 'guest' : 'host');
                 }
-            };
-
-            const handleTimeoutReceived = (playerWhoTimedOut) => {
-                applyDamage('opp', 1, '時間切れ');
-                setTurn(isHost ? 'host' : 'guest');
-                setGameTimer(20);
             };
 
             const applyDamage = (target, amount, reason) => {
-                // target: 'me' or 'opp'
-                if (target === 'me') {
-                    setMyHp(prev => Math.max(0, prev - amount));
-                    setDamageAnim('me');
-                } else {
-                    setOppHp(prev => Math.max(0, prev - amount));
-                    setDamageAnim('opp');
-                }
+                setShake(true);
+                setTimeout(() => setShake(false), 500);
                 
-                // Add alert to history
+                if (target === 'me') setMyHp(prev => Math.max(0, prev - amount));
+                else setOppHp(prev => Math.max(0, prev - amount));
+                
                 setHistory(prev => [...prev, { word: `⚠️ DAMAGE: ${reason}`, type: 'alert' }]);
-
-                setTimeout(() => setDamageAnim(null), 500);
-
-                // Game Over Check is done in render or useEffect based on HP
             };
 
-            const resetGame = (shouldSend) => {
-                if (shouldSend) send({ type: 'REMATCH' });
-                // Return to topic setup
-                setPhase('topic_input');
-                setMyTopic('');
-                setOppTopic(null);
-                setSelectedTopicObj(null);
+            const showError = (msg) => {
+                setError(msg);
+                setTimeout(() => setError(''), 2500);
+            };
+
+            const resetGame = () => {
+                setPhase('lobby');
+                setMyTopic(''); setOppTopic(null); setSelectedTopic(null);
                 setHistory([]);
-                setTopicTimer(60);
-                setMyHp(3);
-                setOppHp(3);
+                setMyHp(MAX_HP); setOppHp(MAX_HP);
             };
 
-            // --- RENDER HELPERS ---
+            const copyId = () => {
+                const textArea = document.createElement("textarea");
+                textArea.value = myId;
+                textArea.style.position = "fixed";
+                textArea.style.left = "-9999px";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    showError('IDをコピーしました');
+                } catch (err) { showError('コピー失敗'); }
+                document.body.removeChild(textArea);
+            };
+
+            // --- COMPUTED ---
             const isGameOver = myHp <= 0 || oppHp <= 0;
             const amIWinner = oppHp <= 0 && myHp > 0;
-
-            // RENDER: LOBBY
-            if (phase === 'lobby') return (
-                <div className="flex flex-col items-center justify-center h-full p-6 space-y-10 animate-fade-in">
-                    <div className="text-center space-y-2">
-                        <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 neon-text" style={{fontFamily: 'Black Ops One'}}>
-                            GENESIS
-                        </h1>
-                        <p className="text-cyan-400 tracking-[0.5em] text-xs">NEON WORD BATTLE II</p>
-                    </div>
-
-                    <div className="w-full max-w-md space-y-8 relative z-10">
-                        {/* HOST */}
-                        <div className="glass-panel p-6 rounded-2xl border border-cyan-500/30 bg-black/40 backdrop-blur-md neon-box">
-                            <div className="text-cyan-400 font-bold mb-2 flex items-center gap-2">
-                                <i data-lucide="server" className="w-4 h-4"></i> HOST ID
-                            </div>
-                            <div className="flex gap-2">
-                                <div className="flex-1 bg-black/60 rounded-xl flex items-center justify-center text-3xl font-mono tracking-widest text-white border border-cyan-900 h-16">
-                                    {myId || '...'}
-                                </div>
-                                <Button onClick={() => navigator.clipboard.writeText(myId)} className="h-16 w-16 !p-0" icon="copy" />
-                            </div>
-                        </div>
-
-                        {/* JOIN */}
-                        <div className="glass-panel p-6 rounded-2xl border border-slate-700 bg-black/40 backdrop-blur-md">
-                            <div className="text-slate-400 font-bold mb-2 flex items-center gap-2">
-                                <i data-lucide="zap" className="w-4 h-4"></i> JOIN GAME
-                            </div>
-                            <div className="flex gap-2">
-                                <input 
-                                    value={targetId}
-                                    onChange={(e) => setTargetId(e.target.value.toUpperCase())}
-                                    placeholder="HOST ID"
-                                    className="flex-1 bg-slate-900 border border-slate-600 text-white rounded-xl px-4 text-xl font-mono text-center outline-none focus:border-cyan-500 transition-colors"
-                                />
-                                <Button onClick={connect} variant="danger" className="w-24" disabled={!targetId}>JOIN</Button>
-                            </div>
-                        </div>
-                    </div>
-                    {error && <div className="fixed bottom-10 bg-rose-900/90 text-white px-6 py-3 rounded-lg border border-rose-500 animate-bounce">{error}</div>}
-                </div>
-            );
-
-            // RENDER: TOPIC INPUT
-            if (phase === 'topic_input') return (
-                <div className="flex flex-col items-center justify-center h-full p-6 space-y-8 bg-black/80">
-                    <div className="text-center">
-                        <h2 className="text-4xl font-bold text-white mb-2">お題を提案せよ</h2>
-                        <p className="text-slate-400 text-sm">互いに提案し、ランダムで決定される。<br/>苦手なジャンルは拒否権を行使せよ。</p>
-                    </div>
-
-                    <div className="w-full max-w-md relative">
-                         <div className="text-right text-xs text-cyan-500 mb-1 font-mono">TIME: {topicTimer}</div>
-                        <input 
-                            value={myTopic}
-                            onChange={(e) => setMyTopic(e.target.value)}
-                            placeholder="例: スタジオジブリのキャラ"
-                            disabled={!!(oppTopic && isHost && myTopic)} // Host waits if already decided logic triggers, simplified here
-                            className="w-full bg-slate-900 border-2 border-cyan-700 text-white p-6 rounded-2xl text-2xl text-center outline-none focus:shadow-[0_0_20px_rgba(6,182,212,0.5)] focus:border-cyan-400 transition-all placeholder:text-slate-700"
-                        />
-                    </div>
-
-                    <div className="flex gap-4">
-                        <Button onClick={() => setMyTopic(SAMPLE_TOPICS[0])} variant="secondary" className="text-sm">ランダム (おまかせ)</Button>
-                        <Button onClick={submitTopic} disabled={!myTopic} className="px-10">決定</Button>
-                    </div>
-
-                    {/* Waiting Status */}
-                    <div className="h-8 text-center font-mono text-sm text-yellow-500 animate-pulse">
-                        {!oppTopic ? "WAITING FOR OPPONENT..." : "OPPONENT READY!"}
-                    </div>
-                </div>
-            );
-
-            // RENDER: TOPIC DECIDE
-            if (phase === 'topic_decide') {
-                const isMyProposed = selectedTopicObj.owner === (isHost ? 'host' : 'guest');
-                const canVeto = !isMyProposed && selectedTopicObj.owner !== 'system' && !isVetoed;
-
-                return (
-                    <div className="flex flex-col items-center justify-center h-full p-6 space-y-8 bg-black/90 z-50">
-                        <div className="text-center space-y-4 w-full max-w-lg">
-                            <div className="text-slate-500 text-xs tracking-widest uppercase">CURRENT MISSION</div>
-                            
-                            <div className="relative group">
-                                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-xl blur opacity-25 group-hover:opacity-50 transition-opacity"></div>
-                                <div className="relative bg-slate-900 border border-slate-700 p-10 rounded-xl text-center">
-                                    <h3 className={`text-3xl md:text-5xl font-black text-white ${isVetoed ? 'glitch-effect text-rose-400' : 'text-cyan-400'}`}>
-                                        {selectedTopicObj.text}
-                                    </h3>
-                                    <div className="mt-4 flex justify-center gap-2">
-                                        <span className="text-xs px-2 py-1 bg-slate-800 rounded text-slate-400">
-                                            Proposer: {selectedTopicObj.owner === 'system' ? 'SYSTEM' : (isMyProposed ? 'YOU' : 'OPPONENT')}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex justify-center items-center gap-4 min-h-[80px]">
-                                {canVeto ? (
-                                    <>
-                                        <p className="text-rose-400 text-sm font-bold animate-pulse">
-                                            知らないお題ですか？<br/>拒否権を行使できます ({topicTimer}s)
-                                        </p>
-                                        <Button onClick={handleVeto} variant="danger" icon="ban">VETO (拒否)</Button>
-                                    </>
-                                ) : (
-                                    <div className="text-slate-500 text-sm">
-                                        {isVetoed ? "お題が変更されました" : "お題が決定しました"}
-                                    </div>
-                                )}
-                            </div>
-
-                            {isHost && (
-                                <Button onClick={confirmTopic} className="w-full py-4 text-xl mt-4 scanline overflow-hidden">
-                                    <span className="relative z-10">BATTLE START</span>
-                                </Button>
-                            )}
-                            {!isHost && <div className="text-cyan-500 animate-pulse text-sm">HOST IS STARTING GAME...</div>}
-                        </div>
-                    </div>
-                );
-            }
-
-            // RENDER: PLAYING & RESULT
             const isMyTurn = turn === (isHost ? 'host' : 'guest');
 
-            if (isGameOver) {
-                return (
-                    <div className="flex flex-col items-center justify-center h-full relative overflow-hidden">
-                        <div className={`absolute inset-0 opacity-20 ${amIWinner ? 'bg-cyan-900' : 'bg-rose-900'}`}></div>
-                        <div className="relative z-10 text-center space-y-6 p-8 bg-black/80 rounded-3xl border border-white/10 backdrop-blur-xl">
-                            <h1 className={`text-6xl font-black ${amIWinner ? 'text-cyan-400 neon-text' : 'text-rose-500 neon-text'}`}>
-                                {amIWinner ? 'VICTORY' : 'DEFEAT'}
-                            </h1>
-                            <div className="text-2xl text-white font-bold">
-                                {amIWinner ? '相手を論破しました' : '言葉が尽きました...'}
-                            </div>
-                            <div className="py-4">
-                                <div className="text-xs text-slate-500">FINAL TOPIC</div>
-                                <div className="text-lg text-white">{selectedTopicObj?.text}</div>
-                            </div>
-                            <Button onClick={() => resetGame(true)} variant="primary">REMATCH</Button>
-                        </div>
-                    </div>
-                );
-            }
-
+            // --- RENDER ---
             return (
-                <div className={`flex flex-col h-screen max-w-2xl mx-auto relative ${damageAnim === 'me' ? 'animate-[shake_0.5s_ease-in-out]' : ''}`}>
-                    {/* HUD */}
-                    <div className="p-3 bg-slate-900/90 backdrop-blur border-b border-slate-800 flex justify-between items-end relative z-20 shadow-xl">
-                        {/* OPPONENT */}
-                        <div className={`transition-all duration-300 ${damageAnim === 'opp' ? 'opacity-50 scale-95' : ''}`}>
-                            <div className="flex gap-1 mb-1">
-                                {[...Array(3)].map((_,i) => (
-                                    <div key={i} className={`h-2 w-8 -skew-x-12 ${i < oppHp ? 'bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.6)]' : 'bg-slate-800'}`}/>
-                                ))}
-                            </div>
-                            <div className="text-[10px] font-black text-rose-500 tracking-widest">ENEMY</div>
-                        </div>
+                <div className={`app-container ${shake ? 'shake-anim' : ''}`}>
+                    <ParticleBackground />
+                    <div className="scanlines"></div>
 
-                        {/* TOPIC & TIMER */}
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-[200px] text-center pt-2">
-                            <div className="bg-slate-950 border border-cyan-900/50 rounded-b-xl px-4 py-1 inline-block">
-                                <div className="text-[10px] text-cyan-600 truncate max-w-[150px] mx-auto">{selectedTopicObj?.text}</div>
+                    {/* --- PHASE: LOBBY --- */}
+                    {phase === 'lobby' && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 space-y-8 animate-enter">
+                            <div className="text-center relative">
+                                <h1 className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-cyan-300 to-blue-600 neon-text-cyan" style={{fontFamily: 'Black Ops One'}}>
+                                    OVERDRIVE
+                                </h1>
+                                <p className="text-cyan-400 text-xs tracking-[0.5em] mt-2">NEON WORD BATTLE</p>
                             </div>
-                            <div className={`text-4xl font-black mt-1 ${gameTimer <= 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`} style={{fontFamily: 'Black Ops One'}}>
-                                {gameTimer}
-                            </div>
-                        </div>
 
-                        {/* ME */}
-                        <div className={`text-right transition-all duration-300 ${damageAnim === 'me' ? 'opacity-50 scale-95' : ''}`}>
-                            <div className="flex gap-1 mb-1 justify-end">
-                                {[...Array(3)].map((_,i) => (
-                                    <div key={i} className={`h-2 w-8 -skew-x-12 ${i < myHp ? 'bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.6)]' : 'bg-slate-800'}`}/>
-                                ))}
-                            </div>
-                            <div className="text-[10px] font-black text-cyan-400 tracking-widest">YOU</div>
-                        </div>
-                    </div>
+                            <div className="w-full max-w-sm space-y-6">
+                                <div className="glass-morphism p-6 rounded-2xl border border-cyan-500/30">
+                                    <div className="text-cyan-400 text-xs font-bold mb-2 flex items-center gap-2">
+                                        <i data-lucide="server" className="w-4 h-4"></i> HOST GAME
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="flex-1 bg-black/60 rounded-lg flex items-center justify-center text-3xl font-mono tracking-widest text-white h-14 border border-cyan-900/50">
+                                            {myId || '...'}
+                                        </div>
+                                        <Button onClick={copyId} variant="ghost" className="border border-cyan-500/30 text-cyan-400" icon="copy"/>
+                                    </div>
+                                </div>
 
-                    {/* ERROR TOAST */}
-                    {error && (
-                        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-30 bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg animate-bounce">
-                            {error}
+                                <div className="glass-morphism p-6 rounded-2xl border border-slate-700">
+                                    <div className="text-slate-400 text-xs font-bold mb-2 flex items-center gap-2">
+                                        <i data-lucide="zap" className="w-4 h-4"></i> JOIN GAME
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            value={targetId}
+                                            onChange={(e) => setTargetId(e.target.value.toUpperCase())}
+                                            placeholder="ENTER ID"
+                                            className="flex-1 bg-slate-900/80 border border-slate-600 text-white rounded-lg px-4 text-center font-mono text-xl outline-none focus:border-cyan-500"
+                                        />
+                                        <Button onClick={connect} variant="danger" disabled={!targetId} className="w-24">GO</Button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
-                    {/* HISTORY */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
-                        {history.map((h, i) => {
-                            if(h.type === 'alert') return (
-                                <div key={i} className="text-center text-rose-500 text-xs font-bold bg-rose-950/30 py-1 rounded border border-rose-900/50">
-                                    {h.word}
-                                </div>
-                            );
-                            const isMine = h.owner === (isHost ? 'host' : 'guest');
-                            const isSystem = h.owner === 'system';
-                            return (
-                                <div key={i} className={`flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')}`}>
-                                    {isSystem ? (
-                                        <span className="text-xs text-slate-500 bg-slate-900 px-3 py-1 rounded-full">{h.word}</span>
-                                    ) : (
-                                        <div className={`chat-bubble ${isMine ? 'mine' : 'opponent'} animate-fade-in`}>
-                                            {h.word}
+                    {/* --- PHASE: TOPIC SELECTION --- */}
+                    {phase === 'topic' && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-6 bg-black/80 backdrop-blur-sm">
+                            <div className="w-full max-w-md space-y-6 animate-enter">
+                                {!selectedTopic ? (
+                                    <>
+                                        <div className="text-center space-y-2">
+                                            <h2 className="text-3xl font-bold text-white">MISSION SETUP</h2>
+                                            <p className="text-slate-400 text-sm">互いにお題を提示せよ</p>
                                         </div>
+                                        <div className="relative">
+                                            <input 
+                                                value={myTopic}
+                                                onChange={(e) => setMyTopic(e.target.value)}
+                                                placeholder="例: 赤い食べ物"
+                                                disabled={!!(oppTopic && isHost && myTopic)}
+                                                className="w-full bg-slate-900 border-2 border-cyan-800 text-white p-6 rounded-xl text-2xl text-center outline-none focus:border-cyan-400 placeholder:text-slate-700"
+                                            />
+                                            <div className="absolute top-2 right-2 text-xs font-mono text-cyan-500">{topicTimer}s</div>
+                                        </div>
+                                        <div className="flex gap-3">
+                                            <Button onClick={() => setMyTopic(SAMPLE_TOPICS[0])} variant="secondary" className="flex-1 text-sm">ランダム</Button>
+                                            <Button onClick={() => send({type:'TOPIC_SUBMIT', topic: myTopic})} disabled={!myTopic} className="flex-1">決定</Button>
+                                        </div>
+                                        {!oppTopic && <div className="text-center text-xs text-yellow-500 animate-pulse">WAITING FOR RIVAL...</div>}
+                                    </>
+                                ) : (
+                                    <div className="text-center space-y-8">
+                                        <div className="text-xs text-slate-500 tracking-widest">SELECTED TOPIC</div>
+                                        <div className={`text-4xl font-black text-white p-8 border-2 border-dashed ${isVetoed ? 'border-rose-500 text-rose-400' : 'border-cyan-500 text-cyan-400'} rounded-xl bg-slate-900/80`}>
+                                            {selectedTopic.text}
+                                        </div>
+                                        
+                                        {selectedTopic.owner !== 'system' && selectedTopic.owner !== (isHost ? 'host' : 'guest') && !isVetoed ? (
+                                            <div className="animate-pulse">
+                                                <p className="text-rose-400 text-sm mb-4 font-bold">不利なお題ですか？<br/>拒否権を行使できます</p>
+                                                <Button onClick={handleVeto} variant="danger" icon="ban" className="w-full">VETO (拒否)</Button>
+                                            </div>
+                                        ) : (
+                                            <div className="text-slate-400 text-sm">{isVetoed ? "サンプルお題に変更されました" : "お題決定！"}</div>
+                                        )}
+
+                                        {isHost && (
+                                            <Button onClick={startMatch} className="w-full py-4 text-xl">BATTLE START</Button>
+                                        )}
+                                        {!isHost && <div className="text-cyan-500 animate-pulse text-sm">HOST IS STARTING...</div>}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- PHASE: VS ANIMATION --- */}
+                    {phase === 'vs_anim' && (
+                        <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
+                            <div className="absolute top-1/4 left-[-100%] w-full h-32 bg-cyan-600 flex items-center justify-end px-10 skew-x-12 animate-[slide-in-left_0.5s_forwards]">
+                                <span className="text-4xl font-black italic text-black mr-10">YOU</span>
+                            </div>
+                            <div className="absolute bottom-1/4 right-[-100%] w-full h-32 bg-rose-600 flex items-center justify-start px-10 skew-x-12 animate-[slide-in-right_0.5s_0.2s_forwards]">
+                                <span className="text-4xl font-black italic text-black ml-10">RIVAL</span>
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <h1 className="text-9xl font-black text-white italic scale-0 animate-[pop-in_0.5s_0.7s_forwards] neon-text-cyan">VS</h1>
+                            </div>
+                            <style>{`
+                                @keyframes slide-in-left { to { transform: translateX(100%); left: -10%; } }
+                                @keyframes slide-in-right { to { transform: translateX(-100%); right: -10%; } }
+                            `}</style>
+                        </div>
+                    )}
+
+                    {/* --- PHASE: GAMEPLAY --- */}
+                    {(phase === 'playing' || isGameOver) && (
+                        <div className="flex-1 flex flex-col relative z-10 h-full">
+                            {/* HEADER */}
+                            <div className="flex-none p-4 pb-2 flex justify-between items-end bg-gradient-to-b from-black/80 to-transparent">
+                                <HealthBar hp={oppHp} max={MAX_HP} isLeft={true} color="rose" />
+                                <div className="absolute top-2 left-1/2 -translate-x-1/2 text-center">
+                                    <div className="bg-slate-900/90 border border-slate-700 px-3 py-1 rounded-b-lg text-[10px] text-slate-400 truncate max-w-[120px]">
+                                        {selectedTopic?.text}
+                                    </div>
+                                    <div className={`text-4xl font-black mt-1 ${gameTimer <= 5 ? 'text-rose-500 animate-pulse' : 'text-white'}`} style={{fontFamily: 'Black Ops One'}}>
+                                        {gameTimer}
+                                    </div>
+                                </div>
+                                <HealthBar hp={myHp} max={MAX_HP} isLeft={false} color="cyan" />
+                            </div>
+
+                            {/* CHAT HISTORY */}
+                            <div className="flex-1 overflow-y-auto px-4 py-2 space-y-6" ref={scrollRef}>
+                                {history.map((h, i) => {
+                                    if(h.type === 'alert') return (
+                                        <div key={i} className="text-center">
+                                            <span className="bg-rose-950/80 text-rose-400 text-xs font-bold px-3 py-1 rounded border border-rose-500/30">
+                                                {h.word}
+                                            </span>
+                                        </div>
+                                    );
+                                    
+                                    const isMine = h.owner === (isHost ? 'host' : 'guest');
+                                    const isSystem = h.owner === 'system';
+                                    
+                                    // OBJECTION BUTTON CHECK
+                                    const canObject = i === objectionTargetIndex && !isMine && !isSystem && !isGameOver;
+
+                                    return (
+                                        <div key={i} className={`flex ${isSystem ? 'justify-center' : (isMine ? 'justify-end' : 'justify-start')} animate-enter relative group`}>
+                                            {isSystem ? (
+                                                <span className="text-xs text-slate-500">{h.word}</span>
+                                            ) : (
+                                                <div className="relative max-w-[80%]">
+                                                    <div className={`
+                                                        px-5 py-3 rounded-2xl font-bold text-lg shadow-lg relative z-10
+                                                        ${isMine 
+                                                            ? 'bg-gradient-to-br from-cyan-600 to-blue-700 text-white rounded-tr-none border border-cyan-400/50 neon-text-cyan' 
+                                                            : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-600'}
+                                                    `}>
+                                                        {h.word}
+                                                    </div>
+                                                    
+                                                    {/* DYNAMIC OBJECTION BUTTON */}
+                                                    {canObject && (
+                                                        <button 
+                                                            onClick={() => sendObjection(i)}
+                                                            className="absolute -right-24 top-1/2 -translate-y-1/2 z-20 pop-in flex items-center gap-1 bg-yellow-500 text-black font-black px-3 py-2 rounded shadow-[0_0_15px_rgba(234,179,8,0.8)] hover:scale-110 transition-transform active:scale-95 border-2 border-yellow-300"
+                                                        >
+                                                            <i data-lucide="alert-triangle" className="w-4 h-4"></i>
+                                                            異議!
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* INPUT AREA */}
+                            <div className="flex-none p-4 pb-6 bg-slate-900/90 border-t border-slate-800 backdrop-blur">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <div className="text-xs text-slate-400">
+                                        Last: <span className="text-white text-xl font-bold mx-1">{lastChar || '-'}</span>
+                                    </div>
+                                    {isMyTurn ? (
+                                        <div className="text-cyan-400 text-xs font-bold animate-pulse">YOUR TURN</div>
+                                    ) : (
+                                        <div className="text-slate-600 text-xs font-bold">WAITING...</div>
                                     )}
                                 </div>
-                            );
-                        })}
-                        <div ref={(el) => el?.scrollIntoView({ behavior: "smooth" })}></div>
-                    </div>
-
-                    {/* INPUT AREA */}
-                    <div className="absolute bottom-0 w-full bg-slate-950/90 backdrop-blur border-t border-slate-800 p-4 pb-8 z-20">
-                        {/* Turn Indicator */}
-                        <div className="flex justify-between items-center mb-3">
-                            <div className="text-slate-400 text-xs">
-                                Last: <span className="text-white text-xl font-bold mx-1">{lastChar}</span> から
+                                <div className="flex gap-2">
+                                    <input
+                                        value={input}
+                                        onChange={(e) => setInput(e.target.value)}
+                                        onKeyDown={(e) => e.key === 'Enter' && isMyTurn && submitWord()}
+                                        disabled={!isMyTurn || isGameOver}
+                                        placeholder={isMyTurn ? `「${lastChar || ''}」から入力` : "相手のターン"}
+                                        className="flex-1 bg-black border border-slate-700 text-white rounded-xl px-4 py-3 outline-none focus:border-cyan-500 focus:shadow-[0_0_10px_rgba(6,182,212,0.3)] transition-all font-bold disabled:opacity-50"
+                                    />
+                                    <Button onClick={submitWord} disabled={!isMyTurn || !input || isGameOver} icon="send" className="w-16 !px-0" />
+                                </div>
                             </div>
-                            
-                            {!isMyTurn ? (
-                                <button 
-                                    onClick={sendObjection}
-                                    className="bg-rose-900/50 hover:bg-rose-800 text-rose-300 border border-rose-700 px-3 py-1 rounded text-xs font-bold flex items-center gap-1 transition-colors"
-                                >
-                                    <i data-lucide="alert-triangle" className="w-3 h-3"></i> 異議あり!
-                                </button>
-                            ) : (
-                                <div className="text-cyan-400 text-xs font-bold animate-pulse">YOUR TURN</div>
-                            )}
                         </div>
+                    )}
 
-                        <div className="flex gap-2">
-                            <input
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && isMyTurn && submitWord()}
-                                disabled={!isMyTurn}
-                                placeholder={isMyTurn ? "入力..." : "相手のターン"}
-                                className="flex-1 bg-slate-900 border border-slate-700 text-white px-4 py-3 rounded-xl outline-none focus:border-cyan-500 disabled:opacity-50 transition-all font-bold"
-                            />
-                            <Button onClick={submitWord} disabled={!isMyTurn || !input} icon="send" className="w-16 !px-0" />
+                    {/* --- GAME OVER OVERLAY --- */}
+                    {isGameOver && (
+                        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-md animate-enter">
+                            <div className={`text-6xl md:text-8xl font-black mb-4 ${amIWinner ? 'text-cyan-400 neon-text-cyan' : 'text-rose-500 neon-text-pink'} italic`}>
+                                {amIWinner ? 'WINNER' : 'LOSE'}
+                            </div>
+                            <div className="text-white font-bold text-xl mb-8">
+                                {amIWinner ? 'OPPONENT NEUTRALIZED' : 'SYSTEM CRITICAL'}
+                            </div>
+                            <Button onClick={() => send({type:'REMATCH'})} variant="primary" className="px-10 py-4 text-lg">REMATCH</Button>
                         </div>
-                    </div>
+                    )}
+
+                    {/* TOAST ERROR */}
+                    {error && (
+                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] bg-rose-600 text-white px-6 py-2 rounded-full font-bold shadow-xl animate-bounce border border-white/20">
+                            {error}
+                        </div>
+                    )}
                 </div>
             );
         };
