@@ -120,7 +120,7 @@
         const SAMPLE_TOPICS = ["アニメキャラ", "学校にあるもの", "コンビニの商品", "4文字の言葉", "緑色のもの", "歴史上の人物"];
         const MAX_HP = 5;
         const TIMER_SETUP = 60;
-        const TIMER_GAME = 30;
+        const TIMER_GAME = 60; // 30 -> 60に変更
 
         // --- UTILS ---
         const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -176,7 +176,7 @@
             const [targetId, setTargetId] = useState('');
             const [isHost, setIsHost] = useState(false);
             
-            // Flow: lobby -> topic_input -> topic_wait -> roulette -> ng_input -> ng_wait -> playing -> result
+            // Flow
             const [phase, setPhase] = useState('lobby');
             const [error, setError] = useState('');
             
@@ -201,6 +201,7 @@
             const [timer, setTimer] = useState(0);
             
             const stateRef = useRef({ phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady });
+            const connRef = useRef(null); // Ref for connection to prevent stale closures
             const scrollRef = useRef(null);
 
             useEffect(() => {
@@ -242,6 +243,7 @@
 
             const setupConn = (c, amHost) => {
                 setConn(c);
+                connRef.current = c; // Update Ref
                 setIsHost(amHost);
                 c.on('open', () => {
                     setPhase('topic_input');
@@ -255,7 +257,10 @@
             };
 
             const send = (data) => {
-                if(conn && conn.open) conn.send(data);
+                // Use Ref to ensure we always have the current connection object, even inside closures
+                if(connRef.current && connRef.current.open) {
+                    connRef.current.send(data);
+                }
             };
 
             // --- HANDLERS ---
@@ -411,6 +416,9 @@
                 const s = stateRef.current;
                 let dmg = 0;
                 let reason = '';
+                
+                // --- TRAP CHECK LOGIC ---
+                // I am the receiver. I check if the word sent by opponent hits MY traps.
                 if(word === s.ngWords.high) { dmg = 3; reason = 'NGワード(3pt)踏破!'; }
                 else if(word === s.ngWords.mid) { dmg = 2; reason = 'NGワード(2pt)踏破!'; }
                 else if(word === s.ngWords.low) { dmg = 1; reason = 'NGワード(1pt)踏破!'; }
@@ -418,7 +426,10 @@
                 if(word.slice(-1) === 'ん') { dmg = MAX_HP; reason = '自爆:「ん」'; }
 
                 if(dmg > 0) {
+                    // Update MY view of Opponent
                     applyDamage('opp', dmg, reason);
+                    // Tell Opponent they took damage
+                    // FIX: This send was failing because conn was stale in closure
                     send({ type: 'DAMAGE_REPORT', amount: dmg, reason });
                 }
 
