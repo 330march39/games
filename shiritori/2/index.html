@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KOTOBA STADIUM - ULTIMATE</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+        
+        :root {
+            --c-p1: #3B82F6; /* Vivid Blue */
+            --c-p1-dark: #1D4ED8;
+            --c-p2: #EC4899; /* Hot Pink */
+            --c-p2-dark: #BE185D;
+            --c-accent: #F59E0B; /* Amber */
+            --c-bg: #F0F9FF;
+            --c-text: #1E293B;
+        }
+
+        body {
+            font-family: 'Zen Maru Gothic', sans-serif;
+            background-color: var(--c-bg);
+            color: var(--c-text);
+            overflow: hidden;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* --- NINTENDO-STYLE POP UI --- */
+        .font-pop { font-family: 'Mochiy Pop One', sans-serif; }
+
+        .pop-btn {
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
+            transform: translateY(0);
+        }
+        .pop-btn:active:not(:disabled) {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 rgba(0,0,0,0.2);
+        }
+        .pop-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+            transform: translateY(6px);
+            filter: grayscale(100%);
+        }
+
+        .pop-card {
+            background: white;
+            border-radius: 1.5rem;
+            border: 4px solid #fff;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        .pop-input {
+            border: 3px solid #E2E8F0;
+            border-radius: 1rem;
+            transition: all 0.2s;
+            font-family: 'Zen Maru Gothic', sans-serif;
+            font-weight: bold;
+        }
+        .pop-input:focus {
+            outline: none;
+            border-color: var(--c-p1);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+            transform: scale(1.02);
+        }
+
+        /* --- BACKGROUND PATTERN --- */
+        .bg-pattern {
+            background-image: radial-gradient(#CBD5E1 15%, transparent 16%), radial-gradient(#CBD5E1 15%, transparent 16%);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            opacity: 0.3;
+            animation: bg-slide 20s linear infinite;
+        }
+        @keyframes bg-slide { from { background-position: 0 0, 10px 10px; } to { background-position: 40px 40px, 50px 50px; } }
+
+        /* --- ANIMATIONS --- */
+        @keyframes pop-in {
+            0% { transform: scale(0.5); opacity: 0; }
+            60% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in { animation: pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        @keyframes bounce-small {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        .animate-bounce-small { animation: bounce-small 2s infinite ease-in-out; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-6px) rotate(-2deg); }
+            20%, 40%, 60%, 80% { transform: translateX(6px) rotate(2deg); }
+        }
+        .animate-shake { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+
+        @keyframes slide-up-enter {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up-enter { animation: slide-up-enter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        @keyframes wipe-in {
+            0% { clip-path: circle(0% at 50% 50%); }
+            100% { clip-path: circle(150% at 50% 50%); }
+        }
+        .wipe-transition { animation: wipe-in 0.8s cubic-bezier(0.7, 0, 0.3, 1) forwards; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+        /* Player Colors */
+        .theme-p1 { --theme-color: var(--c-p1); --theme-dark: var(--c-p1-dark); }
+        .theme-p2 { --theme-color: var(--c-p2); --theme-dark: var(--c-p2-dark); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        // --- SOUND ENGINE (Simple Web Audio API) ---
+        const SoundEngine = {
+            ctx: null,
+            init: () => {
+                if (!SoundEngine.ctx) {
+                    SoundEngine.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (SoundEngine.ctx.state === 'suspended') SoundEngine.ctx.resume();
+            },
+            play: (type) => {
+                if (!SoundEngine.ctx) return;
+                const osc = SoundEngine.ctx.createOscillator();
+                const gain = SoundEngine.ctx.createGain();
+                const now = SoundEngine.ctx.currentTime;
+                
+                osc.connect(gain);
+                gain.connect(SoundEngine.ctx.destination);
+
+                if (type === 'tap') { // UI Click
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'turn') { // Turn Start
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.linearRampToValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                } else if (type === 'damage') { // Damage
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(100, now);
+                    osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'win') { // Win Jingle
+                    osc.type = 'square';
+                    // Simple Arpeggio
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                        const o = SoundEngine.ctx.createOscillator();
+                        const g = SoundEngine.ctx.createGain();
+                        o.connect(g);
+                        g.connect(SoundEngine.ctx.destination);
+                        o.frequency.value = freq;
+                        g.gain.setValueAtTime(0.05, now + i*0.1);
+                        g.gain.linearRampToValueAtTime(0, now + i*0.1 + 0.3);
+                        o.start(now + i*0.1);
+                        o.stop(now + i*0.1 + 0.3);
+                    });
+                }
+            }
+        };
+
+        // --- CONSTANTS ---
+        const SAMPLE_TOPICS = [
+            "アニメキャラ", "学校にあるもの", "コンビニの商品", "4文字の言葉", "緑色のもの", "歴史上の人物",
+            "赤いもの", "丸いもの", "国名・地名", "動物", "水の中の生き物", "冬に関連するもの",
+            "キッチンにあるもの", "スポーツ", "職業", "カタカナ語", "3文字の言葉", "甘いもの",
+            "冷たいもの", "空を飛ぶもの", "黄色いもの", "家にあるもの", "漢字2文字", "夏に関連するもの"
+        ];
+        const MAX_HP = 5;
+        const TIMER_SETUP = 60; 
+        const TIMER_GAME = 60; 
+        const TURN_ANIM_DURATION = 2000;
+        const HIRAGANA_CHARS = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ";
+
+        // --- UTILS ---
+        const getRandomChar = () => HIRAGANA_CHARS[Math.floor(Math.random() * HIRAGANA_CHARS.length)];
+        const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
+        const toHiragana = (str) => str.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+        const toHalfWidth = (str) => str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        });
+        const getLastChar = (w) => {
+            if(!w) return '';
+            const last = w.slice(-1);
+            const map = {'ぁ':'あ','ぃ':'い','ぅ':'う','ぇ':'え','ぉ':'お','っ':'つ','ゃ':'や','ゅ':'ゆ','ょ':'よ','ゎ':'わ'};
+            if(map[last]) return map[last];
+            if(last === 'ー') {
+                const prev = w.slice(-2, -1);
+                return map[prev] || prev;
+            }
+            return last;
+        };
+
+        // --- COMPONENTS ---
+        
+        // Nintendo-style Button
+        const Button = ({ onClick, children, className="", disabled=false, variant="primary", icon, size="md" }) => {
+            const handleInteract = () => {
+                if(!disabled) {
+                    SoundEngine.init();
+                    SoundEngine.play('tap');
+                    onClick && onClick();
+                }
+            };
+            
+            const styles = {
+                primary: "bg-blue-500 hover:bg-blue-400 text-white border-b-4 border-blue-700 active:border-b-0",
+                danger: "bg-pink-500 hover:bg-pink-400 text-white border-b-4 border-pink-700 active:border-b-0",
+                accent: "bg-yellow-400 hover:bg-yellow-300 text-slate-800 border-b-4 border-yellow-600 active:border-b-0",
+                ghost: "bg-slate-200 hover:bg-slate-100 text-slate-600 border-b-4 border-slate-300 active:border-b-0"
+            };
+            const sizes = {
+                sm: "px-4 py-2 text-sm",
+                md: "px-6 py-3 text-lg",
+                lg: "px-8 py-4 text-xl w-full"
+            };
+
+            return (
+                <button 
+                    onClick={handleInteract} 
+                    disabled={disabled} 
+                    className={`pop-btn rounded-2xl font-black tracking-wider flex items-center justify-center gap-2 ${styles[variant]} ${sizes[size]} ${className}`}
+                >
+                    {icon && <i data-lucide={icon} className="w-5 h-5"></i>}
+                    {children}
+                </button>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            // Net
+            const [peer, setPeer] = useState(null);
+            const [conn, setConn] = useState(null);
+            const [myId, setMyId] = useState('');
+            const [targetId, setTargetId] = useState('');
+            const [isHost, setIsHost] = useState(false);
+            
+            // User Data
+            const [userName, setUserName] = useState('');
+            const [oppName, setOppName] = useState('RIVAL');
+            
+            // Flow
+            const [phase, setPhase] = useState('lobby'); 
+            const [error, setError] = useState('');
+            const [damageAlert, setDamageAlert] = useState(null);
+            const [turnNotify, setTurnNotify] = useState(null); 
+
+            // Game Logic
+            const [myTopic, setMyTopic] = useState('');
+            const [oppTopic, setOppTopic] = useState('');
+            const [isMyTopicConfirmed, setIsMyTopicConfirmed] = useState(false);
+            const [isOppTopicConfirmed, setIsOppTopicConfirmed] = useState(false);
+            
+            const [rouletteData, setRouletteData] = useState({ candidates: [], winner: null });
+            const [rouletteDisplay, setRouletteDisplay] = useState('');
+            const [selectedTopic, setSelectedTopic] = useState(null);
+            const [ngWords, setNgWords] = useState({ high: '', mid: '', low: '' });
+            const [oppNgReady, setOppNgReady] = useState(false);
+            const [coinResult, setCoinResult] = useState(null);
+            
+            const [history, setHistory] = useState([]);
+            const [turn, setTurn] = useState('host');
+            const [myHp, setMyHp] = useState(MAX_HP);
+            const [oppHp, setOppHp] = useState(MAX_HP);
+            const [input, setInput] = useState('');
+            const [lastChar, setLastChar] = useState('');
+            const [initialChar, setInitialChar] = useState(''); 
+            
+            const [displayTimer, setDisplayTimer] = useState(0); 
+            const [phaseStartTime, setPhaseStartTime] = useState(0); 
+            const [turnStartTime, setTurnStartTime] = useState(0); 
+            const [isInputLocked, setIsInputLocked] = useState(false);
+            const [isOpponentTyping, setIsOpponentTyping] = useState(false);
+
+            // Refs
+            const stateRef = useRef({ 
+                phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
+                turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked
+            });
+            const connRef = useRef(null); 
+            const scrollRef = useRef(null);
+            const loopRef = useRef(null);
+            const processingTimeout = useRef(false);
+
+            // Sync Ref
+            useEffect(() => {
+                stateRef.current = { 
+                    phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
+                    turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked
+                };
+            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked]);
+
+            // Icons
+            useEffect(() => { if(window.lucide) window.lucide.createIcons(); });
+            
+            // Auto Scroll
+            useEffect(() => { 
+                if(scrollRef.current) {
+                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight; 
+                }
+            }, [history, isOpponentTyping]);
+
+            // Init Peer
+            useEffect(() => {
+                const id = generateId();
+                const p = new Peer(`KB-${id}`);
+                p.on('open', () => { setMyId(id); setPeer(p); });
+                p.on('connection', c => setupConn(c, true));
+                p.on('error', e => showError('接続エラー'));
+                return () => p.destroy();
+            }, []);
+
+            // Heartbeat
+            useEffect(() => {
+               const hb = setInterval(() => {
+                   if(stateRef.current.phase !== 'lobby' && connRef.current?.open) {
+                       connRef.current.send({ type: 'PING' });
+                   }
+               }, 2000);
+               return () => clearInterval(hb);
+            }, []);
+
+            // Timer Loop
+            useEffect(() => {
+                const loop = () => {
+                    const s = stateRef.current;
+                    const now = Date.now();
+                    let targetTime = 0;
+                    let duration = 0;
+
+                    if (s.phase === 'topic_input' || s.phase === 'ng_input') {
+                        targetTime = s.phaseStartTime;
+                        duration = TIMER_SETUP;
+                    } else if (s.phase === 'playing' && s.turnStartTime > 0) {
+                        targetTime = s.turnStartTime;
+                        duration = TIMER_GAME;
+                    }
+
+                    if (targetTime > 0) {
+                        if (s.phase === 'playing' && now < targetTime) {
+                            setDisplayTimer(TIMER_GAME);
+                            setIsInputLocked(true);
+                        } else {
+                            const elapsedSec = (now - targetTime) / 1000;
+                            const remain = Math.max(0, Math.ceil(duration - elapsedSec));
+                            setDisplayTimer(remain);
+                            setIsInputLocked(false);
+
+                            if (s.isHost && remain <= 0 && !processingTimeout.current) {
+                                if (s.phase === 'playing') handleTimeout();
+                                else if (s.phase === 'ng_input') forceStartGame();
+                                else if (s.phase === 'topic_input') forceSubmitTopic();
+                            }
+                        }
+                    }
+                    loopRef.current = requestAnimationFrame(loop);
+                };
+                loopRef.current = requestAnimationFrame(loop);
+                return () => cancelAnimationFrame(loopRef.current);
+            }, []);
+
+            // Networking
+            const connect = () => { 
+                if(!targetId || !peer) return; 
+                SoundEngine.init();
+                SoundEngine.play('tap');
+                setupConn(peer.connect(`KB-${targetId.toUpperCase()}`), false); 
+            };
+
+            const setupConn = (c, amHost) => {
+                setConn(c); connRef.current = c; setIsHost(amHost);
+                c.on('open', () => {
+                    send({ type: 'NAME_SYNC', name: stateRef.current.userName || 'PLAYER' });
+                    setPhase('vs');
+                    setTimeout(() => startPhase('topic_input'), 3000);
+                });
+                c.on('data', handleData);
+                c.on('close', () => { showError('切断されました'); resetGame(); });
+            };
+
+            const send = (data) => { if(connRef.current?.open) connRef.current.send(data); };
+
+            const startPhase = (newPhase) => {
+                const now = Date.now();
+                setPhase(newPhase); setPhaseStartTime(now);
+                if (stateRef.current.isHost) send({ type: 'PHASE_CHANGE', phase: newPhase, startTime: now });
+            };
+
+            const handleData = (data) => {
+                const s = stateRef.current;
+                switch(data.type) {
+                    case 'PING': break;
+                    case 'TYPING': setIsOpponentTyping(data.isTyping); break;
+                    case 'NAME_SYNC':
+                        setOppName(data.name || 'RIVAL');
+                        if(s.isHost) send({ type: 'NAME_SYNC', name: s.userName || 'PLAYER' });
+                        break;
+                    case 'PHASE_CHANGE': setPhase(data.phase); setPhaseStartTime(data.startTime); break;
+                    case 'TOPIC_CONFIRM':
+                        setOppTopic(data.topic); setIsOppTopicConfirmed(true);
+                        if (s.isHost && s.isMyTopicConfirmed) startRoulette(s.myTopic, data.topic);
+                        break;
+                    case 'ROULETTE_START':
+                        setOppTopic(data.hostTopic); playRouletteAnimation(data.candidates, data.winner);
+                        break;
+                    case 'NG_READY':
+                        setOppNgReady(true); if(s.isHost && s.phase === 'ng_wait') startCoinToss();
+                        break;
+                    case 'FORCE_NG_COMPLETE':
+                        setOppNgReady(true); if(s.isHost) startCoinToss();
+                        break;
+                    case 'COIN_TOSS_START':
+                        setCoinResult(data.result); setLastChar(data.initialChar); setInitialChar(data.initialChar); setPhase('coin');
+                        setTimeout(() => { 
+                            setPhase('playing'); setTurn(data.result); setHistory([]); 
+                            const startTime = Date.now() + TURN_ANIM_DURATION;
+                            setTurnStartTime(startTime);
+                            triggerTurnAnim(data.result === (isHost ? 'host' : 'guest') ? 'me' : 'rival', 0);
+                        }, 4000);
+                        break;
+                    case 'MOVE': 
+                        setIsOpponentTyping(false); 
+                        receiveMove(data.word); 
+                        break;
+                    case 'TURN_CHANGE':
+                        processingTimeout.current = false;
+                        setTurn(data.nextTurn); setTurnStartTime(data.startTime);
+                        setMyHp(data.oppHp); setOppHp(data.myHp);
+                        triggerTurnAnim(data.nextTurn === (isHost ? 'host' : 'guest') ? 'me' : 'rival', data.delay);
+                        if (data.nextTurn !== (isHost ? 'host' : 'guest')) setInput('');
+                        break;
+                    case 'DAMAGE_REPORT':
+                        applyDamage('me', data.amount, data.reason);
+                        if(data.remainingHp !== undefined) setMyHp(data.remainingHp); 
+                        break;
+                    case 'TIMEOUT_PENALTY':
+                        processingTimeout.current = false;
+                        setMyHp(data.oppHp); setOppHp(data.myHp);
+                        setTurn(data.nextTurn); setTurnStartTime(data.startTime);
+                        setHistory(prev => [...prev, { type: 'timeout', owner: data.victim }]);
+                        const victimOwner = data.victim === 'host' ? (s.isHost ? 'me' : 'opp') : (s.isHost ? 'opp' : 'me');
+                        applyDamage(victimOwner === 'me' ? 'me' : 'opp', 1, 'タイムオーバー');
+                        triggerTurnAnim(data.nextTurn === (isHost ? 'host' : 'guest') ? 'me' : 'rival', 3000);
+                        break;
+                    case 'REMATCH': resetGame(); break;
+                }
+            };
+
+            // Actions
+            const triggerTurnAnim = (who, delay) => {
+                setTimeout(() => {
+                    setTurnNotify(who);
+                    SoundEngine.play('turn');
+                    setTimeout(() => setTurnNotify(null), 2000);
+                }, delay);
+            };
+
+            const submitTopic = () => {
+                if(!myTopic) return showError("お題を入力してね！");
+                setIsMyTopicConfirmed(true); send({ type: 'TOPIC_CONFIRM', topic: myTopic });
+                if (isHost && stateRef.current.isOppTopicConfirmed) startRoulette(myTopic, stateRef.current.oppTopic);
+            };
+
+            const forceSubmitTopic = () => {
+                const s = stateRef.current;
+                let myT = s.myTopic || SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                let oppT = s.oppTopic;
+                if (!s.isMyTopicConfirmed) {
+                    setMyTopic(myT); setIsMyTopicConfirmed(true);
+                    send({ type: 'TOPIC_CONFIRM', topic: myT });
+                }
+                if (!s.isOppTopicConfirmed) oppT = SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                startRoulette(myT, oppT);
+            };
+
+            const startRoulette = (hostT, guestT) => {
+                const isHostChosen = Math.random() > 0.5;
+                const winner = isHostChosen ? { text: hostT, owner: 'host' } : { text: guestT, owner: 'guest' };
+                const candidates = [hostT, guestT];
+                playRouletteAnimation(candidates, winner);
+                send({ type: 'ROULETTE_START', candidates, winner, hostTopic: hostT });
+            };
+
+            const playRouletteAnimation = (candidates, winner) => {
+                setPhase('roulette'); setRouletteData({ candidates, winner });
+                let count = 0;
+                const spin = () => {
+                    setRouletteDisplay(candidates[count % 2]); count++;
+                    if(count < 20) setTimeout(spin, 50 + count * 10);
+                    else {
+                        setRouletteDisplay(winner.text); setSelectedTopic(winner);
+                        SoundEngine.play('turn');
+                        setTimeout(() => startPhase('ng_input'), 2500);
+                    }
+                };
+                spin();
+            };
+
+            const submitNg = () => {
+                const words = [ngWords.high, ngWords.mid, ngWords.low];
+                if(words.some(w => w.slice(-1) === 'ん')) return showError("「ん」で終わる言葉はNG不可！");
+                if(words.some(w => w && !/^[\u3040-\u309fー]+$/.test(w))) return showError("ひらがなのみOK！");
+                setPhase('ng_wait'); send({ type: 'NG_READY' });
+                if(isHost && oppNgReady) startCoinToss();
+            };
+
+            const forceStartGame = () => {
+                if (stateRef.current.phase === 'ng_input') {
+                    setNgWords({high:'', mid:'', low:''}); 
+                    setPhase('ng_wait'); send({ type: 'FORCE_NG_COMPLETE' }); startCoinToss();
+                }
+            };
+
+            const startCoinToss = () => {
+                const initialChar = getRandomChar();
+                const firstPlayer = Math.random() > 0.5 ? 'host' : 'guest';
+                send({ type: 'COIN_TOSS_START', result: firstPlayer, initialChar });
+                setCoinResult(firstPlayer); setLastChar(initialChar); setInitialChar(initialChar); setPhase('coin');
+                setTimeout(() => {
+                    setPhase('playing'); setTurn(firstPlayer); setHistory([]); 
+                    const startTime = Date.now() + TURN_ANIM_DURATION;
+                    setTurnStartTime(startTime);
+                    triggerTurnAnim(firstPlayer === 'host' ? 'me' : 'rival', 0);
+                }, 4000);
+            };
+
+            const handleTimeout = () => {
+                if (processingTimeout.current) return;
+                processingTimeout.current = true;
+                const s = stateRef.current;
+                const victim = s.turn; 
+                let newHostHp = s.isHost ? s.myHp : s.oppHp;
+                let newGuestHp = s.isHost ? s.oppHp : s.myHp;
+                if (victim === 'host') newHostHp = Math.max(0, newHostHp - 1);
+                else newGuestHp = Math.max(0, newGuestHp - 1);
+
+                const nextTurn = s.turn === 'host' ? 'guest' : 'host';
+                const nextStartTime = Date.now() + 3000 + TURN_ANIM_DURATION; 
+
+                if (s.isHost) {
+                     applyDamage(victim === 'host' ? 'me' : 'opp', 1, 'タイムオーバー');
+                }
+                setHistory(prev => [...prev, { type: 'timeout', owner: victim }]);
+                setTurn(nextTurn); setTurnStartTime(nextStartTime);
+                triggerTurnAnim(nextTurn === 'host' ? 'me' : 'rival', 3000);
+                
+                send({ type: 'TIMEOUT_PENALTY', victim, myHp: newHostHp, oppHp: newGuestHp, nextTurn, startTime: nextStartTime });
+                setTimeout(() => { processingTimeout.current = false; }, 500); 
+            };
+
+            const submitWord = () => {
+                if(!input) return;
+                const hira = toHiragana(input);
+                if (!/^[\u3040-\u309fー]+$/.test(hira)) return showError('ひらがなで入力！');
+                if (lastChar && hira[0] !== lastChar) return showError(`「${lastChar}」から始めて！`);
+                if (history.some(h => h.word === hira)) return showError('既出ワード！');
+                
+                if(hira.slice(-1) === 'ん') {
+                    const suicideHist = [...history, { word: hira, owner: isHost?'host':'guest', damage: MAX_HP }];
+                    setHistory(suicideHist);
+                    applyDamage('me', MAX_HP, '自爆！');
+                    send({ type: 'MOVE', word: hira });
+                    send({ type: 'DAMAGE_REPORT', amount: MAX_HP, reason: '自爆！', remainingHp: 0 });
+                    return;
+                }
+
+                setHistory([...history, { word: hira, owner: isHost?'host':'guest', damage: 0 }]);
+                setInput('');
+                send({ type: 'MOVE', word: hira });
+                setLastChar(getLastChar(hira));
+                changeTurnInternal(isHost?'guest':'host', false);
+            };
+
+            const receiveMove = (word) => {
+                const s = stateRef.current;
+                let dmg = 0;
+                let reason = '';
+                if(word === s.ngWords.high) { dmg = 3; reason = 'NGワード (3ダメージ)!'; }
+                else if(word === s.ngWords.mid) { dmg = 2; reason = 'NGワード (2ダメージ)!'; }
+                else if(word === s.ngWords.low) { dmg = 1; reason = 'NGワード (1ダメージ)!'; }
+                if(word.slice(-1) === 'ん') { dmg = MAX_HP; reason = '自爆！'; }
+
+                setHistory(prev => [...prev, { word, owner: !s.isHost ? 'host' : 'guest', damage: dmg }]);
+                setLastChar(getLastChar(word));
+
+                const hasDamage = dmg > 0;
+                if(hasDamage) {
+                    applyDamage('opp', dmg, reason);
+                    const newOppHp = Math.max(0, s.oppHp - dmg);
+                    send({ type: 'DAMAGE_REPORT', amount: dmg, reason, remainingHp: newOppHp });
+                }
+
+                if (s.isHost) changeTurnInternal(s.isHost ? 'host' : 'guest', hasDamage);
+                else {
+                    setTurn(s.isHost ? 'host' : 'guest');
+                    triggerTurnAnim(s.isHost ? 'me' : 'rival', hasDamage ? 3000 : 0);
+                }
+            };
+
+            const changeTurnInternal = (next, hasDamage) => {
+                const now = Date.now();
+                const delay = hasDamage ? 3000 : 0;
+                const nextStartTime = now + delay + TURN_ANIM_DURATION;
+                
+                setTurn(next); 
+                setTurnStartTime(nextStartTime);
+                triggerTurnAnim(next === (stateRef.current.isHost ? 'host' : 'guest') ? 'me' : 'rival', delay);
+
+                if (stateRef.current.isHost) {
+                    send({ type: 'TURN_CHANGE', nextTurn: next, startTime: nextStartTime, delay: delay, myHp: stateRef.current.myHp, oppHp: stateRef.current.oppHp });
+                }
+            };
+
+            const applyDamage = (target, amount, msg) => {
+                setDamageAlert({ target, amount, reason: msg });
+                SoundEngine.play('damage');
+                setTimeout(() => setDamageAlert(null), 2000);
+                
+                let setHp = target === 'me' ? setMyHp : setOppHp;
+                let currentHp = target === 'me' ? stateRef.current.myHp : stateRef.current.oppHp;
+                const nextHp = Math.max(0, currentHp - amount);
+                setHp(nextHp);
+
+                setHistory(prev => {
+                    if(prev.length === 0) return prev;
+                    if(msg.includes('NG') || msg.includes('自爆')) {
+                        const last = prev[prev.length - 1];
+                        if(last.damage === 0) {
+                            const updated = [...prev];
+                            updated[updated.length-1] = { ...last, damage: amount };
+                            return updated;
+                        }
+                    }
+                    return prev;
+                });
+                if(nextHp <= 0) setTimeout(() => {
+                    setPhase('result');
+                    if(target === 'opp') SoundEngine.play('win');
+                }, 2500);
+            };
+
+            // Utils UI
+            const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 3000); };
+            const handleRematch = () => { send({ type: 'REMATCH' }); resetGame(); };
+            const resetGame = () => {
+                setPhase('lobby'); setMyTopic(''); setOppTopic(''); setSelectedTopic(null);
+                setNgWords({ high:'', mid:'', low:'' }); setOppNgReady(false);
+                setIsMyTopicConfirmed(false); setIsOppTopicConfirmed(false);
+                setHistory([]); setMyHp(MAX_HP); setOppHp(MAX_HP); setDamageAlert(null);
+                setTurnStartTime(0); setPhaseStartTime(0); setInitialChar('');
+                setIsOpponentTyping(false); processingTimeout.current = false; setTurnNotify(null);
+            };
+            const copyId = () => {
+                navigator.clipboard.writeText(myId);
+                showError('コピーしました！');
+            };
+
+            const isMyTurn = turn === (isHost?'host':'guest');
+
+            // --- RENDER ---
+            return (
+                <div className="w-full h-screen bg-pattern relative overflow-hidden flex flex-col font-sans">
+                    
+                    {/* --- GLOBAL OVERLAYS --- */}
+                    {turnNotify && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none wipe-transition bg-black/20">
+                            <div className={`transform rotate-[-5deg] px-20 py-8 border-8 border-white shadow-2xl rounded-3xl ${turnNotify === 'me' ? 'bg-blue-500' : 'bg-pink-500'}`}>
+                                <h1 className="text-6xl md:text-8xl font-black text-white italic font-pop drop-shadow-md text-center">
+                                    {turnNotify === 'me' ? 'YOUR TURN!' : 'RIVAL TURN!'}
+                                </h1>
+                            </div>
+                        </div>
+                    )}
+
+                    {damageAlert && (
+                        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none animate-shake">
+                            <div className="relative">
+                                <div className="text-[10rem] font-black text-white drop-shadow-[0_8px_0_rgba(0,0,0,0.5)] font-pop stroke-2">
+                                    -{damageAlert.amount}
+                                </div>
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-2 rounded-full whitespace-nowrap border-4 border-white shadow-lg">
+                                    {damageAlert.reason}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce-small">
+                            <div className="bg-slate-800 text-white px-8 py-3 rounded-full font-bold shadow-xl border-4 border-white flex items-center gap-2">
+                                <i data-lucide="alert-circle"></i>
+                                {error}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* --- SCENES --- */}
+                    
+                    {/* LOBBY */}
+                    {phase === 'lobby' && (
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-8 animate-pop-in">
+                            <div className="text-center space-y-2">
+                                <div className="bg-yellow-400 text-yellow-900 inline-block px-4 py-1 rounded-full font-black text-sm tracking-widest mb-4 border-2 border-yellow-600">NEON WORD BATTLE V2</div>
+                                <h1 className="text-5xl md:text-7xl font-black text-slate-800 font-pop tracking-tighter drop-shadow-sm">
+                                    KOTOBA<br/><span className="text-blue-500">STA</span><span className="text-pink-500">DIUM</span>
+                                </h1>
+                            </div>
+
+                            <div className="pop-card p-6 w-full max-w-sm space-y-6">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-400 mb-1 pl-2">PLAYER NAME</label>
+                                    <input value={userName} onChange={e => setUserName(e.target.value)} className="pop-input w-full px-4 py-3 bg-slate-50 text-xl text-center" placeholder="名前を入力" maxLength={8} />
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t-2 border-slate-100">
+                                    <div className="flex gap-2">
+                                        <input value={targetId} onChange={e => setTargetId(e.target.value.toUpperCase())} className="pop-input flex-1 px-4 py-3 bg-slate-50 text-center font-mono uppercase placeholder:text-slate-300" placeholder="IDを入力" />
+                                        <Button onClick={connect} variant="danger" icon="swords">BATTLE</Button>
+                                    </div>
+                                    <div className="text-center text-sm font-bold text-slate-300">OR</div>
+                                    <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-xs font-bold text-blue-400">YOUR ID</span>
+                                            <button onClick={copyId} className="text-xs font-bold text-blue-500 hover:text-blue-600">COPY</button>
+                                        </div>
+                                        <div className="text-3xl font-mono font-black text-blue-600 text-center tracking-widest">{myId || '...'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* VS TRANSITION */}
+                    {phase === 'vs' && (
+                        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
+                            <div className="w-full flex flex-col md:flex-row h-full">
+                                <div className="flex-1 bg-blue-500 flex items-center justify-center relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-blue-600 opacity-20 bg-pattern"></div>
+                                    <div className="text-center z-10 transform -rotate-3 transition-transform hover:scale-110 duration-500">
+                                        <div className="text-blue-200 text-xl font-bold tracking-widest mb-2">CHALLENGER</div>
+                                        <div className="text-6xl font-black text-white font-pop">{userName || 'YOU'}</div>
+                                    </div>
+                                </div>
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
+                                    <div className="text-8xl font-black text-yellow-400 font-pop italic drop-shadow-[0_5px_0_rgba(0,0,0,0.3)] animate-pop-in">VS</div>
+                                </div>
+                                <div className="flex-1 bg-pink-500 flex items-center justify-center relative overflow-hidden">
+                                    <div className="absolute inset-0 bg-pink-600 opacity-20 bg-pattern"></div>
+                                    <div className="text-center z-10 transform rotate-3 transition-transform hover:scale-110 duration-500">
+                                        <div className="text-pink-200 text-xl font-bold tracking-widest mb-2">RIVAL</div>
+                                        <div className="text-6xl font-black text-white font-pop">{oppName}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* TOPIC PHASE */}
+                    {(phase === 'topic_input' || phase === 'topic_wait') && (
+                        <div className="flex-1 flex flex-col items-center justify-center p-6 slide-up-enter">
+                            <div className="pop-card w-full max-w-md overflow-hidden">
+                                <div className="bg-slate-100 p-4 border-b-2 border-slate-200 flex justify-between items-center">
+                                    <h2 className="font-black text-slate-700 flex items-center gap-2"><i data-lucide="message-square"></i> お題を決めよう</h2>
+                                    <div className="bg-slate-800 text-white px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div>
+                                </div>
+                                
+                                {((isMyTopicConfirmed && !isHost) || (isHost && isMyTopicConfirmed && !isOppTopicConfirmed)) ? (
+                                    <div className="p-12 text-center space-y-4">
+                                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                        <div className="font-bold text-slate-500 animate-pulse">相手の入力を待っています...</div>
+                                    </div>
+                                ) : (
+                                    <div className="p-6 space-y-6">
+                                        <div>
+                                            <input value={myTopic} onChange={e => setMyTopic(e.target.value)} className="pop-input w-full px-4 py-4 text-xl text-center" placeholder="例：赤いもの" />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <Button onClick={() => setMyTopic(SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)])} variant="ghost" size="sm">ランダム</Button>
+                                            <Button onClick={submitTopic} variant="primary">決定！</Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ROULETTE */}
+                    {phase === 'roulette' && (
+                        <div className="fixed inset-0 z-50 bg-slate-900/90 flex flex-col items-center justify-center space-y-8">
+                            <div className="text-white font-bold tracking-widest animate-pulse">BATTLE TOPIC</div>
+                            <div className="bg-white px-12 py-8 rounded-3xl border-8 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.5)] transform scale-125">
+                                <div className="text-4xl md:text-6xl font-black text-slate-800 font-pop text-center min-w-[300px]">{rouletteDisplay}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* NG INPUT */}
+                    {(phase === 'ng_input' || phase === 'ng_wait') && (
+                        <div className="flex-1 flex flex-col bg-slate-50">
+                            <div className="bg-slate-800 text-white p-4 text-center shadow-lg z-10">
+                                <div className="text-xs font-bold text-slate-400 mb-1">CURRENT TOPIC</div>
+                                <div className="text-2xl font-black font-pop">{selectedTopic?.text}</div>
+                            </div>
+                            
+                            <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
+                                {phase === 'ng_wait' ? (
+                                    <div className="text-center animate-bounce-small">
+                                        <div className="text-6xl mb-4">🤫</div>
+                                        <div className="font-bold text-slate-500">NGワードをセット中...</div>
+                                    </div>
+                                ) : (
+                                    <div className="pop-card w-full max-w-md p-6 space-y-6 slide-up-enter">
+                                        <div className="flex justify-between items-center">
+                                            <h2 className="font-black text-pink-500 text-xl">NGワードを仕掛けろ！</h2>
+                                            <div className="bg-pink-100 text-pink-600 px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div className="relative">
+                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-red-500 text-white text-xs font-black px-2 py-1 rounded shadow">3pt</span>
+                                                <input value={ngWords.high} onChange={e => setNgWords({...ngWords, high: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-pink-200 focus:border-pink-500" placeholder="大ダメージ (ひらがな)" />
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-orange-500 text-white text-xs font-black px-2 py-1 rounded shadow">2pt</span>
+                                                <input value={ngWords.mid} onChange={e => setNgWords({...ngWords, mid: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-orange-200 focus:border-orange-500" placeholder="中ダメージ (ひらがな)" />
+                                            </div>
+                                            <div className="relative">
+                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-yellow-500 text-white text-xs font-black px-2 py-1 rounded shadow">1pt</span>
+                                                <input value={ngWords.low} onChange={e => setNgWords({...ngWords, low: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-yellow-200 focus:border-yellow-500" placeholder="小ダメージ (ひらがな)" />
+                                            </div>
+                                        </div>
+                                        <Button onClick={submitNg} variant="danger" size="lg">セット完了！</Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* COIN TOSS */}
+                    {phase === 'coin' && (
+                        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
+                             <div className={`relative w-48 h-48 transition-all duration-[3s] ease-out transform-style-3d ${coinResult === (isHost?'host':'guest') ? 'rotate-y-[1800deg]' : 'rotate-y-[1980deg]'}`} style={{transformStyle: 'preserve-3d'}}>
+                                <div className="absolute inset-0 bg-blue-500 rounded-full flex items-center justify-center border-8 border-white text-white font-black text-3xl backface-hidden">YOU</div>
+                                <div className="absolute inset-0 bg-pink-500 rounded-full flex items-center justify-center border-8 border-white text-white font-black text-3xl backface-hidden" style={{transform: 'rotateY(180deg)'}}>RIVAL</div>
+                             </div>
+                        </div>
+                    )}
+
+                    {/* BATTLE MAIN */}
+                    {(phase === 'playing' || phase === 'result') && (
+                        <div className="flex flex-col h-full bg-slate-50">
+                            {/* HEADER UI */}
+                            <div className="bg-white shadow-sm p-2 z-20 flex justify-between items-stretch h-20 border-b-4 border-slate-100">
+                                {/* Rival HP */}
+                                <div className="flex-1 flex flex-col justify-center items-start pl-2">
+                                    <div className="text-xs font-bold text-pink-500 mb-1 flex items-center gap-1"><i data-lucide="swords" className="w-3 h-3"></i> {oppName}</div>
+                                    <div className="flex gap-1">
+                                        {[...Array(MAX_HP)].map((_, i) => (
+                                            <div key={i} className={`w-6 h-8 rounded transition-all duration-300 ${i < oppHp ? 'bg-pink-500 shadow-[0_4px_0_#be185d]' : 'bg-slate-200 translate-y-1'}`}></div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {/* Center Info */}
+                                <div className="flex flex-col items-center justify-center w-24 relative">
+                                    <div className="absolute -top-2 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-b-lg font-bold shadow-sm">{selectedTopic?.text}</div>
+                                    <div className={`text-4xl font-black font-mono mt-2 ${displayTimer <= 10 ? 'text-red-500 animate-pulse' : 'text-slate-800'}`}>{isInputLocked ? '--' : displayTimer}</div>
+                                </div>
+                                {/* My HP */}
+                                <div className="flex-1 flex flex-col justify-center items-end pr-2">
+                                    <div className="text-xs font-bold text-blue-500 mb-1 flex items-center gap-1">{userName} <i data-lucide="shield" className="w-3 h-3"></i></div>
+                                    <div className="flex gap-1">
+                                        {[...Array(MAX_HP)].map((_, i) => (
+                                            <div key={i} className={`w-6 h-8 rounded transition-all duration-300 ${i < myHp ? 'bg-blue-500 shadow-[0_4px_0_#1d4ed8]' : 'bg-slate-200 translate-y-1'}`}></div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* NG INFO BAR */}
+                            <div className="bg-slate-100 py-1 px-4 flex justify-center gap-2 border-b border-slate-200">
+                                {[ngWords.high, ngWords.mid, ngWords.low].map((w, i) => w && (
+                                    <div key={i} className="bg-white border border-slate-300 text-slate-500 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                                        {w} <span className="text-red-500">{3-i}pt</span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* CHAT AREA */}
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-pattern pb-32" ref={scrollRef}>
+                                <div className="flex justify-center py-4">
+                                    <div className="bg-slate-200 text-slate-600 px-6 py-2 rounded-full font-bold text-sm shadow-inner flex items-center gap-2">
+                                        最初の文字 <span className="text-xl text-slate-800 font-pop bg-white w-8 h-8 flex items-center justify-center rounded-full shadow-sm">{initialChar}</span>
+                                    </div>
+                                </div>
+                                
+                                {history.map((h, i) => {
+                                    if(h.type === 'timeout') return (
+                                        <div key={i} className="flex justify-center opacity-70">
+                                            <div className="bg-slate-800 text-white px-4 py-2 rounded-full text-xs font-bold">⏰ TIME OVER (-1 HP)</div>
+                                        </div>
+                                    );
+
+                                    const isMine = h.owner === (isHost?'host':'guest');
+                                    return (
+                                        <div key={i} className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-pop-in`}>
+                                            <div className={`relative max-w-[80%] px-5 py-3 rounded-2xl font-bold text-lg shadow-sm border-b-4 
+                                                ${isMine ? 'bg-blue-500 border-blue-700 text-white rounded-tr-none' : 'bg-white border-slate-300 text-slate-800 rounded-tl-none'}
+                                                ${h.damage > 0 ? 'animate-shake !bg-red-500 !border-red-700 !text-white' : ''}
+                                            `}>
+                                                {h.word}
+                                                {h.damage > 0 && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded-full shadow-sm">HIT!</span>}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                
+                                {isOpponentTyping && (
+                                    <div className="flex justify-start">
+                                        <div className="bg-slate-200 px-4 py-3 rounded-2xl rounded-tl-none flex gap-1">
+                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* INPUT AREA */}
+                            <div className="absolute bottom-0 left-0 right-0 bg-white/90 backdrop-blur p-4 pb-8 border-t border-slate-200 shadow-lg z-30">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <div className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                        NEXT: <span className="bg-slate-800 text-white w-6 h-6 flex items-center justify-center rounded font-pop">{lastChar || initialChar}</span>
+                                    </div>
+                                    <div className={`text-xs font-black tracking-wider ${isMyTurn && !isInputLocked ? 'text-blue-500' : 'text-slate-300'}`}>
+                                        {isMyTurn && !isInputLocked ? 'あなたの番です' : '相手の番です'}
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input 
+                                        value={input} 
+                                        onChange={e => { setInput(e.target.value); send({ type: 'TYPING', isTyping: true }); }}
+                                        onBlur={() => send({ type: 'TYPING', isTyping: false })}
+                                        onKeyDown={e => e.key==='Enter' && !isInputLocked && submitWord()}
+                                        disabled={!isMyTurn || isInputLocked}
+                                        className="pop-input flex-1 px-4 py-3 text-lg bg-slate-50 disabled:bg-slate-100 disabled:opacity-50"
+                                        placeholder={isMyTurn ? `${lastChar || initialChar} からはじまる言葉` : "待機中..."}
+                                    />
+                                    <Button 
+                                        onClick={submitWord} 
+                                        disabled={!isMyTurn || !input || isInputLocked} 
+                                        icon="send" 
+                                        className="rounded-xl"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* RESULT OVERLAY */}
+                            {phase === 'result' && (
+                                <div className="fixed inset-0 z-[100] bg-slate-900/90 flex flex-col items-center justify-center animate-pop-in space-y-8">
+                                    <div className="text-center">
+                                        <div className="text-sm text-slate-400 font-bold tracking-[0.5em] mb-4">GAME SET</div>
+                                        <h1 className={`text-6xl md:text-8xl font-black font-pop italic transform -rotate-6 drop-shadow-[0_10px_0_rgba(0,0,0,0.5)] ${myHp > 0 ? 'text-yellow-400' : 'text-slate-600'}`}>
+                                            {myHp > 0 ? 'WIN!' : 'LOSE...'}
+                                        </h1>
+                                    </div>
+                                    <div className="bg-white p-8 rounded-3xl text-center w-full max-w-sm">
+                                        <div className="grid grid-cols-2 gap-8 mb-6">
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-400 mb-1">YOU</div>
+                                                <div className="text-4xl font-black text-blue-500 font-mono">{myHp}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-bold text-slate-400 mb-1">RIVAL</div>
+                                                <div className="text-4xl font-black text-pink-500 font-mono">{oppHp}</div>
+                                            </div>
+                                        </div>
+                                        <Button onClick={handleRematch} variant="primary" size="lg" icon="rotate-cw">もう一度遊ぶ</Button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
