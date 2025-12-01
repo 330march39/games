@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>KOTOBA STADIUM - ULTIMATE V2</title>
+    <title>KOTOBA STADIUM - ULTIMATE V3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -15,18 +15,15 @@
         @import url('https://fonts.googleapis.com/css2?family=Mochiy+Pop+One&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
         
         :root {
-            /* Vivid Splat Colors */
-            --c-p1: #2563EB; /* Bright Blue */
-            --c-p1-light: #60A5FA;
-            --c-p1-dark: #1E40AF;
+            /* Vivid Splat Colors (More Contrast) */
+            --c-p1: #0052FF; /* Nintendo Blue */
+            --c-p1-light: #4D85FF;
+            --c-p2: #FF005C; /* Nintendo Red/Pink */
+            --c-p2-light: #FF4D8C;
+            --c-accent: #FFD600; /* Coin Yellow */
             
-            --c-p2: #DB2777; /* Vivid Pink */
-            --c-p2-light: #F472B6;
-            --c-p2-dark: #9D174D;
-            
-            --c-accent: #FBBF24; /* Amber */
-            --c-bg: #F3F4F6;
-            --c-text: #111827;
+            --c-bg: #F0F2F5;
+            --c-text: #2D3748;
 
             /* Safe Area for Mobile */
             --safe-bottom: env(safe-area-inset-bottom, 20px);
@@ -40,7 +37,6 @@
             touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
-            /* Prevent pull-to-refresh on mobile */
             overscroll-behavior: none;
         }
 
@@ -49,7 +45,7 @@
 
         .pop-btn {
             transition: all 0.1s cubic-bezier(0.34, 1.56, 0.64, 1);
-            box-shadow: 0 6px 0 rgba(0,0,0,0.25);
+            box-shadow: 0 6px 0 rgba(0,0,0,0.2);
             transform: translateY(0);
             position: relative;
             overflow: hidden;
@@ -58,7 +54,7 @@
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(255,255,255,0.2), transparent);
+            background: linear-gradient(rgba(255,255,255,0.3) 0%, transparent 100%);
             pointer-events: none;
         }
         .pop-btn:active:not(:disabled) {
@@ -66,50 +62,49 @@
             box-shadow: 0 0 0 rgba(0,0,0,0.2);
         }
         .pop-btn:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             box-shadow: none;
             transform: translateY(6px);
             filter: grayscale(100%);
         }
 
-        /* Card with thicker borders and softer shadows */
         .pop-card {
             background: white;
             border-radius: 1.5rem;
-            border: 4px solid #E5E7EB;
-            box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.15);
+            border: 4px solid #E2E8F0;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        .pop-card-blue { border-color: var(--c-p1-light); box-shadow: 0 12px 24px -8px rgba(37, 99, 235, 0.2); }
-        .pop-card-pink { border-color: var(--c-p2-light); box-shadow: 0 12px 24px -8px rgba(219, 39, 119, 0.2); }
 
         .pop-input {
-            border: 3px solid #E5E7EB;
+            border: 3px solid #CBD5E0;
             border-radius: 1rem;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             font-family: 'Zen Maru Gothic', sans-serif;
-            font-weight: bold;
+            font-weight: 900;
             font-size: 16px; /* Prevent zoom on iOS */
+            color: #2D3748;
         }
         .pop-input:focus {
             outline: none;
             border-color: var(--c-p1);
-            background-color: #EFF6FF;
-            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.2);
-            transform: scale(1.01);
+            background-color: #F7FAFC;
+            box-shadow: 0 0 0 4px rgba(0, 82, 255, 0.15);
+            transform: scale(1.02);
         }
+        .pop-input::placeholder { color: #A0AEC0; font-weight: 500; }
 
         /* --- BACKGROUND PATTERN --- */
         .bg-pattern {
-            background-color: #f0f2f5;
+            background-color: #F7FAFC;
             background-image: 
-                radial-gradient(#d1d5db 2px, transparent 2.5px),
-                radial-gradient(#d1d5db 2px, transparent 2.5px);
-            background-size: 30px 30px;
-            background-position: 0 0, 15px 15px;
-            animation: bg-scroll 60s linear infinite;
+                linear-gradient(45deg, #EDF2F7 25%, transparent 25%, transparent 75%, #EDF2F7 75%, #EDF2F7),
+                linear-gradient(45deg, #EDF2F7 25%, transparent 25%, transparent 75%, #EDF2F7 75%, #EDF2F7);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            animation: bg-scroll 40s linear infinite;
         }
-        @keyframes bg-scroll { from { background-position: 0 0, 15px 15px; } to { background-position: 60px 60px, 75px 75px; } }
+        @keyframes bg-scroll { from { background-position: 0 0, 20px 20px; } to { background-position: 80px 40px, 100px 60px; } }
 
         /* --- ANIMATIONS --- */
         @keyframes pop-in {
@@ -119,11 +114,12 @@
         }
         .animate-pop-in { animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
-        @keyframes bounce-item {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-8px); }
+        @keyframes title-bounce {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            25% { transform: translateY(-10px) rotate(-2deg); }
+            75% { transform: translateY(-5px) rotate(2deg); }
         }
-        .animate-bounce-item { animation: bounce-item 2s infinite ease-in-out; }
+        .animate-title { animation: title-bounce 3s infinite ease-in-out; }
 
         @keyframes shake-hard {
             0%, 100% { transform: translateX(0) rotate(0); }
@@ -140,26 +136,34 @@
         .wipe-transition { animation: wipe-reveal 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
 
         /* 3D Coin */
+        .coin-scene { perspective: 1000px; }
         .coin-3d {
+            width: 100%; height: 100%;
             transform-style: preserve-3d;
             transition: transform 3s cubic-bezier(0.1, 0.8, 0.1, 1);
         }
-
-        /* Particles Canvas */
-        #particles {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999;
+        .coin-face {
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+            border: 8px solid white;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
         }
 
-        /* Custom Scrollbar */
+        /* Particles */
+        #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+
+        /* Utilities */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
         .custom-scroll::-webkit-scrollbar { width: 6px; }
         .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 99px; }
-
-        /* Utility for Mobile Safe Area */
+        .custom-scroll::-webkit-scrollbar-thumb { background: #CBD5E0; border-radius: 99px; }
         .pb-safe { padding-bottom: var(--safe-bottom); }
+        
+        /* Flex Fixes */
+        .flex-fix-input { min-width: 0; flex: 1; }
     </style>
 </head>
 <body>
@@ -169,7 +173,7 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
 
-        // --- SOUND ENGINE V2 (Improved Juice) ---
+        // --- SOUND ENGINE V3 (Nintendo-like Polish) ---
         const SoundEngine = {
             ctx: null,
             init: () => {
@@ -187,75 +191,59 @@
                 gain.connect(SoundEngine.ctx.destination);
 
                 switch(type) {
-                    case 'tap': // Pop sound
+                    case 'tap': // Pop (UI)
                         osc.type = 'sine';
-                        osc.frequency.setValueAtTime(600, t);
-                        osc.frequency.exponentialRampToValueAtTime(100, t + 0.15);
-                        gain.gain.setValueAtTime(0.3, t);
-                        gain.gain.linearRampToValueAtTime(0, t + 0.15);
-                        osc.start(t);
-                        osc.stop(t + 0.15);
-                        break;
-                    case 'confirm': // High pitch bling
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(880, t);
-                        osc.frequency.linearRampToValueAtTime(1760, t + 0.1);
+                        osc.frequency.setValueAtTime(800, t);
+                        osc.frequency.exponentialRampToValueAtTime(100, t + 0.1);
                         gain.gain.setValueAtTime(0.2, t);
-                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-                        osc.start(t);
-                        osc.stop(t + 0.3);
+                        gain.gain.linearRampToValueAtTime(0, t + 0.1);
+                        osc.start(t); osc.stop(t + 0.1);
                         break;
-                    case 'turn': // Whistle/Alert
+                    case 'confirm': // "Kaching!"
                         const o2 = SoundEngine.ctx.createOscillator();
                         o2.connect(gain);
-                        osc.type = 'sine';
-                        o2.type = 'triangle';
-                        osc.frequency.setValueAtTime(440, t);
-                        osc.frequency.linearRampToValueAtTime(880, t + 0.1);
-                        o2.frequency.setValueAtTime(445, t); // Detune
-                        o2.frequency.linearRampToValueAtTime(890, t + 0.1);
-                        gain.gain.setValueAtTime(0.2, t);
-                        gain.gain.linearRampToValueAtTime(0, t + 0.4);
+                        osc.type = 'triangle';
+                        o2.type = 'sine';
+                        osc.frequency.setValueAtTime(880, t);
+                        osc.frequency.linearRampToValueAtTime(1760, t + 0.1);
+                        o2.frequency.setValueAtTime(1760, t);
+                        gain.gain.setValueAtTime(0.1, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
                         osc.start(t); o2.start(t);
                         osc.stop(t + 0.4); o2.stop(t + 0.4);
                         break;
-                    case 'damage': // Heavy impact
+                    case 'turn': // "Pi-Pik!"
                         osc.type = 'square';
-                        osc.frequency.setValueAtTime(150, t);
-                        osc.frequency.exponentialRampToValueAtTime(40, t + 0.2);
-                        gain.gain.setValueAtTime(0.3, t);
-                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-                        // Add noise burst simulation via high freq modulation
-                        const lfo = SoundEngine.ctx.createOscillator();
-                        lfo.type = 'sawtooth';
-                        lfo.frequency.value = 50;
-                        const lfoGain = SoundEngine.ctx.createGain();
-                        lfoGain.gain.value = 500;
-                        lfo.connect(lfoGain);
-                        lfoGain.connect(osc.frequency);
-                        lfo.start(t); lfo.stop(t+0.3);
-                        
-                        osc.start(t);
-                        osc.stop(t + 0.3);
+                        osc.frequency.setValueAtTime(1200, t);
+                        gain.gain.setValueAtTime(0.05, t);
+                        gain.gain.setValueAtTime(0, t + 0.08);
+                        gain.gain.setValueAtTime(0.05, t + 0.15);
+                        gain.gain.setValueAtTime(0, t + 0.3);
+                        osc.start(t); osc.stop(t + 0.3);
                         break;
-                    case 'win': // Victory Fanfare
-                        const playNote = (freq, time, dur) => {
+                    case 'damage': // Heavy Thud
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(100, t);
+                        osc.frequency.exponentialRampToValueAtTime(20, t + 0.2);
+                        gain.gain.setValueAtTime(0.4, t);
+                        gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                        osc.start(t); osc.stop(t + 0.2);
+                        break;
+                    case 'win': // Fanfare
+                        const playNote = (f, start, dur) => {
                             const o = SoundEngine.ctx.createOscillator();
                             const g = SoundEngine.ctx.createGain();
                             o.type = 'triangle';
                             o.connect(g);
                             g.connect(SoundEngine.ctx.destination);
-                            o.frequency.value = freq;
-                            g.gain.setValueAtTime(0.2, time);
-                            g.gain.exponentialRampToValueAtTime(0.01, time + dur);
-                            o.start(time); o.stop(time + dur);
+                            o.frequency.value = f;
+                            g.gain.setValueAtTime(0.1, start);
+                            g.gain.linearRampToValueAtTime(0, start + dur);
+                            o.start(start); o.stop(start + dur);
                         };
-                        // C Major Arpeggio
-                        playNote(523.25, t, 0.2);
-                        playNote(659.25, t + 0.1, 0.2);
-                        playNote(783.99, t + 0.2, 0.2);
-                        playNote(1046.50, t + 0.3, 0.6);
-                        playNote(523.25, t + 0.3, 0.6); // Octave lower harmony
+                        [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50].forEach((f, i) => {
+                            playNote(f, t + i*0.12, 0.4);
+                        });
                         break;
                 }
             }
@@ -263,10 +251,7 @@
 
         // --- PARTICLE SYSTEM ---
         const ParticleSystem = {
-            canvas: null,
-            ctx: null,
-            particles: [],
-            active: false,
+            canvas: null, ctx: null, particles: [], active: false,
             init: () => {
                 ParticleSystem.canvas = document.getElementById('particles');
                 ParticleSystem.ctx = ParticleSystem.canvas.getContext('2d');
@@ -280,17 +265,14 @@
             },
             burst: () => {
                 ParticleSystem.active = true;
-                const colors = ['#2563EB', '#DB2777', '#FBBF24', '#ffffff'];
-                for(let i=0; i<100; i++) {
+                const colors = ['#0052FF', '#FF005C', '#FFD600', '#FFFFFF'];
+                for(let i=0; i<120; i++) {
                     ParticleSystem.particles.push({
-                        x: window.innerWidth/2,
-                        y: window.innerHeight/2,
-                        vx: (Math.random() - 0.5) * 20,
-                        vy: (Math.random() - 0.5) * 20 - 5,
-                        size: Math.random() * 8 + 4,
-                        color: colors[Math.floor(Math.random()*colors.length)],
-                        life: 1.0,
-                        decay: Math.random() * 0.02 + 0.005
+                        x: window.innerWidth/2, y: window.innerHeight/2,
+                        vx: (Math.random() - 0.5) * 25, vy: (Math.random() - 0.5) * 25 - 8,
+                        size: Math.random() * 10 + 5, color: colors[Math.floor(Math.random()*colors.length)],
+                        life: 1.0, decay: Math.random() * 0.015 + 0.005,
+                        rotation: Math.random() * 360, vRotation: (Math.random() - 0.5) * 20
                     });
                 }
                 ParticleSystem.loop();
@@ -298,35 +280,25 @@
             loop: () => {
                 if(!ParticleSystem.active) return;
                 const ctx = ParticleSystem.ctx;
-                const w = ParticleSystem.canvas.width;
-                const h = ParticleSystem.canvas.height;
-                ctx.clearRect(0,0,w,h);
+                ctx.clearRect(0,0,ParticleSystem.canvas.width,ParticleSystem.canvas.height);
 
                 for(let i = ParticleSystem.particles.length-1; i>=0; i--) {
                     const p = ParticleSystem.particles[i];
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.5; // Gravity
-                    p.life -= p.decay;
+                    p.x += p.vx; p.y += p.vy; p.vy += 0.6; p.life -= p.decay; p.rotation += p.vRotation;
                     
-                    if(p.life <= 0) {
-                        ParticleSystem.particles.splice(i, 1);
-                        continue;
-                    }
+                    if(p.life <= 0) { ParticleSystem.particles.splice(i, 1); continue; }
 
+                    ctx.save();
+                    ctx.translate(p.x, p.y);
+                    ctx.rotate(p.rotation * Math.PI / 180);
                     ctx.globalAlpha = p.life;
                     ctx.fillStyle = p.color;
-                    ctx.beginPath();
-                    ctx.rect(p.x, p.y, p.size, p.size); // Confetti squares
-                    ctx.fill();
+                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+                    ctx.restore();
                 }
 
-                if(ParticleSystem.particles.length > 0) {
-                    requestAnimationFrame(ParticleSystem.loop);
-                } else {
-                    ParticleSystem.active = false;
-                    ctx.clearRect(0,0,w,h);
-                }
+                if(ParticleSystem.particles.length > 0) requestAnimationFrame(ParticleSystem.loop);
+                else { ParticleSystem.active = false; ctx.clearRect(0,0,ParticleSystem.canvas.width,ParticleSystem.canvas.height); }
             }
         };
 
@@ -347,9 +319,6 @@
         const getRandomChar = () => HIRAGANA_CHARS[Math.floor(Math.random() * HIRAGANA_CHARS.length)];
         const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
         const toHiragana = (str) => str.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
-        const toHalfWidth = (str) => str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
-            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-        });
         const getLastChar = (w) => {
             if(!w) return '';
             const last = w.slice(-1);
@@ -363,8 +332,6 @@
         };
 
         // --- COMPONENTS ---
-        
-        // Nintendo-style Button V2
         const Button = ({ onClick, children, className="", disabled=false, variant="primary", icon, size="md", fullWidth=false }) => {
             const handleInteract = () => {
                 if(!disabled) {
@@ -375,61 +342,49 @@
             };
             
             const styles = {
-                primary: "bg-blue-600 hover:bg-blue-500 text-white border-b-4 border-blue-800 active:border-b-0",
-                danger: "bg-pink-600 hover:bg-pink-500 text-white border-b-4 border-pink-800 active:border-b-0",
-                accent: "bg-yellow-400 hover:bg-yellow-300 text-slate-900 border-b-4 border-yellow-600 active:border-b-0",
-                ghost: "bg-slate-200 hover:bg-slate-100 text-slate-600 border-b-4 border-slate-300 active:border-b-0"
+                primary: "bg-[#0052FF] hover:bg-[#0040D0] text-white border-b-4 border-[#0030A0] active:border-b-0",
+                danger: "bg-[#FF005C] hover:bg-[#D0004C] text-white border-b-4 border-[#A0003A] active:border-b-0",
+                accent: "bg-[#FFD600] hover:bg-[#E0BC00] text-slate-900 border-b-4 border-[#B09200] active:border-b-0",
+                ghost: "bg-slate-200 hover:bg-slate-300 text-slate-600 border-b-4 border-slate-300 active:border-b-0"
             };
-            const sizes = {
-                sm: "px-3 py-2 text-sm",
-                md: "px-6 py-3 text-base md:text-lg",
-                lg: "px-8 py-4 text-lg md:text-xl"
-            };
+            const sizes = { sm: "px-3 py-2 text-sm", md: "px-6 py-3 text-base md:text-lg", lg: "px-8 py-4 text-lg md:text-xl" };
 
             return (
                 <button 
-                    onClick={handleInteract} 
-                    disabled={disabled} 
-                    className={`pop-btn rounded-xl md:rounded-2xl font-black tracking-wider flex items-center justify-center gap-2 ${styles[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
+                    onClick={handleInteract} disabled={disabled} 
+                    className={`pop-btn rounded-xl md:rounded-2xl font-black tracking-wider flex items-center justify-center gap-2 flex-shrink-0 ${styles[variant]} ${sizes[size]} ${fullWidth ? 'w-full' : ''} ${className}`}
                 >
                     {icon && <i data-lucide={icon} className="w-5 h-5"></i>}
-                    <span>{children}</span>
+                    <span className="whitespace-nowrap">{children}</span>
                 </button>
             );
         };
 
         // --- MAIN APP ---
         const App = () => {
-            // Net
+            // Net & User
             const [peer, setPeer] = useState(null);
             const [conn, setConn] = useState(null);
             const [myId, setMyId] = useState('');
             const [targetId, setTargetId] = useState('');
             const [isHost, setIsHost] = useState(false);
-            
-            // User Data
             const [userName, setUserName] = useState('');
             const [oppName, setOppName] = useState('RIVAL');
             
-            // Flow
+            // Flow & Game
             const [phase, setPhase] = useState('lobby'); 
             const [error, setError] = useState('');
             const [damageAlert, setDamageAlert] = useState(null);
             const [turnNotify, setTurnNotify] = useState(null); 
-
-            // Game Logic
             const [myTopic, setMyTopic] = useState('');
             const [oppTopic, setOppTopic] = useState('');
             const [isMyTopicConfirmed, setIsMyTopicConfirmed] = useState(false);
             const [isOppTopicConfirmed, setIsOppTopicConfirmed] = useState(false);
-            
-            const [rouletteData, setRouletteData] = useState({ candidates: [], winner: null });
             const [rouletteDisplay, setRouletteDisplay] = useState('');
             const [selectedTopic, setSelectedTopic] = useState(null);
             const [ngWords, setNgWords] = useState({ high: '', mid: '', low: '' });
             const [oppNgReady, setOppNgReady] = useState(false);
             const [coinResult, setCoinResult] = useState(null);
-            
             const [history, setHistory] = useState([]);
             const [turn, setTurn] = useState('host');
             const [myHp, setMyHp] = useState(MAX_HP);
@@ -437,7 +392,6 @@
             const [input, setInput] = useState('');
             const [lastChar, setLastChar] = useState('');
             const [initialChar, setInitialChar] = useState(''); 
-            
             const [displayTimer, setDisplayTimer] = useState(0); 
             const [phaseStartTime, setPhaseStartTime] = useState(0); 
             const [turnStartTime, setTurnStartTime] = useState(0); 
@@ -445,80 +399,53 @@
             const [isOpponentTyping, setIsOpponentTyping] = useState(false);
 
             // Refs
-            const stateRef = useRef({ 
-                phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
-                turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked
-            });
+            const stateRef = useRef({ phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked });
             const connRef = useRef(null); 
             const scrollRef = useRef(null);
             const loopRef = useRef(null);
             const processingTimeout = useRef(false);
 
-            // Sync Ref
-            useEffect(() => {
-                stateRef.current = { 
-                    phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
-                    turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked
-                };
-            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked]);
+            useEffect(() => { stateRef.current = { phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked }; }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime, phaseStartTime, isMyTopicConfirmed, isOppTopicConfirmed, initialChar, isInputLocked]);
 
-            // Effects
+            // --- PERSISTENCE ---
+            useEffect(() => { const saved = localStorage.getItem('nwb_username'); if(saved) setUserName(saved); }, []);
+            useEffect(() => { if(userName) localStorage.setItem('nwb_username', userName); }, [userName]);
+
+            // --- INIT ---
             useEffect(() => { if(window.lucide) window.lucide.createIcons(); });
             useEffect(() => { ParticleSystem.init(); }, []);
-            
-            // Auto Scroll
-            useEffect(() => { 
-                if(scrollRef.current) {
-                    scrollRef.current.scrollTop = scrollRef.current.scrollHeight; 
-                }
-            }, [history, isOpponentTyping, phase]);
-
-            // Init Peer
+            useEffect(() => { if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight; }, [history, isOpponentTyping, phase]);
             useEffect(() => {
                 const id = generateId();
                 const p = new Peer(`KB-${id}`);
                 p.on('open', () => { setMyId(id); setPeer(p); });
                 p.on('connection', c => setupConn(c, true));
-                p.on('error', e => showError('接続エラー'));
+                p.on('error', e => showError('接続エラー: リロードしてください'));
                 return () => p.destroy();
             }, []);
 
-            // Heartbeat
             useEffect(() => {
-               const hb = setInterval(() => {
-                   if(stateRef.current.phase !== 'lobby' && connRef.current?.open) {
-                       connRef.current.send({ type: 'PING' });
-                   }
-               }, 2000);
+               const hb = setInterval(() => { if(stateRef.current.phase !== 'lobby' && connRef.current?.open) connRef.current.send({ type: 'PING' }); }, 2000);
                return () => clearInterval(hb);
             }, []);
 
-            // Timer Loop
+            // --- TIMER LOOP ---
             useEffect(() => {
                 const loop = () => {
                     const s = stateRef.current;
                     const now = Date.now();
                     let targetTime = 0;
                     let duration = 0;
-
-                    if (s.phase === 'topic_input' || s.phase === 'ng_input') {
-                        targetTime = s.phaseStartTime;
-                        duration = TIMER_SETUP;
-                    } else if (s.phase === 'playing' && s.turnStartTime > 0) {
-                        targetTime = s.turnStartTime;
-                        duration = TIMER_GAME;
-                    }
+                    if (s.phase === 'topic_input' || s.phase === 'ng_input') { targetTime = s.phaseStartTime; duration = TIMER_SETUP; }
+                    else if (s.phase === 'playing' && s.turnStartTime > 0) { targetTime = s.turnStartTime; duration = TIMER_GAME; }
 
                     if (targetTime > 0) {
-                        if (s.phase === 'playing' && now < targetTime) {
-                            setDisplayTimer(TIMER_GAME);
-                            setIsInputLocked(true);
-                        } else {
+                        if (s.phase === 'playing' && now < targetTime) { setDisplayTimer(TIMER_GAME); setIsInputLocked(true); } 
+                        else {
                             const elapsedSec = (now - targetTime) / 1000;
                             const remain = Math.max(0, Math.ceil(duration - elapsedSec));
                             setDisplayTimer(remain);
                             setIsInputLocked(false);
-
                             if (s.isHost && remain <= 0 && !processingTimeout.current) {
                                 if (s.phase === 'playing') handleTimeout();
                                 else if (s.phase === 'ng_input') forceStartGame();
@@ -532,57 +459,39 @@
                 return () => cancelAnimationFrame(loopRef.current);
             }, []);
 
-            // Networking
+            // --- NETWORKING ---
             const connect = () => { 
                 if(!targetId || !peer) return; 
-                SoundEngine.init();
-                SoundEngine.play('confirm');
+                SoundEngine.init(); SoundEngine.play('confirm');
                 setupConn(peer.connect(`KB-${targetId.toUpperCase()}`), false); 
             };
-
             const setupConn = (c, amHost) => {
                 setConn(c); connRef.current = c; setIsHost(amHost);
                 c.on('open', () => {
                     send({ type: 'NAME_SYNC', name: stateRef.current.userName || 'PLAYER' });
                     setPhase('vs');
-                    // Mobile: wait a bit longer for orientation changes
                     setTimeout(() => startPhase('topic_input'), 4000);
                 });
                 c.on('data', handleData);
-                c.on('close', () => { showError('切断されました'); resetGame(); });
+                c.on('close', () => { showError('相手との接続が切れました'); resetGame(); });
             };
-
             const send = (data) => { if(connRef.current?.open) connRef.current.send(data); };
-
             const startPhase = (newPhase) => {
                 const now = Date.now();
                 setPhase(newPhase); setPhaseStartTime(now);
                 if (stateRef.current.isHost) send({ type: 'PHASE_CHANGE', phase: newPhase, startTime: now });
             };
-
             const handleData = (data) => {
                 const s = stateRef.current;
                 switch(data.type) {
                     case 'PING': break;
                     case 'TYPING': setIsOpponentTyping(data.isTyping); break;
-                    case 'NAME_SYNC':
-                        setOppName(data.name || 'RIVAL');
-                        if(s.isHost) send({ type: 'NAME_SYNC', name: s.userName || 'PLAYER' });
-                        break;
+                    case 'NAME_SYNC': setOppName(data.name || 'RIVAL'); if(s.isHost) send({ type: 'NAME_SYNC', name: s.userName || 'PLAYER' }); break;
                     case 'PHASE_CHANGE': setPhase(data.phase); setPhaseStartTime(data.startTime); break;
-                    case 'TOPIC_CONFIRM':
-                        setOppTopic(data.topic); setIsOppTopicConfirmed(true);
-                        if (s.isHost && s.isMyTopicConfirmed) startRoulette(s.myTopic, data.topic);
-                        break;
-                    case 'ROULETTE_START':
-                        setOppTopic(data.hostTopic); playRouletteAnimation(data.candidates, data.winner);
-                        break;
-                    case 'NG_READY':
-                        setOppNgReady(true); if(s.isHost && s.phase === 'ng_wait') startCoinToss();
-                        break;
-                    case 'FORCE_NG_COMPLETE':
-                        setOppNgReady(true); if(s.isHost) startCoinToss();
-                        break;
+                    case 'TOPIC_CONFIRM': setOppTopic(data.topic); setIsOppTopicConfirmed(true); if (s.isHost && s.isMyTopicConfirmed) startRoulette(s.myTopic, data.topic); break;
+                    case 'ROULETTE_START': setOppTopic(data.hostTopic); playRouletteAnimation(data.candidates, data.winner); break;
+                    case 'NG_READY': setOppNgReady(true); if(s.isHost && s.phase === 'ng_wait') startCoinToss(); break;
+                    case 'FORCE_NG_COMPLETE': setOppNgReady(true); if(s.isHost) startCoinToss(); break;
                     case 'COIN_TOSS_START':
                         setCoinResult(data.result); setLastChar(data.initialChar); setInitialChar(data.initialChar); setPhase('coin');
                         setTimeout(() => { 
@@ -592,10 +501,7 @@
                             triggerTurnAnim(data.result === (isHost ? 'host' : 'guest') ? 'me' : 'rival', 0);
                         }, 4000);
                         break;
-                    case 'MOVE': 
-                        setIsOpponentTyping(false); 
-                        receiveMove(data.word); 
-                        break;
+                    case 'MOVE': setIsOpponentTyping(false); receiveMove(data.word); break;
                     case 'TURN_CHANGE':
                         processingTimeout.current = false;
                         setTurn(data.nextTurn); setTurnStartTime(data.startTime);
@@ -603,10 +509,7 @@
                         triggerTurnAnim(data.nextTurn === (isHost ? 'host' : 'guest') ? 'me' : 'rival', data.delay);
                         if (data.nextTurn !== (isHost ? 'host' : 'guest')) setInput('');
                         break;
-                    case 'DAMAGE_REPORT':
-                        applyDamage('me', data.amount, data.reason);
-                        if(data.remainingHp !== undefined) setMyHp(data.remainingHp); 
-                        break;
+                    case 'DAMAGE_REPORT': applyDamage('me', data.amount, data.reason); if(data.remainingHp !== undefined) setMyHp(data.remainingHp); break;
                     case 'TIMEOUT_PENALTY':
                         processingTimeout.current = false;
                         setMyHp(data.oppHp); setOppHp(data.myHp);
@@ -620,33 +523,22 @@
                 }
             };
 
-            // Actions
+            // --- LOGIC ---
             const triggerTurnAnim = (who, delay) => {
-                setTimeout(() => {
-                    setTurnNotify(who);
-                    SoundEngine.play('turn');
-                    setTimeout(() => setTurnNotify(null), 2000);
-                }, delay);
+                setTimeout(() => { setTurnNotify(who); SoundEngine.play('turn'); setTimeout(() => setTurnNotify(null), 2000); }, delay);
             };
-
             const submitTopic = () => {
-                if(!myTopic) return showError("お題を入力してね！");
+                if(!myTopic) return showError("お題を入力してください");
                 setIsMyTopicConfirmed(true); send({ type: 'TOPIC_CONFIRM', topic: myTopic });
                 if (isHost && stateRef.current.isOppTopicConfirmed) startRoulette(myTopic, stateRef.current.oppTopic);
             };
-
             const forceSubmitTopic = () => {
                 const s = stateRef.current;
                 let myT = s.myTopic || SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
-                let oppT = s.oppTopic;
-                if (!s.isMyTopicConfirmed) {
-                    setMyTopic(myT); setIsMyTopicConfirmed(true);
-                    send({ type: 'TOPIC_CONFIRM', topic: myT });
-                }
-                if (!s.isOppTopicConfirmed) oppT = SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                let oppT = s.oppTopic || SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                if (!s.isMyTopicConfirmed) { setMyTopic(myT); setIsMyTopicConfirmed(true); send({ type: 'TOPIC_CONFIRM', topic: myT }); }
                 startRoulette(myT, oppT);
             };
-
             const startRoulette = (hostT, guestT) => {
                 const isHostChosen = Math.random() > 0.5;
                 const winner = isHostChosen ? { text: hostT, owner: 'host' } : { text: guestT, owner: 'guest' };
@@ -654,37 +546,26 @@
                 playRouletteAnimation(candidates, winner);
                 send({ type: 'ROULETTE_START', candidates, winner, hostTopic: hostT });
             };
-
             const playRouletteAnimation = (candidates, winner) => {
-                setPhase('roulette'); setRouletteData({ candidates, winner });
-                let count = 0;
+                setPhase('roulette'); let count = 0;
                 const spin = () => {
                     setRouletteDisplay(candidates[count % 2]); count++;
                     if(count < 20) setTimeout(spin, 50 + count * 10);
                     else {
-                        setRouletteDisplay(winner.text); setSelectedTopic(winner);
-                        SoundEngine.play('confirm');
+                        setRouletteDisplay(winner.text); setSelectedTopic(winner); SoundEngine.play('confirm');
                         setTimeout(() => startPhase('ng_input'), 2500);
                     }
                 };
                 spin();
             };
-
             const submitNg = () => {
                 const words = [ngWords.high, ngWords.mid, ngWords.low];
-                if(words.some(w => w.slice(-1) === 'ん')) return showError("「ん」で終わる言葉はNG不可！");
-                if(words.some(w => w && !/^[\u3040-\u309fー]+$/.test(w))) return showError("ひらがなのみOK！");
+                if(words.some(w => w.slice(-1) === 'ん')) return showError("「ん」で終わる言葉は禁止です");
+                if(words.some(w => w && !/^[\u3040-\u309fー]+$/.test(w))) return showError("ひらがなで入力してください");
                 setPhase('ng_wait'); send({ type: 'NG_READY' });
                 if(isHost && oppNgReady) startCoinToss();
             };
-
-            const forceStartGame = () => {
-                if (stateRef.current.phase === 'ng_input') {
-                    setNgWords({high:'', mid:'', low:''}); 
-                    setPhase('ng_wait'); send({ type: 'FORCE_NG_COMPLETE' }); startCoinToss();
-                }
-            };
-
+            const forceStartGame = () => { if (stateRef.current.phase === 'ng_input') { setNgWords({high:'', mid:'', low:''}); setPhase('ng_wait'); send({ type: 'FORCE_NG_COMPLETE' }); startCoinToss(); } };
             const startCoinToss = () => {
                 const initialChar = getRandomChar();
                 const firstPlayer = Math.random() > 0.5 ? 'host' : 'guest';
@@ -692,12 +573,10 @@
                 setCoinResult(firstPlayer); setLastChar(initialChar); setInitialChar(initialChar); setPhase('coin');
                 setTimeout(() => {
                     setPhase('playing'); setTurn(firstPlayer); setHistory([]); 
-                    const startTime = Date.now() + TURN_ANIM_DURATION;
-                    setTurnStartTime(startTime);
+                    setTurnStartTime(Date.now() + TURN_ANIM_DURATION);
                     triggerTurnAnim(firstPlayer === 'host' ? 'me' : 'rival', 0);
                 }, 4000);
             };
-
             const handleTimeout = () => {
                 if (processingTimeout.current) return;
                 processingTimeout.current = true;
@@ -705,201 +584,122 @@
                 const victim = s.turn; 
                 let newHostHp = s.isHost ? s.myHp : s.oppHp;
                 let newGuestHp = s.isHost ? s.oppHp : s.myHp;
-                if (victim === 'host') newHostHp = Math.max(0, newHostHp - 1);
-                else newGuestHp = Math.max(0, newGuestHp - 1);
-
+                if (victim === 'host') newHostHp = Math.max(0, newHostHp - 1); else newGuestHp = Math.max(0, newGuestHp - 1);
                 const nextTurn = s.turn === 'host' ? 'guest' : 'host';
                 const nextStartTime = Date.now() + 3000 + TURN_ANIM_DURATION; 
-
-                if (s.isHost) {
-                     applyDamage(victim === 'host' ? 'me' : 'opp', 1, 'タイムオーバー');
-                }
+                if (s.isHost) applyDamage(victim === 'host' ? 'me' : 'opp', 1, 'タイムオーバー');
                 setHistory(prev => [...prev, { type: 'timeout', owner: victim }]);
                 setTurn(nextTurn); setTurnStartTime(nextStartTime);
                 triggerTurnAnim(nextTurn === 'host' ? 'me' : 'rival', 3000);
-                
                 send({ type: 'TIMEOUT_PENALTY', victim, myHp: newHostHp, oppHp: newGuestHp, nextTurn, startTime: nextStartTime });
                 setTimeout(() => { processingTimeout.current = false; }, 500); 
             };
-
             const submitWord = () => {
                 if(!input) return;
                 const hira = toHiragana(input);
-                if (!/^[\u3040-\u309fー]+$/.test(hira)) return showError('ひらがなで入力！');
-                if (lastChar && hira[0] !== lastChar) return showError(`「${lastChar}」から始めて！`);
-                if (history.some(h => h.word === hira)) return showError('既出ワード！');
-                
+                if (!/^[\u3040-\u309fー]+$/.test(hira)) return showError('ひらがなで入力してください');
+                if (lastChar && hira[0] !== lastChar) return showError(`「${lastChar}」から始めてください`);
+                if (history.some(h => h.word === hira)) return showError('既出ワードです');
                 if(hira.slice(-1) === 'ん') {
                     const suicideHist = [...history, { word: hira, owner: isHost?'host':'guest', damage: MAX_HP }];
-                    setHistory(suicideHist);
-                    applyDamage('me', MAX_HP, '自爆！');
-                    send({ type: 'MOVE', word: hira });
-                    send({ type: 'DAMAGE_REPORT', amount: MAX_HP, reason: '自爆！', remainingHp: 0 });
+                    setHistory(suicideHist); applyDamage('me', MAX_HP, '自爆！');
+                    send({ type: 'MOVE', word: hira }); send({ type: 'DAMAGE_REPORT', amount: MAX_HP, reason: '自爆！', remainingHp: 0 });
                     return;
                 }
-
                 setHistory([...history, { word: hira, owner: isHost?'host':'guest', damage: 0 }]);
-                setInput('');
-                send({ type: 'MOVE', word: hira });
-                setLastChar(getLastChar(hira));
-                changeTurnInternal(isHost?'guest':'host', false);
+                setInput(''); send({ type: 'MOVE', word: hira });
+                setLastChar(getLastChar(hira)); changeTurnInternal(isHost?'guest':'host', false);
             };
-
             const receiveMove = (word) => {
                 const s = stateRef.current;
-                let dmg = 0;
-                let reason = '';
+                let dmg = 0; let reason = '';
                 if(word === s.ngWords.high) { dmg = 3; reason = 'NGワード (3ダメージ)!'; }
                 else if(word === s.ngWords.mid) { dmg = 2; reason = 'NGワード (2ダメージ)!'; }
                 else if(word === s.ngWords.low) { dmg = 1; reason = 'NGワード (1ダメージ)!'; }
                 if(word.slice(-1) === 'ん') { dmg = MAX_HP; reason = '自爆！'; }
-
                 setHistory(prev => [...prev, { word, owner: !s.isHost ? 'host' : 'guest', damage: dmg }]);
                 setLastChar(getLastChar(word));
-
                 const hasDamage = dmg > 0;
-                if(hasDamage) {
-                    applyDamage('opp', dmg, reason);
-                    const newOppHp = Math.max(0, s.oppHp - dmg);
-                    send({ type: 'DAMAGE_REPORT', amount: dmg, reason, remainingHp: newOppHp });
-                }
-
+                if(hasDamage) { applyDamage('opp', dmg, reason); send({ type: 'DAMAGE_REPORT', amount: dmg, reason, remainingHp: Math.max(0, s.oppHp - dmg) }); }
                 if (s.isHost) changeTurnInternal(s.isHost ? 'host' : 'guest', hasDamage);
-                else {
-                    setTurn(s.isHost ? 'host' : 'guest');
-                    triggerTurnAnim(s.isHost ? 'me' : 'rival', hasDamage ? 3000 : 0);
-                }
+                else { setTurn(s.isHost ? 'host' : 'guest'); triggerTurnAnim(s.isHost ? 'me' : 'rival', hasDamage ? 3000 : 0); }
             };
-
             const changeTurnInternal = (next, hasDamage) => {
-                const now = Date.now();
-                const delay = hasDamage ? 3000 : 0;
-                const nextStartTime = now + delay + TURN_ANIM_DURATION;
-                
-                setTurn(next); 
-                setTurnStartTime(nextStartTime);
-                triggerTurnAnim(next === (stateRef.current.isHost ? 'host' : 'guest') ? 'me' : 'rival', delay);
-
-                if (stateRef.current.isHost) {
-                    send({ type: 'TURN_CHANGE', nextTurn: next, startTime: nextStartTime, delay: delay, myHp: stateRef.current.myHp, oppHp: stateRef.current.oppHp });
-                }
+                const now = Date.now(); const delay = hasDamage ? 3000 : 0; const nextStartTime = now + delay + TURN_ANIM_DURATION;
+                setTurn(next); setTurnStartTime(nextStartTime); triggerTurnAnim(next === (stateRef.current.isHost ? 'host' : 'guest') ? 'me' : 'rival', delay);
+                if (stateRef.current.isHost) send({ type: 'TURN_CHANGE', nextTurn: next, startTime: nextStartTime, delay: delay, myHp: stateRef.current.myHp, oppHp: stateRef.current.oppHp });
             };
-
             const applyDamage = (target, amount, msg) => {
-                setDamageAlert({ target, amount, reason: msg });
-                SoundEngine.play('damage');
-                setTimeout(() => setDamageAlert(null), 2000);
-                
-                let setHp = target === 'me' ? setMyHp : setOppHp;
-                let currentHp = target === 'me' ? stateRef.current.myHp : stateRef.current.oppHp;
-                const nextHp = Math.max(0, currentHp - amount);
-                setHp(nextHp);
-
+                setDamageAlert({ target, amount, reason: msg }); SoundEngine.play('damage'); setTimeout(() => setDamageAlert(null), 2000);
+                let setHp = target === 'me' ? setMyHp : setOppHp; let currentHp = target === 'me' ? stateRef.current.myHp : stateRef.current.oppHp;
+                const nextHp = Math.max(0, currentHp - amount); setHp(nextHp);
                 setHistory(prev => {
                     if(prev.length === 0) return prev;
                     if(msg.includes('NG') || msg.includes('自爆')) {
                         const last = prev[prev.length - 1];
-                        if(last.damage === 0) {
-                            const updated = [...prev];
-                            updated[updated.length-1] = { ...last, damage: amount };
-                            return updated;
-                        }
+                        if(last.damage === 0) { const updated = [...prev]; updated[updated.length-1] = { ...last, damage: amount }; return updated; }
                     }
                     return prev;
                 });
-                if(nextHp <= 0) setTimeout(() => {
-                    setPhase('result');
-                    if(target === 'opp') {
-                        SoundEngine.play('win');
-                        ParticleSystem.burst();
-                    }
-                }, 2500);
+                if(nextHp <= 0) setTimeout(() => { setPhase('result'); if(target === 'opp') { SoundEngine.play('win'); ParticleSystem.burst(); } }, 2500);
             };
-
-            // Utils UI
             const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 3000); };
             const handleRematch = () => { send({ type: 'REMATCH' }); resetGame(); };
             const resetGame = () => {
-                setPhase('lobby'); setMyTopic(''); setOppTopic(''); setSelectedTopic(null);
-                setNgWords({ high:'', mid:'', low:'' }); setOppNgReady(false);
-                setIsMyTopicConfirmed(false); setIsOppTopicConfirmed(false);
-                setHistory([]); setMyHp(MAX_HP); setOppHp(MAX_HP); setDamageAlert(null);
-                setTurnStartTime(0); setPhaseStartTime(0); setInitialChar('');
-                setIsOpponentTyping(false); processingTimeout.current = false; setTurnNotify(null);
+                setPhase('lobby'); setMyTopic(''); setOppTopic(''); setSelectedTopic(null); setNgWords({ high:'', mid:'', low:'' }); setOppNgReady(false);
+                setIsMyTopicConfirmed(false); setIsOppTopicConfirmed(false); setHistory([]); setMyHp(MAX_HP); setOppHp(MAX_HP); setDamageAlert(null);
+                setTurnStartTime(0); setPhaseStartTime(0); setInitialChar(''); setIsOpponentTyping(false); processingTimeout.current = false; setTurnNotify(null);
             };
-            const copyId = () => {
-                navigator.clipboard.writeText(myId);
-                showError('コピーしました！');
-            };
-
+            const copyId = () => { navigator.clipboard.writeText(myId); showError('コピーしました！'); };
             const isMyTurn = turn === (isHost?'host':'guest');
 
             // --- RENDER ---
             return (
                 <div className="w-full h-[100dvh] bg-pattern relative overflow-hidden flex flex-col font-sans select-none">
-                    
-                    {/* --- GLOBAL OVERLAYS --- */}
                     {turnNotify && (
-                        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none wipe-transition bg-black/30">
-                            <div className={`transform rotate-[-3deg] px-8 md:px-20 py-6 md:py-8 border-4 md:border-8 border-white shadow-2xl rounded-3xl animate-pop-in ${turnNotify === 'me' ? 'bg-blue-600' : 'bg-pink-600'}`}>
-                                <h1 className="text-4xl md:text-8xl font-black text-white italic font-pop drop-shadow-md text-center">
-                                    {turnNotify === 'me' ? 'YOUR TURN!' : 'RIVAL TURN!'}
-                                </h1>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none wipe-transition bg-black/40">
+                            <div className={`transform rotate-[-3deg] px-8 md:px-20 py-6 md:py-8 border-4 md:border-8 border-white shadow-2xl rounded-3xl animate-pop-in ${turnNotify === 'me' ? 'bg-[#0052FF]' : 'bg-[#FF005C]'}`}>
+                                <h1 className="text-4xl md:text-8xl font-black text-white italic font-pop drop-shadow-lg text-center">{turnNotify === 'me' ? 'YOUR TURN!' : 'RIVAL TURN!'}</h1>
                             </div>
                         </div>
                     )}
-
                     {damageAlert && (
                         <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none animate-shake">
                             <div className="relative">
-                                <div className="text-[8rem] md:text-[12rem] font-black text-white drop-shadow-[0_8px_0_rgba(0,0,0,0.5)] font-pop stroke-2 leading-none">
-                                    -{damageAlert.amount}
-                                </div>
-                                <div className="absolute top-full left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-2 rounded-full whitespace-nowrap border-4 border-white shadow-lg mt-4">
-                                    {damageAlert.reason}
-                                </div>
+                                <div className="text-[8rem] md:text-[12rem] font-black text-white drop-shadow-[0_8px_0_rgba(0,0,0,0.5)] font-pop stroke-2 leading-none">-{damageAlert.amount}</div>
+                                <div className="absolute top-full left-1/2 -translate-x-1/2 bg-red-600 text-white font-bold px-6 py-2 rounded-full whitespace-nowrap border-4 border-white shadow-lg mt-4">{damageAlert.reason}</div>
                             </div>
                         </div>
                     )}
-
                     {error && (
-                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-bounce-item w-[90%] max-w-sm">
+                        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[100] animate-pop-in w-[90%] max-w-sm">
                             <div className="bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl border-4 border-white flex items-center justify-center gap-2 text-sm md:text-base">
-                                <i data-lucide="alert-circle" className="shrink-0"></i>
-                                {error}
+                                <i data-lucide="alert-circle" className="shrink-0"></i>{error}
                             </div>
                         </div>
                     )}
 
-                    {/* --- SCENES --- */}
-                    
-                    {/* LOBBY */}
                     {phase === 'lobby' && (
                         <div className="flex-1 flex flex-col items-center justify-center p-4 space-y-6 md:space-y-8 animate-pop-in overflow-y-auto">
-                            <div className="text-center space-y-2">
-                                <div className="bg-yellow-400 text-slate-900 inline-block px-4 py-1 rounded-full font-black text-xs md:text-sm tracking-widest mb-2 border-2 border-yellow-600 shadow-sm">NEON WORD BATTLE V2</div>
+                            <div className="text-center space-y-4 animate-title">
+                                <div className="bg-[#FFD600] text-slate-900 inline-block px-4 py-1 rounded-full font-black text-xs md:text-sm tracking-widest border-2 border-[#B09200] shadow-sm transform rotate-[-2deg]">KOTOBA STADIUM V3</div>
                                 <h1 className="text-5xl md:text-7xl font-black text-slate-800 font-pop tracking-tighter drop-shadow-sm leading-tight">
-                                    KOTOBA<br/><span className="text-blue-600">STA</span><span className="text-pink-600">DIUM</span>
+                                    <span className="text-[#0052FF]">WORD</span><span className="text-slate-300 mx-1">×</span><span className="text-[#FF005C]">BATTLE</span>
                                 </h1>
                             </div>
-
                             <div className="pop-card p-6 w-full max-w-sm space-y-6">
                                 <div>
                                     <label className="block text-xs font-bold text-slate-400 mb-2 pl-1">PLAYER NAME</label>
-                                    <input value={userName} onChange={e => setUserName(e.target.value)} className="pop-input w-full px-4 py-3 bg-slate-50 text-xl text-center text-slate-800" placeholder="名前を入力" maxLength={8} />
+                                    <input value={userName} onChange={e => setUserName(e.target.value)} className="pop-input w-full px-4 py-3 text-xl text-center" placeholder="名前を入力" maxLength={8} />
                                 </div>
-
-                                <div className="space-y-4 pt-4 border-t-2 border-slate-100">
-                                    <div className="flex gap-2">
-                                        <input value={targetId} onChange={e => setTargetId(e.target.value.toUpperCase())} className="pop-input flex-1 px-4 py-3 bg-slate-50 text-center font-mono uppercase placeholder:text-slate-300 text-slate-800" placeholder="IDを入力" />
-                                        <Button onClick={connect} variant="danger" icon="swords">BATTLE</Button>
+                                <div className="space-y-3 pt-4 border-t-2 border-slate-100">
+                                    <div className="flex flex-wrap gap-2">
+                                        <input value={targetId} onChange={e => setTargetId(e.target.value.toUpperCase())} className="pop-input flex-fix-input px-4 py-3 text-center font-mono uppercase" placeholder="IDを入力" />
+                                        <Button onClick={connect} variant="danger" icon="swords" className="flex-shrink-0">BATTLE</Button>
                                     </div>
-                                    <div className="text-center text-sm font-bold text-slate-300">OR</div>
-                                    <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer" onClick={copyId}>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-xs font-bold text-blue-500">YOUR ID (TAP TO COPY)</span>
-                                            <i data-lucide="copy" className="w-4 h-4 text-blue-400"></i>
-                                        </div>
+                                    <div className="text-center text-sm font-bold text-slate-300">- OR -</div>
+                                    <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer active:scale-95 duration-100" onClick={copyId}>
+                                        <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-blue-500">YOUR ID (TAP TO COPY)</span><i data-lucide="copy" className="w-4 h-4 text-blue-400"></i></div>
                                         <div className="text-3xl font-mono font-black text-blue-600 text-center tracking-widest select-all">{myId || '...'}</div>
                                     </div>
                                 </div>
@@ -907,104 +707,53 @@
                         </div>
                     )}
 
-                    {/* VS TRANSITION (Mobile Optimized) */}
                     {phase === 'vs' && (
                         <div className="fixed inset-0 z-50 bg-slate-900 flex flex-col md:flex-row">
-                            <div className="flex-1 bg-blue-600 flex items-center justify-center relative overflow-hidden h-1/2 md:h-full">
-                                <div className="absolute inset-0 bg-blue-700 opacity-20 bg-pattern"></div>
-                                <div className="text-center z-10">
-                                    <div className="text-blue-200 text-sm md:text-xl font-bold tracking-widest mb-2">CHALLENGER</div>
-                                    <div className="text-4xl md:text-6xl font-black text-white font-pop">{userName || 'YOU'}</div>
-                                </div>
+                            <div className="flex-1 bg-[#0052FF] flex items-center justify-center relative overflow-hidden h-1/2 md:h-full">
+                                <div className="absolute inset-0 bg-[#0040D0] opacity-20 bg-pattern"></div>
+                                <div className="text-center z-10"><div className="text-blue-200 text-sm md:text-xl font-bold tracking-widest mb-2">CHALLENGER</div><div className="text-4xl md:text-6xl font-black text-white font-pop">{userName || 'YOU'}</div></div>
                             </div>
-                            
-                            {/* VS Badge */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none">
-                                <div className="text-6xl md:text-8xl font-black text-yellow-400 font-pop italic drop-shadow-[0_5px_0_rgba(0,0,0,0.3)] animate-pop-in">VS</div>
-                            </div>
-
-                            <div className="flex-1 bg-pink-600 flex items-center justify-center relative overflow-hidden h-1/2 md:h-full">
-                                <div className="absolute inset-0 bg-pink-700 opacity-20 bg-pattern"></div>
-                                <div className="text-center z-10">
-                                    <div className="text-pink-200 text-sm md:text-xl font-bold tracking-widest mb-2">RIVAL</div>
-                                    <div className="text-4xl md:text-6xl font-black text-white font-pop">{oppName}</div>
-                                </div>
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"><div className="text-6xl md:text-8xl font-black text-[#FFD600] font-pop italic drop-shadow-lg animate-pop-in">VS</div></div>
+                            <div className="flex-1 bg-[#FF005C] flex items-center justify-center relative overflow-hidden h-1/2 md:h-full">
+                                <div className="absolute inset-0 bg-[#D0004C] opacity-20 bg-pattern"></div>
+                                <div className="text-center z-10"><div className="text-pink-200 text-sm md:text-xl font-bold tracking-widest mb-2">RIVAL</div><div className="text-4xl md:text-6xl font-black text-white font-pop">{oppName}</div></div>
                             </div>
                         </div>
                     )}
 
-                    {/* TOPIC PHASE */}
                     {(phase === 'topic_input' || phase === 'topic_wait') && (
                         <div className="flex-1 flex flex-col items-center justify-center p-6 slide-up-enter bg-slate-100">
                             <div className="pop-card w-full max-w-md overflow-hidden">
-                                <div className="bg-slate-50 p-4 border-b-2 border-slate-200 flex justify-between items-center">
-                                    <h2 className="font-black text-slate-700 flex items-center gap-2 text-lg"><i data-lucide="message-square"></i> お題を決めよう</h2>
-                                    <div className="bg-slate-800 text-white px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div>
-                                </div>
-                                
+                                <div className="bg-slate-50 p-4 border-b-2 border-slate-200 flex justify-between items-center"><h2 className="font-black text-slate-700 flex items-center gap-2 text-lg"><i data-lucide="message-square"></i> お題決定</h2><div className="bg-slate-800 text-white px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div></div>
                                 {((isMyTopicConfirmed && !isHost) || (isHost && isMyTopicConfirmed && !isOppTopicConfirmed)) ? (
-                                    <div className="p-12 text-center space-y-4">
-                                        <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                                        <div className="font-bold text-slate-500 animate-pulse">相手の入力を待っています...</div>
-                                    </div>
+                                    <div className="p-12 text-center space-y-4"><div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div><div className="font-bold text-slate-500 animate-pulse">相手の入力を待機中...</div></div>
                                 ) : (
-                                    <div className="p-6 space-y-6">
-                                        <div>
-                                            <input value={myTopic} onChange={e => setMyTopic(e.target.value)} className="pop-input w-full px-4 py-4 text-xl text-center text-slate-800" placeholder="例：赤いもの" />
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <Button onClick={() => setMyTopic(SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)])} variant="ghost" size="sm">ランダム</Button>
-                                            <Button onClick={submitTopic} variant="primary">決定！</Button>
-                                        </div>
-                                    </div>
+                                    <div className="p-6 space-y-6"><div><input value={myTopic} onChange={e => setMyTopic(e.target.value)} className="pop-input w-full px-4 py-4 text-xl text-center" placeholder="例：赤いもの" /></div><div className="grid grid-cols-2 gap-4"><Button onClick={() => setMyTopic(SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)])} variant="ghost" size="sm">おまかせ</Button><Button onClick={submitTopic} variant="primary">決定！</Button></div></div>
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {/* ROULETTE */}
                     {phase === 'roulette' && (
                         <div className="fixed inset-0 z-50 bg-slate-900/95 flex flex-col items-center justify-center space-y-8">
                             <div className="text-white font-bold tracking-widest animate-pulse">BATTLE TOPIC</div>
-                            <div className="bg-white px-8 md:px-12 py-6 md:py-8 rounded-3xl border-8 border-yellow-400 shadow-[0_0_50px_rgba(250,204,21,0.5)] transform scale-110 md:scale-125 mx-4">
-                                <div className="text-3xl md:text-6xl font-black text-slate-800 font-pop text-center min-w-[280px] break-keep">{rouletteDisplay}</div>
-                            </div>
+                            <div className="bg-white px-8 md:px-12 py-6 md:py-8 rounded-3xl border-8 border-[#FFD600] shadow-[0_0_50px_rgba(255,214,0,0.5)] transform scale-110 md:scale-125 mx-4"><div className="text-3xl md:text-6xl font-black text-slate-800 font-pop text-center min-w-[280px] break-keep">{rouletteDisplay}</div></div>
                         </div>
                     )}
 
-                    {/* NG INPUT */}
                     {(phase === 'ng_input' || phase === 'ng_wait') && (
                         <div className="flex-1 flex flex-col h-full bg-slate-50">
-                            <div className="bg-slate-800 text-white p-4 text-center shadow-lg z-10 shrink-0">
-                                <div className="text-[10px] md:text-xs font-bold text-slate-400 mb-1">CURRENT TOPIC</div>
-                                <div className="text-xl md:text-2xl font-black font-pop">{selectedTopic?.text}</div>
-                            </div>
-                            
+                            <div className="bg-slate-800 text-white p-4 text-center shadow-lg z-10 shrink-0"><div className="text-[10px] md:text-xs font-bold text-slate-400 mb-1">CURRENT TOPIC</div><div className="text-xl md:text-2xl font-black font-pop">{selectedTopic?.text}</div></div>
                             <div className="flex-1 flex flex-col items-center justify-center p-4 overflow-y-auto">
                                 {phase === 'ng_wait' ? (
-                                    <div className="text-center animate-bounce-item">
-                                        <div className="text-6xl mb-4">🤫</div>
-                                        <div className="font-bold text-slate-500">NGワードをセット中...</div>
-                                    </div>
+                                    <div className="text-center animate-bounce-item"><div className="text-6xl mb-4">🤫</div><div className="font-bold text-slate-500">NGワードをセット中...</div></div>
                                 ) : (
                                     <div className="pop-card w-full max-w-md p-6 space-y-6 slide-up-enter">
-                                        <div className="flex justify-between items-center">
-                                            <h2 className="font-black text-pink-600 text-lg md:text-xl">NGワードを仕掛けろ！</h2>
-                                            <div className="bg-pink-100 text-pink-600 px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div>
-                                        </div>
+                                        <div className="flex justify-between items-center"><h2 className="font-black text-[#FF005C] text-lg md:text-xl">NGワードを仕掛けろ！</h2><div className="bg-pink-100 text-pink-600 px-3 py-1 rounded-lg font-mono font-bold">{displayTimer}</div></div>
                                         <div className="space-y-4">
-                                            <div className="relative">
-                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-red-600 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">3pt</span>
-                                                <input value={ngWords.high} onChange={e => setNgWords({...ngWords, high: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-pink-200 focus:border-pink-500 text-slate-800" placeholder="大ダメージ (ひらがな)" />
-                                            </div>
-                                            <div className="relative">
-                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-orange-500 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">2pt</span>
-                                                <input value={ngWords.mid} onChange={e => setNgWords({...ngWords, mid: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-orange-200 focus:border-orange-500 text-slate-800" placeholder="中ダメージ (ひらがな)" />
-                                            </div>
-                                            <div className="relative">
-                                                <span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-yellow-500 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">1pt</span>
-                                                <input value={ngWords.low} onChange={e => setNgWords({...ngWords, low: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-yellow-200 focus:border-yellow-500 text-slate-800" placeholder="小ダメージ (ひらがな)" />
-                                            </div>
+                                            <div className="relative"><span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-red-600 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">3pt</span><input value={ngWords.high} onChange={e => setNgWords({...ngWords, high: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-pink-200 focus:border-pink-500" placeholder="大ダメージ (ひらがな)" /></div>
+                                            <div className="relative"><span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-orange-500 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">2pt</span><input value={ngWords.mid} onChange={e => setNgWords({...ngWords, mid: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-orange-200 focus:border-orange-500" placeholder="中ダメージ (ひらがな)" /></div>
+                                            <div className="relative"><span className="absolute -left-2 top-1/2 -translate-y-1/2 -rotate-12 bg-yellow-500 text-white text-[10px] md:text-xs font-black px-2 py-1 rounded shadow z-10">1pt</span><input value={ngWords.low} onChange={e => setNgWords({...ngWords, low: toHiragana(e.target.value)})} className="pop-input w-full pl-12 pr-4 py-3 border-yellow-200 focus:border-yellow-500" placeholder="小ダメージ (ひらがな)" /></div>
                                         </div>
                                         <Button onClick={submitNg} variant="danger" size="lg" fullWidth>セット完了！</Button>
                                     </div>
@@ -1013,147 +762,69 @@
                         </div>
                     )}
 
-                    {/* COIN TOSS */}
                     {phase === 'coin' && (
-                        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
-                             <div className={`relative w-40 h-40 md:w-48 md:h-48 coin-3d ${coinResult === (isHost?'host':'guest') ? 'rotate-y-[1800deg]' : 'rotate-y-[1980deg]'}`}>
-                                <div className="absolute inset-0 bg-blue-500 rounded-full flex items-center justify-center border-8 border-white text-white font-black text-3xl" style={{backfaceVisibility: 'hidden'}}>YOU</div>
-                                <div className="absolute inset-0 bg-pink-500 rounded-full flex items-center justify-center border-8 border-white text-white font-black text-3xl" style={{backfaceVisibility: 'hidden', transform: 'rotateY(180deg)'}}>RIVAL</div>
+                        <div className="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center coin-scene">
+                             <div className="relative w-40 h-40 md:w-48 md:h-48 coin-3d" style={{ transform: coinResult === (isHost?'host':'guest') ? 'rotateY(1800deg)' : 'rotateY(1980deg)' }}>
+                                <div className="coin-face bg-[#0052FF] text-white font-black text-3xl">YOU</div>
+                                <div className="coin-face bg-[#FF005C] text-white font-black text-3xl" style={{ transform: 'rotateY(180deg)' }}>RIVAL</div>
                              </div>
                         </div>
                     )}
 
-                    {/* BATTLE MAIN - Full Flex Column for Mobile */}
                     {(phase === 'playing' || phase === 'result') && (
                         <div className="flex flex-col h-[100dvh] bg-slate-50 pb-safe">
-                            {/* HEADER UI (Fixed) */}
                             <div className="bg-white shadow-md z-20 flex justify-between items-center h-16 md:h-20 border-b-4 border-slate-100 shrink-0 px-2 md:px-4">
-                                {/* Rival HP */}
                                 <div className="flex-1 flex flex-col justify-center items-start">
-                                    <div className="text-[10px] md:text-xs font-bold text-pink-600 mb-1 flex items-center gap-1 truncate max-w-[100px]"><i data-lucide="swords" className="w-3 h-3"></i> {oppName}</div>
-                                    <div className="flex gap-1">
-                                        {[...Array(MAX_HP)].map((_, i) => (
-                                            <div key={i} className={`w-4 h-6 md:w-6 md:h-8 rounded transition-all duration-300 ${i < oppHp ? 'bg-pink-500 shadow-[0_2px_0_#9d174d] md:shadow-[0_4px_0_#9d174d]' : 'bg-slate-200 translate-y-1'}`}></div>
-                                        ))}
-                                    </div>
+                                    <div className="text-[10px] md:text-xs font-bold text-[#FF005C] mb-1 flex items-center gap-1 truncate max-w-[100px]"><i data-lucide="swords" className="w-3 h-3"></i> {oppName}</div>
+                                    <div className="flex gap-1">{[...Array(MAX_HP)].map((_, i) => (<div key={i} className={`w-4 h-6 md:w-6 md:h-8 rounded-sm transition-all duration-300 ${i < oppHp ? 'bg-[#FF005C] shadow-[0_2px_0_#9D174D]' : 'bg-slate-200 translate-y-1'}`}></div>))}</div>
                                 </div>
-                                {/* Center Info */}
                                 <div className="flex flex-col items-center justify-center w-20 md:w-24 relative">
                                     <div className="absolute -top-1 md:-top-2 bg-slate-800 text-white text-[9px] md:text-[10px] px-2 py-1 rounded-b-lg font-bold shadow-sm whitespace-nowrap overflow-hidden max-w-[120px] text-ellipsis">{selectedTopic?.text}</div>
                                     <div className={`text-3xl md:text-4xl font-black font-mono mt-3 md:mt-2 ${displayTimer <= 10 ? 'text-red-500 animate-pulse' : 'text-slate-800'}`}>{isInputLocked ? '--' : displayTimer}</div>
                                 </div>
-                                {/* My HP */}
                                 <div className="flex-1 flex flex-col justify-center items-end">
-                                    <div className="text-[10px] md:text-xs font-bold text-blue-600 mb-1 flex items-center gap-1 truncate max-w-[100px]">{userName} <i data-lucide="shield" className="w-3 h-3"></i></div>
-                                    <div className="flex gap-1">
-                                        {[...Array(MAX_HP)].map((_, i) => (
-                                            <div key={i} className={`w-4 h-6 md:w-6 md:h-8 rounded transition-all duration-300 ${i < myHp ? 'bg-blue-500 shadow-[0_2px_0_#1e40af] md:shadow-[0_4px_0_#1e40af]' : 'bg-slate-200 translate-y-1'}`}></div>
-                                        ))}
-                                    </div>
+                                    <div className="text-[10px] md:text-xs font-bold text-[#0052FF] mb-1 flex items-center gap-1 truncate max-w-[100px]">{userName} <i data-lucide="shield" className="w-3 h-3"></i></div>
+                                    <div className="flex gap-1">{[...Array(MAX_HP)].map((_, i) => (<div key={i} className={`w-4 h-6 md:w-6 md:h-8 rounded-sm transition-all duration-300 ${i < myHp ? 'bg-[#0052FF] shadow-[0_2px_0_#1E40AF]' : 'bg-slate-200 translate-y-1'}`}></div>))}</div>
                                 </div>
                             </div>
-                            
-                            {/* NG INFO BAR (Fixed) */}
                             <div className="bg-slate-100 py-1 px-4 flex justify-center gap-2 border-b border-slate-200 shrink-0 overflow-x-auto scrollbar-hide">
-                                {[ngWords.high, ngWords.mid, ngWords.low].map((w, i) => w && (
-                                    <div key={i} className="bg-white border border-slate-300 text-slate-500 text-[9px] md:text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 whitespace-nowrap">
-                                        {w} <span className="text-red-500">{3-i}pt</span>
-                                    </div>
-                                ))}
+                                {[ngWords.high, ngWords.mid, ngWords.low].map((w, i) => w && (<div key={i} className="bg-white border border-slate-300 text-slate-500 text-[9px] md:text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1 whitespace-nowrap">{w} <span className="text-red-500">{3-i}pt</span></div>))}
                             </div>
-
-                            {/* CHAT AREA (Flex Grow) */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-pattern custom-scroll" ref={scrollRef}>
-                                <div className="flex justify-center py-4">
-                                    <div className="bg-slate-200 text-slate-600 px-4 py-1 rounded-full font-bold text-xs shadow-inner flex items-center gap-2">
-                                        START <span className="text-lg text-slate-800 font-pop bg-white w-6 h-6 flex items-center justify-center rounded-full shadow-sm">{initialChar}</span>
-                                    </div>
-                                </div>
-                                
+                                <div className="flex justify-center py-4"><div className="bg-slate-200 text-slate-600 px-4 py-1 rounded-full font-bold text-xs shadow-inner flex items-center gap-2">START <span className="text-lg text-slate-800 font-pop bg-white w-6 h-6 flex items-center justify-center rounded-full shadow-sm">{initialChar}</span></div></div>
                                 {history.map((h, i) => {
-                                    if(h.type === 'timeout') return (
-                                        <div key={i} className="flex justify-center opacity-70">
-                                            <div className="bg-slate-800 text-white px-4 py-2 rounded-full text-[10px] font-bold">⏰ TIME OVER (-1 HP)</div>
-                                        </div>
-                                    );
-
+                                    if(h.type === 'timeout') return <div key={i} className="flex justify-center opacity-70"><div className="bg-slate-800 text-white px-4 py-2 rounded-full text-[10px] font-bold">⏰ TIME OVER (-1 HP)</div></div>;
                                     const isMine = h.owner === (isHost?'host':'guest');
                                     return (
                                         <div key={i} className={`flex ${isMine ? 'justify-end' : 'justify-start'} animate-pop-in`}>
-                                            <div className={`relative max-w-[85%] px-4 py-2 md:px-5 md:py-3 rounded-2xl font-bold text-base md:text-lg shadow-sm border-b-4 
-                                                ${isMine ? 'bg-blue-500 border-blue-700 text-white rounded-tr-none' : 'bg-white border-slate-300 text-slate-800 rounded-tl-none'}
-                                                ${h.damage > 0 ? 'animate-shake !bg-red-500 !border-red-700 !text-white' : ''}
-                                            `}>
-                                                {h.word}
-                                                {h.damage > 0 && <span className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm border border-yellow-200">HIT!</span>}
+                                            <div className={`relative max-w-[85%] px-4 py-2 md:px-5 md:py-3 rounded-2xl font-bold text-base md:text-lg shadow-sm border-b-4 ${isMine ? 'bg-[#0052FF] border-[#0030A0] text-white rounded-tr-none' : 'bg-white border-slate-300 text-slate-800 rounded-tl-none'} ${h.damage > 0 ? 'animate-shake !bg-[#FF005C] !border-[#A0003A] !text-white' : ''}`}>
+                                                {h.word}{h.damage > 0 && <span className="absolute -top-2 -right-2 bg-[#FFD600] text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm border border-yellow-200">HIT!</span>}
                                             </div>
                                         </div>
                                     )
                                 })}
-                                
-                                {isOpponentTyping && (
-                                    <div className="flex justify-start">
-                                        <div className="bg-slate-200 px-4 py-3 rounded-2xl rounded-tl-none flex gap-1">
-                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-                                            <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                                        </div>
-                                    </div>
-                                )}
-                                {/* Spacer for scroll to bottom visibility */}
+                                {isOpponentTyping && <div className="flex justify-start"><div className="bg-slate-200 px-4 py-3 rounded-2xl rounded-tl-none flex gap-1"><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'0.1s'}}></div><div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div></div></div>}
                                 <div className="h-2"></div> 
                             </div>
-
-                            {/* INPUT AREA (Fixed) */}
                             <div className="bg-white/95 backdrop-blur p-3 md:p-4 border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] z-30 shrink-0">
                                 <div className="flex justify-between items-center mb-2 px-1">
-                                    <div className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                                        NEXT: <span className="bg-slate-800 text-white w-6 h-6 flex items-center justify-center rounded font-pop">{lastChar || initialChar}</span>
-                                    </div>
-                                    <div className={`text-xs font-black tracking-wider ${isMyTurn && !isInputLocked ? 'text-blue-600 animate-pulse' : 'text-slate-300'}`}>
-                                        {isMyTurn && !isInputLocked ? 'あなたの番です' : '相手の番です'}
-                                    </div>
+                                    <div className="text-xs font-bold text-slate-400 flex items-center gap-1">NEXT: <span className="bg-slate-800 text-white w-6 h-6 flex items-center justify-center rounded font-pop">{lastChar || initialChar}</span></div>
+                                    <div className={`text-xs font-black tracking-wider ${isMyTurn && !isInputLocked ? 'text-[#0052FF] animate-pulse' : 'text-slate-300'}`}>{isMyTurn && !isInputLocked ? 'あなたの番です' : '相手の番です'}</div>
                                 </div>
                                 <div className="flex gap-2">
-                                    <input 
-                                        value={input} 
-                                        onChange={e => { setInput(e.target.value); send({ type: 'TYPING', isTyping: true }); }}
-                                        onBlur={() => send({ type: 'TYPING', isTyping: false })}
-                                        onKeyDown={e => e.key==='Enter' && !isInputLocked && submitWord()}
-                                        disabled={!isMyTurn || isInputLocked}
-                                        className="pop-input flex-1 px-4 py-3 text-base bg-slate-50 disabled:bg-slate-100 disabled:opacity-50 text-slate-800"
-                                        placeholder={isMyTurn ? `${lastChar || initialChar} からはじまる言葉` : "待機中..."}
-                                    />
-                                    <Button 
-                                        onClick={submitWord} 
-                                        disabled={!isMyTurn || !input || isInputLocked} 
-                                        icon="send" 
-                                        className="rounded-xl px-4 md:px-6"
-                                    />
+                                    <input value={input} onChange={e => { setInput(e.target.value); send({ type: 'TYPING', isTyping: true }); }} onBlur={() => send({ type: 'TYPING', isTyping: false })} onKeyDown={e => e.key==='Enter' && !isInputLocked && submitWord()} disabled={!isMyTurn || isInputLocked} className="pop-input flex-fix-input px-4 py-3 text-base bg-slate-50 disabled:bg-slate-100 disabled:opacity-50 text-slate-800" placeholder={isMyTurn ? `${lastChar || initialChar} からはじまる言葉` : "待機中..."} />
+                                    <Button onClick={submitWord} disabled={!isMyTurn || !input || isInputLocked} icon="send" className="rounded-xl px-4 md:px-6 flex-shrink-0" />
                                 </div>
                             </div>
-
-                            {/* RESULT OVERLAY */}
                             {phase === 'result' && (
                                 <div className="fixed inset-0 z-[100] bg-slate-900/90 flex flex-col items-center justify-center animate-pop-in space-y-8 p-4">
                                     <div className="text-center relative">
                                         <div className="text-sm text-slate-400 font-bold tracking-[0.5em] mb-4">GAME SET</div>
-                                        <h1 className={`text-6xl md:text-9xl font-black font-pop italic transform -rotate-6 drop-shadow-[0_10px_0_rgba(0,0,0,0.5)] ${myHp > 0 ? 'text-yellow-400' : 'text-slate-600'}`}>
-                                            {myHp > 0 ? 'WIN!' : 'LOSE...'}
-                                        </h1>
+                                        <h1 className={`text-6xl md:text-9xl font-black font-pop italic transform -rotate-6 drop-shadow-[0_10px_0_rgba(0,0,0,0.5)] ${myHp > 0 ? 'text-[#FFD600]' : 'text-slate-600'}`}>{myHp > 0 ? 'WIN!' : 'LOSE...'}</h1>
                                         {myHp > 0 && <div className="absolute -top-10 -right-10 text-4xl animate-bounce-item">👑</div>}
                                     </div>
                                     <div className="bg-white p-6 md:p-8 rounded-3xl text-center w-full max-w-sm shadow-2xl">
-                                        <div className="grid grid-cols-2 gap-4 md:gap-8 mb-6">
-                                            <div>
-                                                <div className="text-xs font-bold text-slate-400 mb-1">YOU</div>
-                                                <div className="text-3xl md:text-4xl font-black text-blue-500 font-mono">{myHp}</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold text-slate-400 mb-1">RIVAL</div>
-                                                <div className="text-3xl md:text-4xl font-black text-pink-500 font-mono">{oppHp}</div>
-                                            </div>
-                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 md:gap-8 mb-6"><div><div className="text-xs font-bold text-slate-400 mb-1">YOU</div><div className="text-3xl md:text-4xl font-black text-[#0052FF] font-mono">{myHp}</div></div><div><div className="text-xs font-bold text-slate-400 mb-1">RIVAL</div><div className="text-3xl md:text-4xl font-black text-[#FF005C] font-mono">{oppHp}</div></div></div>
                                         <Button onClick={handleRematch} variant="primary" size="lg" icon="rotate-cw" fullWidth>もう一度遊ぶ</Button>
                                     </div>
                                 </div>
