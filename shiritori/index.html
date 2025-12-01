@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON WORD BATTLE: OVERDRIVE</title>
+    <title>NEON WORD BATTLE: SYNC OVERDRIVE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -139,6 +139,10 @@
         const MAX_HP = 5;
         const TIMER_SETUP = 60;
         const TIMER_GAME = 60;
+        
+        // Random Char Generator
+        const HIRAGANA_CHARS = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ";
+        const getRandomChar = () => HIRAGANA_CHARS[Math.floor(Math.random() * HIRAGANA_CHARS.length)];
 
         // --- UTILS ---
         const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -172,10 +176,11 @@
             );
         };
 
-        const CyberInput = ({ value, onChange, placeholder, label, color="cyan", maxLength }) => (
+        const CyberInput = ({ value, onChange, placeholder, label, color="cyan", maxLength, type="text" }) => (
             <div className="w-full relative group">
                 {label && <div className={`text-[10px] font-bold mb-1 tracking-widest ${color==='rose'?'text-rose-400':'text-cyan-400'}`}>{label}</div>}
                 <input
+                    type={type}
                     value={value}
                     onChange={onChange}
                     placeholder={placeholder}
@@ -200,11 +205,11 @@
             const [oppName, setOppName] = useState('RIVAL');
 
             // Flow
-            const [phase, setPhase] = useState('lobby'); // lobby, topic_input, topic_wait, roulette, ng_input, ng_wait, playing, result
+            const [phase, setPhase] = useState('lobby'); 
             const [error, setError] = useState('');
             
             // Damage Animation
-            const [damageAlert, setDamageAlert] = useState(null); // { amount, reason, target: 'me'|'opp' }
+            const [damageAlert, setDamageAlert] = useState(null);
 
             // Data
             const [myTopic, setMyTopic] = useState('');
@@ -224,15 +229,24 @@
             const [input, setInput] = useState('');
             const [lastChar, setLastChar] = useState('');
             
+            // Timer Logic (Synced)
             const [timer, setTimer] = useState(0);
+            const [turnStartTime, setTurnStartTime] = useState(0); // Host only uses this to calculate tick
             
-            const stateRef = useRef({ phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName });
+            const stateRef = useRef({ 
+                phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
+                turnStartTime
+            });
             const connRef = useRef(null); 
             const scrollRef = useRef(null);
+            const timerRef = useRef(null); // Interval ID
 
             useEffect(() => {
-                stateRef.current = { phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName };
-            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName]);
+                stateRef.current = { 
+                    phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName,
+                    turnStartTime
+                };
+            }, [phase, turn, myHp, oppHp, history, isHost, myTopic, oppTopic, ngWords, oppNgReady, userName, turnStartTime]);
 
             // Load User Name
             useEffect(() => {
@@ -240,7 +254,6 @@
                 if(savedName) setUserName(savedName);
             }, []);
 
-            // Save User Name
             useEffect(() => {
                 if(userName) localStorage.setItem('nwb_username', userName);
             }, [userName]);
@@ -258,18 +271,35 @@
             useEffect(() => { if(window.lucide) window.lucide.createIcons(); });
 
             useEffect(() => {
-                let interval = setInterval(() => {
-                    setTimer(t => {
-                        if(t <= 0) return 0;
-                        return t - 1;
-                    });
-                }, 1000);
-                return () => clearInterval(interval);
-            }, []);
-
-            useEffect(() => {
                 if(scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
             }, [history]);
+
+            // --- TIMER LOGIC (HOST AUTHORITY) ---
+            useEffect(() => {
+                // Clear any existing timer first
+                if (timerRef.current) clearInterval(timerRef.current);
+
+                if (isHost && phase === 'playing') {
+                    // Host calculates time based on absolute start time to handle backgrounding
+                    timerRef.current = setInterval(() => {
+                        const now = Date.now();
+                        const elapsedSec = Math.floor((now - stateRef.current.turnStartTime) / 1000);
+                        const remain = Math.max(0, TIMER_GAME - elapsedSec);
+                        
+                        setTimer(remain);
+                        send({ type: 'SYNC_TIMER', time: remain }); // Broadcast time to guest
+
+                        if (remain === 0) {
+                            handleTimeout();
+                        }
+                    }, 500); // Update twice a second for responsiveness
+                }
+
+                return () => {
+                    if (timerRef.current) clearInterval(timerRef.current);
+                };
+            }, [isHost, phase, turnStartTime]); // Restart if turn changes (because turnStartTime changes)
+
 
             // --- CONNECTION ---
             const connect = () => {
@@ -283,10 +313,10 @@
                 connRef.current = c;
                 setIsHost(amHost);
                 c.on('open', () => {
-                    // Send my name first
-                    c.send({ type: 'NAME_SYNC', name: stateRef.current.userName || 'PLAYER' });
+                    send({ type: 'NAME_SYNC', name: stateRef.current.userName || 'PLAYER' });
                     setPhase('topic_input');
-                    setTimer(TIMER_SETUP);
+                    setTimer(TIMER_SETUP); // Setup timer is local, simple countdown
+                    startSimpleTimer(TIMER_SETUP);
                 });
                 c.on('data', handleData);
                 c.on('close', () => {
@@ -301,18 +331,28 @@
                 }
             };
 
+            const startSimpleTimer = (duration) => {
+                // Used for Setup phases where strict sync is less critical
+                setTimer(duration);
+                // Clear any existing simple interval
+                const id = setInterval(() => {
+                    setTimer(t => {
+                        if(t <= 1) { clearInterval(id); return 0; }
+                        return t - 1;
+                    });
+                }, 1000);
+            };
+
             // --- HANDLERS ---
             const handleData = (data) => {
                 const s = stateRef.current;
                 switch(data.type) {
                     case 'NAME_SYNC':
                         setOppName(data.name || 'RIVAL');
-                        // If I am guest connecting to host, I should also send my name if I haven't
                         if(!s.isHost) {
-                            // Already sent in open, but double check logic if needed
+                            // Guest might need to send name back if they haven't yet
                         } else {
-                            // Host received name, host should send name back if not already done?
-                            // 'open' event handles initial send.
+                            // Host received name, reply with own name
                             send({ type: 'NAME_SYNC', name: s.userName || 'PLAYER' });
                         }
                         break;
@@ -336,25 +376,38 @@
 
                     case 'START_GAME':
                         setPhase('playing');
-                        setHistory([{ word: 'しりとり', owner: 'system', damage: 0 }]);
-                        setLastChar('り');
+                        setHistory([]); // Clear history, no "shiritori"
+                        setLastChar(data.initialChar); // Sync random char
                         setTurn('host');
-                        setTimer(TIMER_GAME);
+                        if(!s.isHost) {
+                            // Guest waits for timer sync
+                        }
                         break;
 
                     case 'MOVE':
                         receiveMove(data.word);
                         break;
 
-                    case 'DAMAGE_REPORT':
-                        applyDamage('me', data.amount, data.reason);
-                        break;
-                    
-                    case 'TIMEOUT_NOTIFY':
-                        applyDamage('opp', 1, '時間切れ');
-                        changeTurn(s.isHost ? 'host' : 'guest');
+                    case 'SYNC_STATE':
+                        // Force sync state (HP, Turn)
+                        setOppHp(data.myHp); // Opponent's HP is 'myHp' in their payload
+                        setMyHp(data.oppHp); // My HP is 'oppHp' in their payload
+                        setTurn(data.turn);
                         break;
 
+                    case 'SYNC_TIMER':
+                        if (!s.isHost) {
+                            setTimer(data.time);
+                        }
+                        break;
+
+                    case 'DAMAGE_REPORT':
+                        // data.amount, data.reason, data.remainingHp
+                        applyDamage('me', data.amount, data.reason);
+                        // Force sync HP to what opponent calculated
+                        if(data.remainingHp !== undefined) setMyHp(data.remainingHp);
+                        break;
+                    
                     case 'REMATCH':
                         resetGame();
                         break;
@@ -407,7 +460,7 @@
                         setSelectedTopic(winner);
                         setTimeout(() => {
                             setPhase('ng_input');
-                            setTimer(TIMER_SETUP);
+                            startSimpleTimer(TIMER_SETUP);
                         }, 2000);
                     }
                 };
@@ -422,12 +475,42 @@
             };
 
             const startGame = () => {
-                send({ type: 'START_GAME' });
+                const initialChar = getRandomChar();
                 setPhase('playing');
-                setHistory([{ word: 'しりとり', owner: 'system', damage: 0 }]);
-                setLastChar('り');
+                setHistory([]);
+                setLastChar(initialChar);
                 setTurn('host');
-                setTimer(TIMER_GAME);
+                
+                // Initialize Host Timer
+                setTurnStartTime(Date.now());
+                
+                send({ type: 'START_GAME', initialChar });
+            };
+
+            const handleTimeout = () => {
+                const s = stateRef.current;
+                const isMyTurn = s.turn === (s.isHost ? 'host' : 'guest');
+                
+                // Host decides timeout logic
+                const victim = s.turn === 'host' ? 'host' : 'guest';
+                const damage = 1;
+
+                if (s.isHost) {
+                    // Calculate outcome on host
+                    // If victim is host (me)
+                    if (victim === 'host') {
+                        applyDamage('me', damage, '時間切れ');
+                    } else {
+                        // Victim is guest
+                        // Host sends damage report to guest? No, easier to just Sync State
+                        // Just update OppHp locally
+                        applyDamage('opp', damage, '時間切れ');
+                        send({ type: 'DAMAGE_REPORT', amount: damage, reason: '時間切れ', remainingHp: s.oppHp - damage });
+                    }
+                    
+                    const nextTurn = s.turn === 'host' ? 'guest' : 'host';
+                    changeTurn(nextTurn);
+                }
             };
 
             const submitWord = () => {
@@ -440,15 +523,19 @@
                 
                 if(hira.slice(-1) === 'ん') {
                     applyDamage('me', MAX_HP, '自爆:「ん」');
+                    // Sync this death immediately
                     send({ type: 'MOVE', word: hira });
+                    send({ type: 'SYNC_STATE', myHp: 0, oppHp: oppHp, turn: turn }); // Force end
                     return;
                 }
 
+                const nextTurn = isHost?'guest':'host';
+                
                 send({ type: 'MOVE', word: hira });
                 addHistory(hira, isHost?'host':'guest', 0);
                 setLastChar(getLastChar(hira));
                 setInput('');
-                changeTurn(isHost?'guest':'host');
+                changeTurn(nextTurn);
             };
 
             const receiveMove = (word) => {
@@ -456,55 +543,54 @@
                 let dmg = 0;
                 let reason = '';
                 
-                // Trap Check
+                // I am receiving the word.
+                // If I am receiving, it means the OTHER person played.
+                // I check if THEY stepped on MY trap.
+                
                 if(word === s.ngWords.high) { dmg = 3; reason = 'NGワード(3pt)踏破!'; }
                 else if(word === s.ngWords.mid) { dmg = 2; reason = 'NGワード(2pt)踏破!'; }
                 else if(word === s.ngWords.low) { dmg = 1; reason = 'NGワード(1pt)踏破!'; }
 
                 if(word.slice(-1) === 'ん') { dmg = MAX_HP; reason = '自爆:「ん」'; }
 
+                const owner = !s.isHost ? 'host' : 'guest';
+                
                 if(dmg > 0) {
                     // Update MY view of Opponent
                     applyDamage('opp', dmg, reason);
-                    // Tell Opponent they took damage
-                    send({ type: 'DAMAGE_REPORT', amount: dmg, reason });
+                    // Tell Opponent they took damage AND force their HP to match what I calculated
+                    const newOppHp = Math.max(0, s.oppHp - dmg);
+                    send({ type: 'DAMAGE_REPORT', amount: dmg, reason, remainingHp: newOppHp });
                 }
 
-                const owner = !s.isHost ? 'host' : 'guest';
                 addHistory(word, owner, dmg);
                 setLastChar(getLastChar(word));
-                changeTurn(s.isHost ? 'host' : 'guest');
-            };
-
-            const addHistory = (word, owner, damage) => {
-                setHistory(prev => [...prev, { word, owner, damage }]);
+                
+                const nextTurn = s.isHost ? 'host' : 'guest';
+                // Only host initiates turn change to keep timer sync strict? 
+                // No, both can switch, but Host resets timer base.
+                changeTurn(nextTurn);
             };
 
             const changeTurn = (next) => {
+                const s = stateRef.current;
                 setTurn(next);
-                setTimer(TIMER_GAME);
+                
+                // Host resets the absolute timer start
+                if (s.isHost) {
+                    setTurnStartTime(Date.now());
+                }
+                
+                // SYNC STATE to ensure points are consistent at turn start
+                if (s.isHost) { // Host authoritative sync
+                    send({ type: 'SYNC_STATE', myHp: s.myHp, oppHp: s.oppHp, turn: next });
+                }
             };
-
-            useEffect(() => {
-                if(phase === 'playing' && timer === 0) {
-                    const isMyTurn = turn === (isHost ? 'host' : 'guest');
-                    if(isMyTurn) {
-                        applyDamage('me', 1, '時間切れ');
-                        send({ type: 'TIMEOUT_NOTIFY' });
-                        changeTurn(isHost ? 'guest' : 'host');
-                    }
-                }
-                if((phase === 'topic_input' || phase === 'ng_input') && timer === 0) {
-                     if(phase === 'topic_input' && !myTopic) setMyTopic(SAMPLE_TOPICS[0]);
-                }
-            }, [timer, phase, turn]);
 
             // --- DAMAGE & GAME OVER ---
             const applyDamage = (target, amount, msg) => {
                 // Show Animation Overlay
                 setDamageAlert({ target, amount, reason: msg });
-                
-                // Hide Overlay after 2 seconds
                 setTimeout(() => setDamageAlert(null), 2000);
 
                 let currentHp, setHp;
@@ -517,11 +603,14 @@
 
                 // Check Death
                 if(nextHp <= 0) {
-                    // Delay game over result screen to show damage animation first
                     setTimeout(() => {
                         setPhase('result');
                     }, 2500);
                 }
+            };
+
+            const addHistory = (word, owner, damage) => {
+                setHistory(prev => [...prev, { word, owner, damage }]);
             };
 
             const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 3000); };
@@ -547,7 +636,6 @@
             };
 
             const isMyTurn = turn === (isHost?'host':'guest');
-            // phase 'result' is now the source of truth for game over screen
 
             // --- RENDER ---
             return (
@@ -744,26 +832,39 @@
                             </div>
 
                             {/* CHAT AREA */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4" ref={scrollRef}>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20" ref={scrollRef}>
+                                {/* START MSG */}
+                                <div className="flex justify-center my-4">
+                                    <div className="bg-cyan-950/50 border border-cyan-800 text-cyan-300 px-4 py-2 rounded-full text-xs font-bold">
+                                        START: 「{history.length === 0 ? lastChar : ''}」
+                                    </div>
+                                </div>
+
                                 {history.map((h, i) => {
                                     if(h.type==='alert') return (
                                         <div key={i} className="text-center text-[10px] text-rose-400 font-bold bg-rose-950/50 py-1 rounded border border-rose-900 animate-pulse">{h.word}</div>
                                     );
                                     const isMine = h.owner === (isHost?'host':'guest');
-                                    const isSys = h.owner === 'system';
                                     return (
-                                        <div key={i} className={`flex ${isSys?'justify-center':(isMine?'justify-end':'justify-start')}`}>
-                                            {isSys ? (
-                                                <span className="text-xs text-slate-600 font-mono">- {h.word} -</span>
-                                            ) : (
-                                                <div className={`max-w-[80%] px-4 py-2 rounded font-bold ${isMine?'bg-cyan-900/80 text-cyan-100 border-l-4 border-cyan-400':'bg-slate-800 text-slate-300 border-r-4 border-slate-600'} ${h.damage>0?'!border-rose-500 !text-rose-400 shake-anim':''}`}>
-                                                    {h.word}
-                                                    {h.damage>0 && <div className="text-[10px] mt-1 text-rose-500">💥 HIT -{h.damage}</div>}
-                                                </div>
-                                            )}
+                                        <div key={i} className={`flex ${isMine?'justify-end':'justify-start'}`}>
+                                            <div className={`max-w-[80%] px-4 py-2 rounded font-bold ${isMine?'bg-cyan-900/80 text-cyan-100 border-l-4 border-cyan-400':'bg-slate-800 text-slate-300 border-r-4 border-slate-600'} ${h.damage>0?'!border-rose-500 !text-rose-400 shake-anim':''}`}>
+                                                {h.word}
+                                                {h.damage>0 && <div className="text-[10px] mt-1 text-rose-500">💥 HIT -{h.damage}</div>}
+                                            </div>
                                         </div>
                                     )
                                 })}
+                            </div>
+
+                            {/* TRAP MONITOR (YOUR NG WORDS) */}
+                            <div className="absolute bottom-[80px] left-0 right-0 px-4 pointer-events-none z-20">
+                                <div className="flex justify-center gap-2 opacity-80">
+                                    {[ngWords.high, ngWords.mid, ngWords.low].map((w, i) => w && (
+                                        <div key={i} className="bg-rose-950/80 border border-rose-800 text-rose-300 px-2 py-1 text-[10px] rounded backdrop-blur">
+                                            {w} ({3-i}pt)
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* INPUT AREA */}
