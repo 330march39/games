@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NEON WORD BATTLE: V10 PERFECT</title>
+    <title>NEON WORD BATTLE: V11 STABLE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -157,7 +157,7 @@
         const TIMER_GAME = 60; 
         const DISCONNECT_TIMEOUT = 30000;
         const CONNECTION_WARNING_TIMEOUT = 3000;
-        const TYPING_TIMEOUT = 3000; // Reset typing status after 3s of inactivity
+        const TYPING_TIMEOUT = 3000;
         
         const HIRAGANA_CHARS = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわがぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽ";
         const getRandomChar = () => HIRAGANA_CHARS[Math.floor(Math.random() * HIRAGANA_CHARS.length)];
@@ -165,6 +165,10 @@
         // --- UTILS ---
         const generateId = () => Math.random().toString(36).substring(2, 6).toUpperCase();
         const toHiragana = (str) => str.replace(/[\u30a1-\u30f6]/g, m => String.fromCharCode(m.charCodeAt(0) - 0x60));
+        const toHalfWidth = (str) => str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function(s) {
+            return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+        });
+        
         const getLastChar = (w) => {
             if(!w) return '';
             const last = w.slice(-1);
@@ -223,7 +227,7 @@
             // Connection Health
             const [lastActiveTime, setLastActiveTime] = useState(Date.now());
             const [isUnstable, setIsUnstable] = useState(false);
-            const [isOpponentTyping, setIsOpponentTyping] = useState(false); // Typing State
+            const [isOpponentTyping, setIsOpponentTyping] = useState(false);
 
             // Data
             const [myTopic, setMyTopic] = useState('');
@@ -261,7 +265,7 @@
             const scrollRef = useRef(null);
             const loopRef = useRef(null);
             const typingTimeoutRef = useRef(null);
-            const processingTimeout = useRef(false); // Lock for preventing double timeouts
+            const processingTimeout = useRef(false);
 
             // Sync References
             useEffect(() => {
@@ -315,7 +319,6 @@
             useEffect(() => {
                 const loop = () => {
                     const s = stateRef.current;
-                    // If timeout processing is locked, skip updates
                     if (processingTimeout.current) {
                         loopRef.current = requestAnimationFrame(loop);
                         return;
@@ -341,6 +344,7 @@
                         if (s.isHost && remain <= 0) {
                             if (s.phase === 'playing') handleTimeout();
                             else if (s.phase === 'ng_input') forceStartGame();
+                            else if (s.phase === 'topic_input') forceSubmitTopic();
                         }
                     }
                     loopRef.current = requestAnimationFrame(loop);
@@ -380,7 +384,6 @@
                     case 'PING': break;
                     case 'TYPING':
                         setIsOpponentTyping(data.isTyping);
-                        // Auto-clear typing status after safety timeout
                         if(data.isTyping) {
                             if(typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
                             typingTimeoutRef.current = setTimeout(() => setIsOpponentTyping(false), TYPING_TIMEOUT);
@@ -394,7 +397,6 @@
                         });
                         break;
                     case 'SYNC_FULL':
-                        // Enforce lowest HP rule to prevent drift
                         setOppHp(prev => Math.min(prev, data.myHp));
                         setMyHp(prev => Math.min(prev, data.oppHp));
                         setTurn(data.turn); setTurnStartTime(data.turnStartTime);
@@ -425,32 +427,35 @@
                         break;
                     case 'START_GAME': setPhase('playing'); setTurnStartTime(data.startTime); break;
                     case 'MOVE': 
-                        setIsOpponentTyping(false); // Stop typing anim immediately on move
+                        setIsOpponentTyping(false); 
                         receiveMove(data.word); 
                         break;
                     case 'TURN_CHANGE':
-                        // Unlock timeout logic if it was locked
-                        processingTimeout.current = false;
+                        processingTimeout.current = false; // UNLOCK
                         setTurn(data.nextTurn); setTurnStartTime(data.startTime);
-                        // Sync HP on turn change to keep consistent
                         setMyHp(data.oppHp); setOppHp(data.myHp);
                         break;
                     case 'DAMAGE_REPORT':
                         applyDamage('me', data.amount, data.reason);
-                        if(data.remainingHp !== undefined) setMyHp(data.remainingHp); // STRICT SYNC
+                        if(data.remainingHp !== undefined) setMyHp(data.remainingHp); 
                         break;
                     case 'TIMEOUT_PENALTY':
-                        // Unlock processing
-                        processingTimeout.current = false;
+                        processingTimeout.current = false; // UNLOCK
                         setMyHp(data.oppHp); setOppHp(data.myHp);
                         setTurn(data.nextTurn); setTurnStartTime(data.startTime);
                         setHistory(prev => [...prev, { type: 'timeout', owner: data.victim }]);
-                        // Visual damage locally
                         const victimOwner = data.victim === 'host' ? (s.isHost ? 'me' : 'opp') : (s.isHost ? 'opp' : 'me');
                         applyDamage(victimOwner === 'me' ? 'me' : 'opp', 1, '時間切れ');
                         break;
                     case 'REMATCH': resetGame(); break;
                 }
+            };
+
+            // --- INPUT HANDLING (ID) ---
+            const handleIdChange = (e) => {
+                let val = toHalfWidth(e.target.value).toUpperCase();
+                val = val.replace(/[^A-Z0-9]/g, ''); // Keep only alphanumeric
+                setTargetId(val);
             };
 
             // --- TYPING LOGIC ---
@@ -465,6 +470,30 @@
                 if(!myTopic) return showError("お題を入力せよ");
                 setIsMyTopicConfirmed(true); send({ type: 'TOPIC_CONFIRM', topic: myTopic });
                 if (isHost && stateRef.current.isOppTopicConfirmed) startRoulette(myTopic, stateRef.current.oppTopic);
+            };
+
+            const forceSubmitTopic = () => {
+                // Host forces random topic if timeout
+                const s = stateRef.current;
+                let myT = s.myTopic;
+                let oppT = s.oppTopic;
+
+                // Determine My Topic if missing
+                if (!s.isMyTopicConfirmed) {
+                    myT = SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                    setMyTopic(myT);
+                    setIsMyTopicConfirmed(true);
+                    send({ type: 'TOPIC_CONFIRM', topic: myT }); // Notify guest I picked random
+                }
+
+                // Assume Opponent's topic if missing
+                if (!s.isOppTopicConfirmed) {
+                    oppT = SAMPLE_TOPICS[Math.floor(Math.random()*SAMPLE_TOPICS.length)];
+                    setOppTopic(oppT);
+                    // No need to send confirmation on behalf of opponent, just start roulette
+                }
+
+                startRoulette(myT, oppT);
             };
 
             const startRoulette = (hostT, guestT) => {
@@ -490,10 +519,11 @@
             };
 
             const submitNg = () => {
-                // Check 'ん'
-                if([ngWords.high, ngWords.mid, ngWords.low].some(w => w.slice(-1) === 'ん')) {
-                    return showError("「ん」で終わる言葉はNGに設定できません");
-                }
+                // Validation
+                const words = [ngWords.high, ngWords.mid, ngWords.low];
+                if(words.some(w => w.slice(-1) === 'ん')) return showError("「ん」で終わる言葉はNGに設定できません");
+                if(words.some(w => w && !/^[\u3040-\u309fー]+$/.test(w))) return showError("ひらがなのみ入力可能です");
+
                 setPhase('ng_wait'); send({ type: 'NG_READY' });
                 if(isHost && oppNgReady) startCoinToss();
             };
@@ -516,9 +546,7 @@
                 }, 4000);
             };
 
-            // Unified Timeout Handler (Host Authority)
             const handleTimeout = () => {
-                // LOCK to prevent double execution
                 if (processingTimeout.current) return;
                 processingTimeout.current = true;
 
@@ -528,23 +556,18 @@
                 let newHostHp = s.isHost ? s.myHp : s.oppHp;
                 let newGuestHp = s.isHost ? s.oppHp : s.myHp;
 
-                // Calc Logic
                 if (victim === 'host') newHostHp = Math.max(0, newHostHp - damage);
                 else newGuestHp = Math.max(0, newGuestHp - damage);
 
                 const nextTurn = s.turn === 'host' ? 'guest' : 'host';
                 const now = Date.now();
 
-                // Apply locally immediately
                 if (s.isHost) {
                      if(victim === 'host') applyDamage('me', damage, '時間切れ');
                      else applyDamage('opp', damage, '時間切れ');
                 }
 
                 setHistory(prev => [...prev, { type: 'timeout', owner: victim }]);
-                
-                // Do NOT setTurn yet locally, wait for sync to ensure atomic update? 
-                // Or set locally to feel responsive. Set locally is better.
                 setTurn(nextTurn);
                 setTurnStartTime(now);
                 
@@ -556,6 +579,9 @@
                     nextTurn: nextTurn,
                     startTime: now
                 });
+                
+                // HOST UNLOCKS LOCALLY AFTER SENDING (To be safe, wait for next tick or render)
+                setTimeout(() => { processingTimeout.current = false; }, 500); 
             };
 
             const submitWord = () => {
@@ -682,13 +708,13 @@
                             <div className="w-full max-w-sm space-y-6">
                                 <div className="cyber-box p-6"><div className="text-cyan-400 text-xs font-bold mb-4 tracking-widest border-b border-cyan-900 pb-2">PLAYER SETUP</div><CyberInput value={userName} onChange={(e) => setUserName(e.target.value)} placeholder="ENTER NAME" label="CODENAME (MAX 8)" maxLength={8}/></div>
                                 <div className="cyber-box p-6"><div className="text-cyan-400 text-xs font-bold mb-2 tracking-widest">HOST UNIT</div><div className="flex gap-2"><div className="flex-1 bg-black/50 border border-cyan-900/50 flex items-center justify-center text-2xl font-mono text-cyan-200 h-14">{myId || 'INIT...'}</div><Button onClick={copyId} variant="ghost" icon="copy" /></div></div>
-                                <div className="cyber-box p-6 !border-rose-500/50"><div className="text-rose-400 text-xs font-bold mb-2 tracking-widest">JOIN TARGET</div><div className="flex flex-wrap gap-2"><input value={targetId} onChange={e => setTargetId(e.target.value.toUpperCase())} placeholder="TARGET ID" className="flex-1 min-w-[140px] bg-black/50 border border-rose-900/50 text-rose-200 px-4 py-3 text-center text-xl font-mono outline-none focus:border-rose-500"/><Button onClick={connect} variant="danger" className="flex-1 min-w-[80px]">JOIN</Button></div></div>
+                                <div className="cyber-box p-6 !border-rose-500/50"><div className="text-rose-400 text-xs font-bold mb-2 tracking-widest">JOIN TARGET</div><div className="flex flex-wrap gap-2"><input value={targetId} onChange={handleIdChange} placeholder="TARGET ID" className="flex-1 min-w-[140px] bg-black/50 border border-rose-900/50 text-rose-200 px-4 py-3 text-center text-xl font-mono outline-none focus:border-rose-500"/><Button onClick={connect} variant="danger" className="flex-1 min-w-[80px]">JOIN</Button></div></div>
                             </div>
                         </div>
                     )}
 
                     {phase === 'vs' && (
-                        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden scale-75 md:scale-100 origin-center">
+                        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center overflow-hidden">
                             <div className="absolute inset-0 vs-bg opacity-30"></div>
                             <div className="relative w-full h-full flex items-center justify-center">
                                 <div className="absolute left-0 top-1/4 w-full md:w-1/2 h-32 md:h-48 bg-cyan-900/30 border-r-4 border-cyan-500 transform skew-x-12 -ml-10 flex items-center justify-end pr-10 slide-in-left"><div className="text-right transform -skew-x-12"><div className="text-cyan-300 text-sm tracking-[0.5em] mb-2">CHALLENGER</div><div className="text-3xl md:text-5xl font-black text-white">{userName || 'YOU'}</div></div></div>
