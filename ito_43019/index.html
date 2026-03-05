@@ -205,15 +205,16 @@
             <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
             
-            <h2 class="text-xl lg:text-2xl text-cyan-600 font-black mb-4 relative z-10 shrink-0">参加用 ルームID</h2>
+            <h2 class="text-xl lg:text-2xl text-cyan-600 font-black mb-4 relative z-10 shrink-0">ルームID</h2>
             
             <div class="w-full bg-gray-50 py-4 px-2 lg:py-6 rounded-[2rem] border-4 border-gray-200 mb-6 flex justify-center items-center relative z-10 shadow-inner overflow-hidden shrink-0">
               <span id="host-room-id-display" class="font-black tracking-widest text-gray-800 whitespace-nowrap text-[clamp(2.5rem,10vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] leading-none">------</span>
             </div>
             
             <div class="relative z-10 flex flex-col items-center gap-4 shrink-0">
-              <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100">
-                <img id="host-qr-waiting" class="w-24 h-24 lg:w-32 lg:h-32 object-contain" alt="参加用QRコード" />
+              <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100 relative flex items-center justify-center min-w-[7rem] min-h-[7rem] lg:min-w-[9rem] lg:min-h-[9rem]">
+                <div id="host-qr-loading" class="absolute w-8 h-8 border-4 border-cyan-200 border-t-cyan-500 rounded-full animate-spin"></div>
+                <img id="host-qr-waiting" class="w-24 h-24 lg:w-32 lg:h-32 object-contain opacity-0 transition-opacity duration-300 relative z-10" alt="参加用QRコード" onload="this.classList.remove('opacity-0'); document.getElementById('host-qr-loading').classList.add('hidden');" />
               </div>
               <button onclick="copyRoomUrl()" class="inline-flex items-center justify-center gap-2 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-6 py-3 rounded-2xl font-bold border-2 border-cyan-200 transition-all active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
@@ -226,7 +227,7 @@
         <div class="w-full lg:w-1/2 flex flex-col gap-4 lg:gap-6 lg:h-full lg:min-h-0">
           <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-6 lg:p-8 border-4 border-white shadow-lg flex-1 flex flex-col min-h-[300px] lg:min-h-0">
             <div class="flex justify-between items-center mb-4 lg:mb-6 border-b-2 border-gray-200 pb-4 shrink-0">
-              <h3 class="text-xl lg:text-2xl font-black text-gray-700">あつまった人たち</h3>
+              <h3 class="text-xl lg:text-2xl font-black text-gray-700">参加したプレイヤー</h3>
               <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-lg lg:text-xl shadow-sm" id="host-player-count">0 人</span>
             </div>
             
@@ -392,14 +393,15 @@
 
   <div id="modal-room-id" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-room-id-content">
-      <h2 class="text-2xl text-cyan-600 font-black mb-4">途中参加用 ルームID</h2>
+      <h2 class="text-2xl text-cyan-600 font-black mb-4">ルームID</h2>
       <div class="text-6xl font-black tracking-widest text-gray-800 bg-gray-50 py-4 px-4 rounded-[2rem] border-4 border-gray-200 mb-6 shadow-inner">
         <span id="popup-room-id">------</span>
       </div>
       
       <div class="flex justify-center mb-6">
-        <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100">
-          <img id="popup-qr-image" class="w-40 h-40" alt="参加用QRコード" />
+        <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100 relative flex items-center justify-center min-w-[11rem] min-h-[11rem]">
+          <div id="popup-qr-loading" class="absolute w-10 h-10 border-4 border-cyan-200 border-t-cyan-500 rounded-full animate-spin"></div>
+          <img id="popup-qr-image" class="w-40 h-40 opacity-0 transition-opacity duration-300 relative z-10" alt="参加用QRコード" onload="this.classList.remove('opacity-0'); document.getElementById('popup-qr-loading').classList.add('hidden');" />
         </div>
       </div>
 
@@ -561,6 +563,12 @@
     };
 
     const checkUrlParams = () => {
+      // 保存されていた名前があればセットする
+      const savedName = localStorage.getItem('ito_playerName');
+      if (savedName) {
+        document.getElementById('input-player-name').value = savedName;
+      }
+
       const params = new URLSearchParams(window.location.search);
       const roomFromUrl = params.get('room');
       if (roomFromUrl) {
@@ -599,7 +607,14 @@
       // ポップアップ用のQRコードを生成してセット
       const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
       const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
-      document.getElementById('popup-qr-image').src = qrApiUrl;
+      
+      const qrImgPopup = document.getElementById('popup-qr-image');
+      // 一旦透明にしてスピナーを出し、古い画像を消す
+      qrImgPopup.classList.add('opacity-0');
+      document.getElementById('popup-qr-loading').classList.remove('hidden');
+      qrImgPopup.src = ''; 
+      
+      qrImgPopup.src = qrApiUrl;
 
       const modal = document.getElementById('modal-room-id');
       const content = document.getElementById('modal-room-id-content');
@@ -719,6 +734,8 @@
       state.roomId = rId;
       state.playerName = pName;
       state.isHost = false;
+      // ブラウザに名前を保存
+      localStorage.setItem('ito_playerName', pName);
 
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
       try {
@@ -892,7 +909,14 @@
         // 待機画面のQRコードURLを生成してセット
         const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
-        document.getElementById('host-qr-waiting').src = qrApiUrl;
+        
+        const qrImgHost = document.getElementById('host-qr-waiting');
+        // すでに同じ画像URLなら再読み込みしない
+        if (qrImgHost.src !== qrApiUrl) {
+          qrImgHost.classList.add('opacity-0');
+          document.getElementById('host-qr-loading').classList.remove('hidden');
+          qrImgHost.src = qrApiUrl;
+        }
         
         const listContainer = document.getElementById('host-player-list');
         if (playersList.length === 0) {
