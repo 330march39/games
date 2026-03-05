@@ -443,7 +443,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, onSnapshot, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, setDoc, onSnapshot, updateDoc, deleteDoc, deleteField } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
     const firebaseConfig = {
@@ -514,6 +514,16 @@
     // --- Utilities ---
     const generateRoomId = () => Math.floor(100000 + Math.random() * 900000).toString();
     const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
+
+    // 全画面表示にする関数
+    const requestFullScreen = () => {
+      const docElm = document.documentElement;
+      if (docElm.requestFullscreen) {
+        docElm.requestFullscreen().catch(() => {});
+      } else if (docElm.webkitRequestFullscreen) { // iOS/Safari用
+        docElm.webkitRequestFullscreen().catch(() => {});
+      }
+    };
     
     // UI Navigation
     const showScreen = (screenName) => {
@@ -580,7 +590,10 @@
     };
 
     // --- Global Actions (Exposed to window for HTML onclick) ---
-    window.navToJoin = () => showScreen('join');
+    window.navToJoin = () => {
+      requestFullScreen();
+      showScreen('join');
+    };
     
     // ルールを非表示にし、ブラウザに「見た」ことを記憶させる
     window.hideRuleHint = () => {
@@ -589,7 +602,19 @@
       localStorage.setItem('ito_hasSeenRule', 'true');
     };
     
-    window.navToTitle = () => {
+    window.navToTitle = async () => {
+      // プレイヤーが退出する場合、データベースから自分の情報を削除する
+      if (state.roomId && currentUser && !state.isHost) {
+        try {
+          const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+          await updateDoc(roomRef, {
+            [`players.${currentUser.uid}`]: deleteField()
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
       if (unsubscribeRoom) {
         unsubscribeRoom();
         unsubscribeRoom = null;
@@ -648,6 +673,7 @@
 
     // --- HOST LOGIC ---
     window.handleCreateRoom = async () => {
+      requestFullScreen(); // 追加
       state.roomId = generateRoomId();
       state.isHost = true;
       showScreen('host');
@@ -842,10 +868,13 @@
 
     // 【追加】ホストがブラウザのタブを閉じたり、リロード(強制終了)した場合の解散処理
     window.addEventListener('beforeunload', () => {
-      if (state.isHost && state.roomId) {
+      if (state.roomId) {
         const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
-        // バックグラウンドで解散ステータスに更新
-        updateDoc(roomRef, { status: 'deleted' }).catch(()=>{});
+        if (state.isHost) {
+          updateDoc(roomRef, { status: 'deleted' }).catch(()=>{});
+        } else if (currentUser) {
+          updateDoc(roomRef, { [`players.${currentUser.uid}`]: deleteField() }).catch(()=>{});
+        }
       }
     });
 
@@ -869,6 +898,31 @@
             }
 
             if (state.isHost) {
+              // --- 途中参加者へカードを配る処理 ---
+              const { status, players } = state.roomData;
+              if (status === 'playing' || status === 'revealing') {
+                const lateJoiners = Object.entries(players).filter(([uid, p]) => p.number === null);
+                if (lateJoiners.length > 0) {
+                  // すでに使われている数字のリスト
+                  const usedNumbers = Object.values(players).map(p => p.number).filter(n => n !== null);
+                  // 1〜100の中で、まだ使われていない数字を抽出してシャッフル
+                  let availableNumbers = Array.from({length: 100}, (_, i) => i + 1).filter(n => !usedNumbers.includes(n));
+                  availableNumbers = shuffleArray(availableNumbers);
+                  
+                  const updates = {};
+                  lateJoiners.forEach(([uid, p], index) => {
+                    if (availableNumbers.length > index) {
+                      updates[`players.${uid}.number`] = availableNumbers[index];
+                      updates[`players.${uid}.state`] = 'hand'; // 途中参加でもまずは手札状態から
+                    }
+                  });
+                  
+                  if (Object.keys(updates).length > 0) {
+                    const rRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+                    updateDoc(rRef, updates).catch(e => console.error(e));
+                  }
+                }
+              }
               renderHostView();
             } else {
               renderPlayerView();
