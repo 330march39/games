@@ -185,7 +185,7 @@
   </div>
 
   <!-- ================= Host Screen ================= -->
-  <div id="screen-host" class="hidden flex-col h-screen">
+  <div id="screen-host" class="hidden flex-col h-[100dvh]">
     <header class="bg-white/90 backdrop-blur shadow-sm p-4 flex justify-between items-center px-6 border-b-4 border-cyan-100 z-10">
       <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
       <div class="flex items-center gap-3">
@@ -201,12 +201,12 @@
       <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-8 animate-pop-in">
         
         <div class="w-full lg:w-1/2 flex flex-col">
-          <div class="bg-white rounded-[3rem] shadow-xl p-8 md:p-12 w-full h-full text-center border-8 border-cyan-100 relative overflow-hidden flex flex-col justify-center">
+          <div class="bg-white rounded-[3rem] shadow-xl p-6 md:p-12 w-full text-center border-8 border-cyan-100 relative overflow-hidden flex flex-col justify-center">
             <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
-            
-            <h2 class="text-2xl text-cyan-600 font-black mb-4 relative z-10">参加用 ルームID</h2>
-            <div class="text-7xl md:text-9xl font-black tracking-widest text-gray-800 bg-gray-50 py-6 px-12 rounded-[2rem] border-4 border-gray-200 mb-6 inline-block relative z-10 shadow-inner">
+
+            <h2 class="text-xl md:text-2xl text-cyan-600 font-black mb-4 relative z-10">参加用 ルームID</h2>
+            <div class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-widest text-gray-800 bg-gray-50 py-4 px-2 md:py-6 md:px-8 rounded-[2rem] border-4 border-gray-200 mb-6 w-full max-w-[90%] mx-auto break-words relative z-10 shadow-inner">
               <span id="host-room-id-display">------</span>
             </div>
             
@@ -283,7 +283,7 @@
   </div>
 
   <!-- ================= Player Screen ================= -->
-  <div id="screen-player" class="hidden flex-col h-screen relative">
+  <div id="screen-player" class="hidden flex-col h-[100dvh] relative">
     
     <!-- Player: Waiting View -->
     <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
@@ -804,22 +804,32 @@
       }, 300);
     };
 
-    // ホストが終了を実行したときの処理
+    /// ホストが終了を実行したときの処理
     window.confirmHostExit = async () => {
       window.closeHostExitConfirm();
       
-      // Firestoreからルームを削除する（これによってプレイヤー側も自動で退出される）
       if (state.roomId && state.isHost) {
         try {
           const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+          // まずステータスを「deleted（解散）」に更新して確実にプレイヤーに通知を飛ばす
+          await updateDoc(roomRef, { status: 'deleted' });
+          // その後ドキュメントを削除
           await deleteDoc(roomRef);
         } catch (e) {
-          console.error("ルームの削除に失敗しました", e);
+          console.error("ルームの終了処理に失敗しました", e);
         }
       }
-      
       navToTitle();
     };
+
+    // 【追加】ホストがブラウザのタブを閉じたり、リロード(強制終了)した場合の解散処理
+    window.addEventListener('beforeunload', () => {
+      if (state.isHost && state.roomId) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+        // バックグラウンドで解散ステータスに更新
+        updateDoc(roomRef, { status: 'deleted' }).catch(()=>{});
+      }
+    });
 
     // --- SYNC & RENDER ---
     const listenToRoom = () => {
@@ -830,6 +840,16 @@
         (snapshot) => {
           if (snapshot.exists()) {
             state.roomData = snapshot.data();
+            
+            // 【追加】ホストが終了（解散）ステータスにした場合の処理
+            if (state.roomData.status === 'deleted') {
+              if (!state.isHost) {
+                showAlert("ホストがルームを解散しました。");
+                navToTitle();
+              }
+              return; // ここで処理を止める
+            }
+
             if (state.isHost) {
               renderHostView();
             } else {
