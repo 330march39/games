@@ -174,7 +174,7 @@
     <header class="bg-white/90 backdrop-blur shadow-sm p-4 flex justify-between items-center px-6 border-b-4 border-cyan-100 z-10">
       <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
       <div class="flex items-center gap-3">
-        <button onclick="showRoomIdModal()" class="w-12 h-12 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center hover:bg-cyan-200 transition-colors shadow-sm active:scale-95">
+        <button id="btn-header-qr" onclick="showRoomIdModal()" class="hidden w-12 h-12 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center hover:bg-cyan-200 transition-colors shadow-sm active:scale-95">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm14 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V4zM3 16a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H4a1 1 0 01-1-1v-4zm14 0a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 10h4v4h-4v-4z"></path></svg>
         </button>
         <button onclick="navToTitle()" class="text-gray-500 hover:text-red-500 font-bold bg-gray-100 px-4 py-2 rounded-xl transition-colors">終了</button>
@@ -193,7 +193,10 @@
             <span id="host-room-id-display">------</span>
           </div>
           
-          <div class="relative z-10">
+          <div class="relative z-10 flex flex-col items-center gap-4">
+            <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100">
+              <img id="host-qr-waiting" class="w-32 h-32" alt="参加用QRコード" />
+            </div>
             <button onclick="copyRoomUrl()" class="inline-flex items-center justify-center gap-2 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-6 py-3 rounded-2xl font-bold border-2 border-cyan-200 transition-all active:scale-95">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
               <span id="copy-btn-text">URLをコピー</span>
@@ -360,13 +363,17 @@
 
   <div id="modal-room-id" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-room-id-content">
-      <h2 class="text-2xl text-cyan-600 font-black mb-4">参加用 ルームID</h2>
-      <div class="text-6xl font-black tracking-widest text-gray-800 bg-gray-50 py-6 px-4 rounded-[2rem] border-4 border-gray-200 mb-6 shadow-inner">
+      <h2 class="text-2xl text-cyan-600 font-black mb-4">途中参加用 ルームID</h2>
+      <div class="text-6xl font-black tracking-widest text-gray-800 bg-gray-50 py-4 px-4 rounded-[2rem] border-4 border-gray-200 mb-6 shadow-inner">
         <span id="popup-room-id">------</span>
       </div>
-      <button onclick="copyRoomUrlPopup(this)" class="w-full mb-4 inline-flex items-center justify-center gap-2 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-6 py-4 rounded-2xl font-bold border-2 border-cyan-200 transition-all active:scale-95">
-        URLをコピー
-      </button>
+      
+      <div class="flex justify-center mb-6">
+        <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100">
+          <img id="popup-qr-image" class="w-40 h-40" alt="参加用QRコード" />
+        </div>
+      </div>
+
       <button onclick="closeRoomIdModal()" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:bg-gray-300 transition-colors">
         閉じる
       </button>
@@ -527,6 +534,12 @@
 
     window.showRoomIdModal = () => {
       document.getElementById('popup-room-id').innerText = state.roomId;
+      
+      // ポップアップ用のQRコードを生成してセット
+      const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
+      document.getElementById('popup-qr-image').src = qrApiUrl;
+
       const modal = document.getElementById('modal-room-id');
       const content = document.getElementById('modal-room-id-content');
       modal.classList.remove('hidden');
@@ -743,14 +756,23 @@
       
       const vWaiting = document.getElementById('host-view-waiting');
       const vGame = document.getElementById('host-view-game');
+      const btnHeaderQr = document.getElementById('btn-header-qr'); // ヘッダーのボタン取得
 
       if (status === 'waiting') {
         vWaiting.classList.remove('hidden');
         vGame.classList.add('hidden');
         vGame.classList.remove('flex');
         
+        // 待機中はヘッダーのQRボタンを隠す
+        if (btnHeaderQr) btnHeaderQr.classList.add('hidden');
+        
         document.getElementById('host-room-id-display').innerText = state.roomId;
         document.getElementById('host-player-count').innerText = `${playersList.length} 人`;
+
+        // 待機画面のQRコードURLを生成してセット
+        const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
+        document.getElementById('host-qr-waiting').src = qrApiUrl;
         
         const listContainer = document.getElementById('host-player-list');
         if (playersList.length === 0) {
@@ -766,10 +788,13 @@
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
       } else {
-        // Playing or Revealing
+        // Playing or Revealing (ゲーム中)
         vWaiting.classList.add('hidden');
         vGame.classList.remove('hidden');
         vGame.classList.add('flex');
+
+        // ゲーム中はヘッダーのQRボタンを表示する
+        if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
         
         document.getElementById('host-theme-display').innerText = theme;
         
