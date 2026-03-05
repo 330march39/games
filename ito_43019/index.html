@@ -348,20 +348,17 @@
       </div>
 
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
-    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
+    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-0 bg-gray-900 transition-colors duration-700 hidden cursor-pointer" onclick="handleCardTap()">
 
-      <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
-        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]">
+        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out shadow-2xl rounded-[2.5rem]">
           
-          <!-- Front Side (Number is hidden when rotated 180deg) -->
           <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center rotate-y-180" id="player-card-front">
              <div class="absolute top-4 left-4 text-gray-300 font-black text-2xl" id="table-num-tl"></div>
              <div class="absolute bottom-4 right-4 text-gray-300 font-black text-2xl rotate-180" id="table-num-br"></div>
              <span class="text-[9rem] font-black text-gray-900 drop-shadow-md" id="table-num-center">--</span>
           </div>
 
-          <!-- Back Side (ito logo, visible initially) -->
           <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2.5rem] backface-hidden border-4 border-white/30 flex items-center justify-center overflow-hidden" id="player-card-back">
             <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
             <div class="border-4 border-white/50 w-3/4 h-5/6 rounded-[2rem] flex items-center justify-center relative z-10 shadow-inner backdrop-blur-sm">
@@ -501,13 +498,13 @@
     
     // UI Navigation
     const showScreen = (screenName) => {
-      Object.values(screens).forEach(s => s.classList.add('hidden'));
-      if(screenName === 'title' || screenName === 'join') {
-        screens[screenName].classList.add('flex');
-        screens[screenName].classList.remove('hidden');
-      } else {
-        screens[screenName].classList.remove('hidden');
-      }
+      Object.values(screens).forEach(s => {
+        s.classList.add('hidden');
+        s.classList.remove('flex'); // 一度flexを解除する（レイアウト崩れ防止）
+      });
+      
+      screens[screenName].classList.remove('hidden');
+      screens[screenName].classList.add('flex'); // 必ずflexを付与する
       state.appState = screenName;
     };
 
