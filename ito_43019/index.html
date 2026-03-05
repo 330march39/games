@@ -22,10 +22,22 @@
     }
 
     /* 3D Card Flip Utilities */
-    .perspective-1000 { perspective: 1000px; }
-    .transform-style-3d { transform-style: preserve-3d; }
-    .backface-hidden { backface-visibility: hidden; }
-    .rotate-y-180 { transform: rotateY(180deg); }
+    .perspective-1000 { 
+      -webkit-perspective: 1000px;
+      perspective: 1000px; 
+    }
+    .transform-style-3d { 
+      -webkit-transform-style: preserve-3d;
+      transform-style: preserve-3d; 
+    }
+    .backface-hidden { 
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden; 
+    }
+    .rotate-y-180 { 
+      -webkit-transform: rotateY(180deg);
+      transform: rotateY(180deg); 
+    }
     
     /* Custom Patterns */
     .bg-polka {
@@ -329,17 +341,17 @@
   <!-- ================= Modals ================= -->
   <div id="modal-confirm" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-confirm-content">
-      <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
       </div>
-      <p class="text-gray-800 text-2xl font-black mb-4">ほんとに表（数字）を<br/>見せますか？</p>
-      <p class="text-gray-500 font-bold text-sm mb-8 bg-gray-100 p-3 rounded-xl">※ まだ全員が出し終わっていない<br/>可能性があります。</p>
+      <p class="text-gray-800 text-2xl font-black mb-4">自分の数字を<br/>もう一度確認しますか？</p>
+      <p class="text-gray-500 font-bold text-sm mb-8 bg-gray-100 p-3 rounded-xl">※ 手札の画面（裏返す前）に戻ります。</p>
       <div class="flex gap-4">
         <button onclick="closeConfirmModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:bg-gray-300 transition-colors">
           やめる
         </button>
-        <button onclick="confirmFlip()" class="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black text-lg active:bg-red-600 transition-colors shadow-lg">
-          見せる！
+        <button onclick="confirmReturnToHand()" class="flex-1 py-4 bg-blue-500 text-white rounded-2xl font-black text-lg active:bg-blue-600 transition-colors shadow-lg">
+          確認する
         </button>
       </div>
     </div>
@@ -625,9 +637,10 @@
       }, 300);
     };
 
-    window.confirmFlip = () => {
+    window.confirmReturnToHand = () => {
       window.closeConfirmModal();
-      window.updatePlayerState('faceUp');
+      // 'faceUp' ではなく 'hand'（手札状態）に更新して画面を戻す
+      window.updatePlayerState('hand');
     };
 
     // --- SYNC & RENDER ---
