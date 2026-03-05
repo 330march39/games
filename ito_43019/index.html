@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>ito - ポップデジタル版</title>
+  <title>ito Digital</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -125,7 +125,7 @@
           </h1>
         </div>
         <p class="text-xl font-bold text-purple-600 tracking-widest mt-2 bg-white/50 inline-block px-4 py-1 rounded-full shadow-sm">
-          価値観シンクロゲーム
+          みんなの意図をくみ取ろう！
         </p>
       </div>
 
@@ -142,7 +142,7 @@
           <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
           <div class="relative w-full py-4 bg-cyan-400 text-white rounded-3xl font-black text-xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            ホスト画面を作る
+            ホストとしてルームを作る
           </div>
         </button>
       </div>
@@ -307,25 +307,41 @@
 
       <!-- Card Container -->
       <div class="flex-1 flex items-center justify-center w-full max-w-sm py-8 perspective-1000">
-        <div class="w-full card-aspect bg-white rounded-[2.5rem] shadow-2xl border-8 border-gray-100 flex flex-col items-center justify-center relative overflow-hidden animate-pop-in">
-          <!-- Card decorations -->
-          <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50"></div>
-          <div class="absolute top-4 left-4 text-gray-300 font-black text-2xl z-10" id="player-num-tl"></div>
-          <div class="absolute bottom-4 right-4 text-gray-300 font-black text-2xl rotate-180 z-10" id="player-num-br"></div>
+        <div id="hand-card-3d" class="w-full card-aspect relative transform-style-3d transition-transform duration-700 ease-in-out animate-pop-in shadow-2xl rounded-[2.5rem]">
           
-          <span class="text-[8rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-black drop-shadow-md z-10" id="player-num-center">--</span>
-          <p class="absolute bottom-12 text-sm font-black text-gray-400 bg-white px-4 py-1 rounded-full z-10">あなたの数字</p>
+          <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50"></div>
+            <div class="absolute top-4 left-4 text-gray-300 font-black text-2xl z-10" id="player-num-tl"></div>
+            <div class="absolute bottom-4 right-4 text-gray-300 font-black text-2xl rotate-180 z-10" id="player-num-br"></div>
+            <span class="text-[8rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-black drop-shadow-md z-10" id="player-num-center">--</span>
+            <p class="absolute bottom-12 text-sm font-black text-gray-400 bg-white px-4 py-1 rounded-full z-10">あなたの数字</p>
+          </div>
+
+          <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2.5rem] backface-hidden border-4 border-white/30 flex items-center justify-center overflow-hidden rotate-y-180">
+            <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
+            <div class="border-4 border-white/50 w-3/4 h-5/6 rounded-[2rem] flex items-center justify-center relative z-10 shadow-inner backdrop-blur-sm">
+              <span class="text-white text-7xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">ito</span>
+            </div>
+          </div>
+          
         </div>
       </div>
 
       <div class="w-full max-w-sm mb-4 animate-pop-in" style="animation-delay: 0.2s;">
         <div class="bg-white/80 backdrop-blur text-gray-700 text-sm font-bold p-4 rounded-3xl mb-6 shadow-sm border-2 border-white flex gap-3 items-center">
+          <div id="rule-hint-box" class="bg-white/80 backdrop-blur text-gray-700 text-sm font-bold p-4 rounded-3xl mb-6 shadow-sm border-2 border-white flex gap-3 items-center relative">
           <div class="bg-yellow-400 text-white rounded-full p-2 shrink-0">
              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           </div>
-          <p class="leading-snug">数字の大きさを「言葉」で表現して話し合おう！直接数字を言うのはNG！</p>
+          <p class="leading-snug pr-6">数字の大きさを「言葉」で表現して話し合おう！直接数字を言うのはNG！</p>
+          
+          <button onclick="hideRuleHint()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-500 transition-transform active:scale-90 p-1">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
         </div>
-        <button onclick="updatePlayerState('faceDown')" class="w-full group relative">
+        </div>
+        <div class="w-full max-w-sm mb-4 animate-pop-in" style="animation-delay: 0.2s;">
+        <button id="btn-face-down" onclick="playFaceDownAnimation()" class="w-full group relative">
           <div class="absolute inset-0 bg-blue-700 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
           <div class="relative w-full py-5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
@@ -337,13 +353,6 @@
 
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
     <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
-      
-      <!-- Reveal Hint -->
-      <div id="player-reveal-hint" class="absolute top-12 w-full text-center animate-bounce z-20 hidden pointer-events-none">
-        <span class="bg-yellow-400 text-yellow-900 font-black px-6 py-3 rounded-full shadow-lg text-xl border-4 border-white">
-          タップして表にする！👆
-        </span>
-      </div>
 
       <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
@@ -366,10 +375,6 @@
 
         </div>
       </div>
-      
-      <p id="player-status-text" class="text-gray-400 font-bold mt-10 text-lg bg-black/50 px-6 py-2 rounded-full backdrop-blur">
-        話し合い中... (タップで確認)
-      </p>
 
     </div>
   </div>
@@ -760,6 +765,33 @@
       // 'faceUp' ではなく 'hand'（手札状態）に更新して画面を戻す
       window.updatePlayerState('hand');
     };
+    // バツボタンを押した時の処理
+    window.hideRuleHint = () => {
+      document.getElementById('rule-hint-box').style.display = 'none';
+      localStorage.setItem('ito_rule_hidden', 'true'); // 隠したことをブラウザに記憶させる
+    };
+    // アニメーション付きで場に出す処理
+    window.playFaceDownAnimation = () => {
+      const btn = document.getElementById('btn-face-down');
+      const card = document.getElementById('hand-card-3d');
+      
+      // 連打防止のためボタンを無効化
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+
+      // カードをY軸に180度回転させて裏面を見せる
+      card.classList.add('rotate-y-180');
+
+      // 700ミリ秒(アニメーションの長さ)待ってからテーブル画面へ移行
+      setTimeout(() => {
+        window.updatePlayerState('faceDown');
+        
+        // もう一度手札に戻ったときのために状態をリセットしておく
+        card.classList.remove('rotate-y-180');
+        btn.disabled = false;
+        btn.style.opacity = '1';
+      }, 700);
+    };
 
     // --- SYNC & RENDER ---
     const listenToRoom = () => {
@@ -917,6 +949,12 @@
         document.getElementById('player-num-center').innerText = myData.number;
         document.getElementById('player-num-tl').innerText = myData.number;
         document.getElementById('player-num-br').innerText = myData.number;
+        // 【ここを追加】ルール説明の表示/非表示を判定
+        if (localStorage.getItem('ito_rule_hidden') === 'true') {
+          document.getElementById('rule-hint-box').style.display = 'none';
+        } else {
+          document.getElementById('rule-hint-box').style.display = 'flex';
+        }
       } 
       else {
         // Table view (faceDown or faceUp)
@@ -928,9 +966,6 @@
         const numCenter = document.getElementById('table-num-center');
         const numTl = document.getElementById('table-num-tl');
         const numBr = document.getElementById('table-num-br');
-        const statusText = document.getElementById('player-status-text');
-        const revealHint = document.getElementById('player-reveal-hint');
-
         // Setup numbers
         numCenter.innerText = myData.number;
         numTl.innerText = myData.number;
@@ -941,21 +976,11 @@
           card3d.classList.remove('rotate-y-180');
           vTable.classList.replace('bg-pink-100', 'bg-gray-900');
           vTable.classList.replace('bg-gray-100', 'bg-gray-900'); // ensuring dark bg
-          statusText.classList.remove('hidden');
-          
-          if (status === 'revealing') {
-            revealHint.classList.remove('hidden');
-            statusText.classList.add('hidden');
-          } else {
-            revealHint.classList.add('hidden');
-          }
         } else if (myData.state === 'faceUp') {
           // Card front facing up (rotation 180)
           card3d.classList.add('rotate-y-180');
           // Change background to bright
           vTable.classList.replace('bg-gray-900', 'bg-pink-100');
-          statusText.classList.add('hidden');
-          revealHint.classList.add('hidden');
         }
       }
     };
