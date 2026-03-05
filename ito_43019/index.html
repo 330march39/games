@@ -362,8 +362,16 @@
     import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ito-pop-game';
+    const firebaseConfig = {
+  apiKey: "AIzaSyDAFwlFLR6Ck3hr9yRPkAEbwHJD_oV1BBI",
+  authDomain: "ito-game-90d85.firebaseapp.com",
+  projectId: "ito-game-90d85",
+  storageBucket: "ito-game-90d85.firebasestorage.app",
+  messagingSenderId: "142358300494",
+  appId: "1:142358300494:web:0b89b00e27d8cbd603c01f",
+  measurementId: "G-S7FT8Z39CM"
+};
+    const appId = 'ito-game';
     let app, auth, db;
     let currentUser = null;
     let unsubscribeRoom = null;
