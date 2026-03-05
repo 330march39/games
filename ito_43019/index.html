@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ito - ポップデジタル版</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts: M PLUS Rounded 1c for pop design -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* Custom Styles & Animations */
+    body {
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      /* Prevent pull-to-refresh on mobile */
+      overscroll-behavior-y: none; 
+    }
+
+    /* 3D Card Flip Utilities */
+    .perspective-1000 { perspective: 1000px; }
+    .transform-style-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; }
+    .rotate-y-180 { transform: rotateY(180deg); }
+    
+    /* Custom Patterns */
+    .bg-polka {
+      background-image: radial-gradient(circle, rgba(255,255,255,0.2) 20%, transparent 20%);
+      background-size: 20px 20px;
+    }
+    .bg-stripes {
+      background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.1) 0, rgba(255,255,255,0.1) 10px, transparent 10px, transparent 20px);
+    }
+
+    /* Animations */
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      60% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop-in { animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(-2deg); }
+      50% { transform: translateY(-10px) rotate(2deg); }
+    }
+    .animate-float { animation: float 4s ease-in-out infinite; }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
+      70% { box-shadow: 0 0 0 20px rgba(250, 204, 21, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+    }
+    .animate-pulse-ring { animation: pulse-ring 2s infinite; }
+
+    /* Hide scrollbar */
+    ::-webkit-scrollbar { display: none; }
+
+    /* Card Layout constraints */
+    .card-aspect { aspect-ratio: 2 / 3; }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-cyan-100 to-pink-100 min-h-screen text-gray-800 overflow-hidden flex flex-col">
+
+  <!-- ================= Loading Screen ================= -->
+  <div id="screen-loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white">
+    <div class="text-center">
+      <div class="w-20 h-20 border-8 border-pink-200 border-t-pink-500 rounded-full animate-spin mx-auto mb-4"></div>
+      <p class="font-bold text-pink-500 animate-pulse text-xl">Loading...</p>
+    </div>
+  </div>
+
+  <!-- ================= Title Screen ================= -->
+  <div id="screen-title" class="hidden flex-col items-center justify-center flex-1 p-6 relative">
+    <!-- Decorative background elements -->
+    <div class="absolute top-10 left-10 w-20 h-20 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+    <div class="absolute bottom-10 right-10 w-32 h-32 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse delay-75"></div>
+
+    <div class="max-w-md w-full animate-pop-in z-10">
+      <div class="text-center mb-10">
+        <div class="animate-float inline-block">
+          <h1 class="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-br from-pink-500 via-purple-500 to-indigo-500 drop-shadow-lg mb-2 transform -rotate-2">
+            ito
+          </h1>
+        </div>
+        <p class="text-xl font-bold text-purple-600 tracking-widest mt-2 bg-white/50 inline-block px-4 py-1 rounded-full shadow-sm">
+          価値観シンクロゲーム
+        </p>
+      </div>
+
+      <div class="space-y-6">
+        <button onclick="navToJoin()" class="w-full group relative">
+          <div class="absolute inset-0 bg-pink-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="relative w-full py-5 bg-pink-500 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+            プレイヤーとして遊ぶ
+          </div>
+        </button>
+        
+        <button onclick="handleCreateRoom()" class="w-full group relative mt-4">
+          <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="relative w-full py-4 bg-cyan-400 text-white rounded-3xl font-black text-xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            ホスト画面を作る
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Join Screen ================= -->
+  <div id="screen-join" class="hidden flex-col items-center justify-center flex-1 p-6">
+    <div class="max-w-md w-full bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-8 border-4 border-white relative animate-pop-in">
+      <button onclick="navToTitle()" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90">
+        ←
+      </button>
+      
+      <h2 class="text-3xl font-black text-center text-pink-500 mb-8 mt-2">ゲームに参加</h2>
+      
+      <div id="join-error" class="hidden mb-4 p-3 bg-red-100 text-red-600 font-bold rounded-2xl text-center border-2 border-red-200"></div>
+
+      <div class="space-y-6">
+        <div>
+          <label class="block text-gray-500 font-black mb-2 ml-2">ルームID (数字6ケタ)</label>
+          <input type="text" id="input-room-id" inputmode="numeric" maxlength="6" placeholder="123456"
+            class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-3xl tracking-widest font-black text-gray-800 focus:border-pink-400 focus:bg-white outline-none transition-all"
+          />
+        </div>
+        <div>
+          <label class="block text-gray-500 font-black mb-2 ml-2">あなたのなまえ</label>
+          <input type="text" id="input-player-name" placeholder="なまえを入力！"
+            class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-2xl font-black text-gray-800 focus:border-pink-400 focus:bg-white outline-none transition-all"
+          />
+        </div>
+        
+        <button onclick="joinRoom()" class="w-full group relative pt-4">
+          <div class="absolute inset-x-0 bottom-0 top-4 bg-pink-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="relative w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+            とびこむ！
+          </div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Host Screen ================= -->
+  <div id="screen-host" class="hidden flex-col h-screen">
+    <header class="bg-white/90 backdrop-blur shadow-sm p-4 flex justify-between items-center px-6 border-b-4 border-cyan-100 z-10">
+      <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
+      <button onclick="navToTitle()" class="text-gray-500 hover:text-red-500 font-bold bg-gray-100 px-4 py-2 rounded-xl transition-colors">終了</button>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+      <!-- Host: Waiting View -->
+      <div id="host-view-waiting" class="w-full max-w-4xl flex flex-col items-center animate-pop-in">
+        <div class="bg-white rounded-[3rem] shadow-xl p-8 md:p-12 w-full text-center border-8 border-cyan-100 mb-8 relative overflow-hidden">
+          <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
+          <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
+          
+          <h2 class="text-2xl text-cyan-600 font-black mb-4 relative z-10">参加用 ルームID</h2>
+          <div class="text-7xl md:text-9xl font-black tracking-widest text-gray-800 bg-gray-50 py-6 px-12 rounded-[2rem] border-4 border-gray-200 mb-6 inline-block relative z-10 shadow-inner">
+            <span id="host-room-id-display">------</span>
+          </div>
+          
+          <div class="relative z-10">
+            <button onclick="copyRoomUrl()" class="inline-flex items-center justify-center gap-2 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-6 py-3 rounded-2xl font-bold border-2 border-cyan-200 transition-all active:scale-95">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+              <span id="copy-btn-text">URLをコピー</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="w-full max-w-4xl bg-white/60 backdrop-blur rounded-[2rem] p-8 border-4 border-white shadow-lg">
+          <div class="flex justify-between items-center mb-6 border-b-2 border-gray-200 pb-4">
+            <h3 class="text-2xl font-black text-gray-700">あつまった人たち</h3>
+            <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-xl shadow-sm" id="host-player-count">0 人</span>
+          </div>
+          
+          <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Player chips inserted here -->
+            <div class="col-span-full text-center py-8 text-gray-400 font-bold">プレイヤーを待っています...</div>
+          </div>
+        </div>
+
+        <button id="btn-start-game" onclick="startGame()" disabled class="mt-8 w-full max-w-md group relative disabled:opacity-50 disabled:cursor-not-allowed">
+          <div class="absolute inset-0 bg-yellow-600 rounded-full transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="relative w-full py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full font-black text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+            ゲームスタート！
+          </div>
+        </button>
+      </div>
+
+      <!-- Host: Playing/Revealing View -->
+      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in h-full">
+        <!-- Theme Board -->
+        <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 mb-8 text-center relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+          <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
+          <h2 id="host-theme-display" class="text-4xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2">...</h2>
+        </div>
+
+        <!-- Players Grid -->
+        <div id="host-game-players" class="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 mb-auto">
+          <!-- Player status cards inserted here -->
+        </div>
+
+        <!-- Action Area -->
+        <div class="w-full max-w-2xl mt-8 sticky bottom-4">
+          <button id="btn-reveal-mode" onclick="enableRevealMode()" class="w-full group relative hidden">
+            <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+            <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
+              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+              答え合わせ（開示）へ
+            </div>
+          </button>
+          
+          <button id="btn-next-game" onclick="nextGame()" class="w-full group relative hidden">
+            <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+            <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+              次のゲームへ進む
+            </div>
+          </button>
+          
+          <div id="host-waiting-msg" class="w-full py-5 bg-gray-200 text-gray-500 rounded-[2rem] font-black text-xl text-center border-4 border-white shadow-sm">
+            みんなが場に出すのを待っています...
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= Player Screen ================= -->
+  <div id="screen-player" class="hidden flex-col h-screen relative">
+    
+    <!-- Player: Waiting View -->
+    <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
+      <div class="bg-white/90 backdrop-blur rounded-[3rem] shadow-2xl p-10 max-w-sm w-full text-center border-4 border-white animate-pop-in">
+        <div class="w-24 h-24 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce shadow-inner">
+          <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <h2 class="text-3xl font-black text-gray-800 mb-4">さんか完了！</h2>
+        <p class="text-gray-500 font-bold text-lg leading-relaxed">ホストがゲームをはじめるのを<br/>待っててね！</p>
+      </div>
+    </div>
+
+    <!-- Player: Hand View (Looking at own number) -->
+    <div id="player-view-hand" class="absolute inset-0 flex flex-col items-center justify-between p-6 z-10 bg-gradient-to-b from-yellow-50 to-orange-100 hidden overflow-y-auto">
+      
+      <div class="w-full max-w-sm mt-4 animate-pop-in">
+        <div class="bg-white rounded-3xl shadow-md p-4 text-center border-4 border-yellow-200 relative">
+          <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-black px-3 py-1 rounded-full border-2 border-white">お題</span>
+          <h2 id="player-theme-display" class="text-2xl font-black text-gray-800 mt-2 leading-tight">...</h2>
+        </div>
+      </div>
+
+      <!-- Card Container -->
+      <div class="flex-1 flex items-center justify-center w-full max-w-sm py-8 perspective-1000">
+        <div class="w-full card-aspect bg-white rounded-[2.5rem] shadow-2xl border-8 border-gray-100 flex flex-col items-center justify-center relative overflow-hidden animate-pop-in">
+          <!-- Card decorations -->
+          <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50"></div>
+          <div class="absolute top-4 left-4 text-gray-300 font-black text-2xl z-10" id="player-num-tl"></div>
+          <div class="absolute bottom-4 right-4 text-gray-300 font-black text-2xl rotate-180 z-10" id="player-num-br"></div>
+          
+          <span class="text-[8rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-black drop-shadow-md z-10" id="player-num-center">--</span>
+          <p class="absolute bottom-12 text-sm font-black text-gray-400 bg-white px-4 py-1 rounded-full z-10">あなたの数字</p>
+        </div>
+      </div>
+
+      <div class="w-full max-w-sm mb-4 animate-pop-in" style="animation-delay: 0.2s;">
+        <div class="bg-white/80 backdrop-blur text-gray-700 text-sm font-bold p-4 rounded-3xl mb-6 shadow-sm border-2 border-white flex gap-3 items-center">
+          <div class="bg-yellow-400 text-white rounded-full p-2 shrink-0">
+             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <p class="leading-snug">数字の大きさを「言葉」で表現して話し合おう！直接数字を言うのはNG！</p>
+        </div>
+        <button onclick="updatePlayerState('faceDown')" class="w-full group relative">
+          <div class="absolute inset-0 bg-blue-700 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="relative w-full py-5 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path></svg>
+            場に出す（裏返す）
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
+    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
+      
+      <!-- Reveal Hint -->
+      <div id="player-reveal-hint" class="absolute top-12 w-full text-center animate-bounce z-20 hidden pointer-events-none">
+        <span class="bg-yellow-400 text-yellow-900 font-black px-6 py-3 rounded-full shadow-lg text-xl border-4 border-white">
+          タップして表にする！👆
+        </span>
+      </div>
+
+      <!-- 3D Card Container -->
+      <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
+        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]">
+          
+          <!-- Front Side (Number is hidden when rotated 180deg) -->
+          <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center rotate-y-180" id="player-card-front">
+             <div class="absolute top-4 left-4 text-gray-300 font-black text-2xl" id="table-num-tl"></div>
+             <div class="absolute bottom-4 right-4 text-gray-300 font-black text-2xl rotate-180" id="table-num-br"></div>
+             <span class="text-[9rem] font-black text-gray-900 drop-shadow-md" id="table-num-center">--</span>
+          </div>
+
+          <!-- Back Side (ito logo, visible initially) -->
+          <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2.5rem] backface-hidden border-4 border-white/30 flex items-center justify-center overflow-hidden" id="player-card-back">
+            <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
+            <div class="border-4 border-white/50 w-3/4 h-5/6 rounded-[2rem] flex items-center justify-center relative z-10 shadow-inner backdrop-blur-sm">
+              <span class="text-white text-7xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">ito</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      
+      <p id="player-status-text" class="text-gray-400 font-bold mt-10 text-lg bg-black/50 px-6 py-2 rounded-full backdrop-blur">
+        話し合い中... (タップで確認)
+      </p>
+
+    </div>
+  </div>
+
+  <!-- ================= Modals ================= -->
+  <div id="modal-confirm" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-confirm-content">
+      <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+      <p class="text-gray-800 text-2xl font-black mb-4">ほんとに表（数字）を<br/>見せますか？</p>
+      <p class="text-gray-500 font-bold text-sm mb-8 bg-gray-100 p-3 rounded-xl">※ まだ全員が出し終わっていない<br/>可能性があります。</p>
+      <div class="flex gap-4">
+        <button onclick="closeConfirmModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:bg-gray-300 transition-colors">
+          やめる
+        </button>
+        <button onclick="confirmFlip()" class="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black text-lg active:bg-red-600 transition-colors shadow-lg">
+          見せる！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-alert" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center animate-pop-in">
+      <p id="alert-message" class="text-gray-800 text-xl font-black mb-8"></p>
+      <button onclick="closeAlertModal()" class="w-full py-4 bg-gray-200 text-gray-800 rounded-2xl font-black text-lg active:bg-gray-300">
+        OK
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ================= App Logic ================= -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- Configuration ---
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'ito-pop-game';
+    let app, auth, db;
+    let currentUser = null;
+    let unsubscribeRoom = null;
+
+    // --- State ---
+    const state = {
+      appState: 'loading', // loading, title, join, host, player
+      roomId: '',
+      playerName: '',
+      roomData: null,
+      isHost: false
+    };
+
+    const THEMES = [
+      "人気のある食べ物", "強い動物", "子供のころ怖かったもの", "無人島に持っていきたいもの",
+      "一生に一度は行きたい場所", "テンションが上がること", "コンビニでよく買うもの",
+      "理想の休日の過ごし方", "言われて嬉しい言葉", "ヒーローの条件",
+      "最強の能力（超能力など）", "給食で好きだったメニュー", "旅行先に求めるもの",
+      "大人になったと感じる瞬間", "ストレス発散方法"
+    ];
+
+    // --- DOM Elements ---
+    const screens = {
+      loading: document.getElementById('screen-loading'),
+      title: document.getElementById('screen-title'),
+      join: document.getElementById('screen-join'),
+      host: document.getElementById('screen-host'),
+      player: document.getElementById('screen-player')
+    };
+
+    // --- Utilities ---
+    const generateRoomId = () => Math.floor(100000 + Math.random() * 900000).toString();
+    const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
+    
+    // UI Navigation
+    const showScreen = (screenName) => {
+      Object.values(screens).forEach(s => s.classList.add('hidden'));
+      if(screenName === 'title' || screenName === 'join') {
+        screens[screenName].classList.add('flex');
+        screens[screenName].classList.remove('hidden');
+      } else {
+        screens[screenName].classList.remove('hidden');
+      }
+      state.appState = screenName;
+    };
+
+    const showAlert = (msg) => {
+      document.getElementById('alert-message').innerText = msg;
+      document.getElementById('modal-alert').classList.remove('hidden');
+      document.getElementById('modal-alert').classList.add('flex');
+    };
+    window.closeAlertModal = () => {
+      document.getElementById('modal-alert').classList.add('hidden');
+      document.getElementById('modal-alert').classList.remove('flex');
+    };
+
+    // --- Initialization ---
+    const init = async () => {
+      try {
+        app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, (user) => {
+          if (user) {
+            currentUser = user;
+            checkUrlParams();
+          }
+        });
+      } catch (e) {
+        console.error("Init Error:", e);
+        showAlert("エラーが発生しました。リロードしてください。");
+      }
+    };
+
+    const checkUrlParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      const roomFromUrl = params.get('room');
+      if (roomFromUrl) {
+        document.getElementById('input-room-id').value = roomFromUrl;
+        showScreen('join');
+      } else {
+        showScreen('title');
+      }
+    };
+
+    // --- Global Actions (Exposed to window for HTML onclick) ---
+    window.navToJoin = () => showScreen('join');
+    
+    window.navToTitle = () => {
+      if (unsubscribeRoom) {
+        unsubscribeRoom();
+        unsubscribeRoom = null;
+      }
+      state.roomId = '';
+      state.roomData = null;
+      state.isHost = false;
+      window.history.replaceState({}, document.title, window.location.pathname); // clear URL
+      showScreen('title');
+    };
+
+    // --- HOST LOGIC ---
+    window.handleCreateRoom = async () => {
+      state.roomId = generateRoomId();
+      state.isHost = true;
+      showScreen('host');
+      
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      await setDoc(roomRef, {
+        hostId: currentUser.uid,
+        status: 'waiting',
+        theme: '',
+        players: {},
+        createdAt: Date.now()
+      });
+
+      listenToRoom();
+    };
+
+    window.copyRoomUrl = () => {
+      const url = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
+      navigator.clipboard.writeText(url).then(() => {
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.innerText = "コピーしました！";
+        setTimeout(() => btnText.innerText = "URLをコピー", 2000);
+      }).catch(e => {
+        // Fallback for iframe
+        const textArea = document.createElement("textarea");
+        textArea.value = url;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+        const btnText = document.getElementById('copy-btn-text');
+        btnText.innerText = "コピーしました！";
+        setTimeout(() => btnText.innerText = "URLをコピー", 2000);
+      });
+    };
+
+    window.startGame = async () => {
+      if (!state.roomData || Object.keys(state.roomData.players).length === 0) return;
+      const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+      const playerIds = Object.keys(state.roomData.players);
+      const numbers = shuffleArray(Array.from({length: 100}, (_, i) => i + 1));
+      
+      const updates = { status: 'playing', theme: theme };
+      playerIds.forEach((uid, index) => {
+        updates[`players.${uid}.number`] = numbers[index];
+        updates[`players.${uid}.state`] = 'hand';
+      });
+
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      await updateDoc(roomRef, updates);
+    };
+
+    window.enableRevealMode = async () => {
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      await updateDoc(roomRef, { status: 'revealing' });
+    };
+
+    window.nextGame = async () => {
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      const updates = { status: 'waiting', theme: '' };
+      Object.keys(state.roomData.players).forEach(uid => {
+        updates[`players.${uid}.state`] = 'waiting';
+        updates[`players.${uid}.number`] = null;
+      });
+      await updateDoc(roomRef, updates);
+    };
+
+    // --- PLAYER LOGIC ---
+    window.joinRoom = async () => {
+      const rId = document.getElementById('input-room-id').value.trim();
+      const pName = document.getElementById('input-player-name').value.trim();
+      const errorDiv = document.getElementById('join-error');
+      
+      if (rId.length !== 6) {
+        errorDiv.innerText = "ルームIDは6ケタの数字だよ！";
+        errorDiv.classList.remove('hidden'); return;
+      }
+      if (!pName) {
+        errorDiv.innerText = "なまえを入力してね！";
+        errorDiv.classList.remove('hidden'); return;
+      }
+      
+      errorDiv.classList.add('hidden');
+      state.roomId = rId;
+      state.playerName = pName;
+      state.isHost = false;
+
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      try {
+        await updateDoc(roomRef, {
+          [`players.${currentUser.uid}`]: {
+            name: pName,
+            joinedAt: Date.now(),
+            state: 'waiting',
+            number: null
+          }
+        });
+        showScreen('player');
+        listenToRoom();
+      } catch (e) {
+        console.error(e);
+        errorDiv.innerText = "ルームが見つからないか、通信エラーです。";
+        errorDiv.classList.remove('hidden');
+      }
+    };
+
+    window.updatePlayerState = async (newState) => {
+      if (!currentUser || !state.roomId) return;
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      await updateDoc(roomRef, { [`players.${currentUser.uid}.state`]: newState });
+    };
+
+    window.handleCardTap = () => {
+      if (!state.roomData) return;
+      const myData = state.roomData.players[currentUser.uid];
+      if (myData.state === 'faceUp') return;
+
+      if (state.roomData.status === 'revealing') {
+        window.updatePlayerState('faceUp');
+      } else {
+        // Show modal
+        const modal = document.getElementById('modal-confirm');
+        const content = document.getElementById('modal-confirm-content');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        // trigger animation
+        setTimeout(() => {
+          modal.classList.remove('opacity-0');
+          content.classList.remove('scale-90', 'opacity-0');
+        }, 10);
+      }
+    };
+
+    window.closeConfirmModal = () => {
+      const modal = document.getElementById('modal-confirm');
+      const content = document.getElementById('modal-confirm-content');
+      modal.classList.add('opacity-0');
+      content.classList.add('scale-90');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }, 300);
+    };
+
+    window.confirmFlip = () => {
+      window.closeConfirmModal();
+      window.updatePlayerState('faceUp');
+    };
+
+    // --- SYNC & RENDER ---
+    const listenToRoom = () => {
+      if (unsubscribeRoom) unsubscribeRoom();
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      
+      unsubscribeRoom = onSnapshot(roomRef, 
+        (snapshot) => {
+          if (snapshot.exists()) {
+            state.roomData = snapshot.data();
+            if (state.isHost) {
+              renderHostView();
+            } else {
+              renderPlayerView();
+            }
+          } else {
+            if(!state.isHost) {
+               showAlert("ルームが解散されました。");
+               navToTitle();
+            }
+          }
+        },
+        (error) => {
+          console.error(error);
+          showAlert("通信エラーが発生しました。");
+        }
+      );
+    };
+
+    const renderHostView = () => {
+      const { status, players, theme } = state.roomData;
+      const playersList = Object.entries(players || {}).map(([id, p]) => ({ id, ...p }));
+      
+      const vWaiting = document.getElementById('host-view-waiting');
+      const vGame = document.getElementById('host-view-game');
+
+      if (status === 'waiting') {
+        vWaiting.classList.remove('hidden');
+        vGame.classList.add('hidden');
+        vGame.classList.remove('flex');
+        
+        document.getElementById('host-room-id-display').innerText = state.roomId;
+        document.getElementById('host-player-count').innerText = `${playersList.length} 人`;
+        
+        const listContainer = document.getElementById('host-player-list');
+        if (playersList.length === 0) {
+          listContainer.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400 font-bold text-xl">プレイヤーを待っています...</div>`;
+        } else {
+          listContainer.innerHTML = playersList.map(p => `
+            <div class="bg-white py-4 px-4 rounded-2xl shadow-sm border-2 border-cyan-100 font-black text-gray-700 text-center text-xl animate-pop-in">
+              ${p.name}
+            </div>
+          `).join('');
+        }
+        
+        document.getElementById('btn-start-game').disabled = playersList.length === 0;
+
+      } else {
+        // Playing or Revealing
+        vWaiting.classList.add('hidden');
+        vGame.classList.remove('hidden');
+        vGame.classList.add('flex');
+        
+        document.getElementById('host-theme-display').innerText = theme;
+        
+        const isRevealing = status === 'revealing';
+        const sortedPlayers = isRevealing ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
+        const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+
+        const grid = document.getElementById('host-game-players');
+        grid.innerHTML = sortedPlayers.map(p => {
+          let stateHtml = '';
+          let borderClass = 'border-gray-200';
+          let bgClass = 'bg-white';
+          
+          if (p.state === 'hand') {
+            stateHtml = `<span class="bg-gray-100 text-gray-500 px-4 py-1.5 rounded-full text-sm font-black mt-3 block">考え中...</span>`;
+          } else if (p.state === 'faceDown') {
+            borderClass = 'border-cyan-400 shadow-cyan-100 shadow-lg transform -translate-y-1';
+            bgClass = 'bg-cyan-50';
+            stateHtml = `<span class="bg-cyan-500 text-white px-4 py-1.5 rounded-full text-sm font-black mt-3 block animate-pop-in">場に出した！</span>`;
+          } else if (p.state === 'faceUp') {
+            borderClass = 'border-pink-400 shadow-pink-100 shadow-lg';
+            bgClass = 'bg-pink-50';
+            stateHtml = `
+              <div class="flex flex-col items-center mt-2 animate-pop-in">
+                <span class="text-xs text-pink-600 font-bold mb-1">オープン</span>
+                <span class="text-5xl font-black text-gray-900">${p.number}</span>
+              </div>
+            `;
+          }
+
+          return `
+            <div class="${bgClass} rounded-[2rem] p-6 border-4 ${borderClass} flex flex-col items-center justify-center text-center transition-all duration-300">
+              <div class="font-black text-xl text-gray-800 break-words w-full">${p.name}</div>
+              ${stateHtml}
+            </div>
+          `;
+        }).join('');
+
+        // Action Buttons
+        const btnReveal = document.getElementById('btn-reveal-mode');
+        const btnNext = document.getElementById('btn-next-game');
+        const msgWait = document.getElementById('host-waiting-msg');
+
+        if (!isRevealing) {
+          btnNext.classList.add('hidden');
+          if (allReady) {
+            btnReveal.classList.remove('hidden');
+            msgWait.classList.add('hidden');
+          } else {
+            btnReveal.classList.add('hidden');
+            msgWait.classList.remove('hidden');
+          }
+        } else {
+          btnReveal.classList.add('hidden');
+          msgWait.classList.add('hidden');
+          btnNext.classList.remove('hidden');
+        }
+      }
+    };
+
+    const renderPlayerView = () => {
+      const { status, players, theme } = state.roomData;
+      const myData = players[currentUser.uid];
+      if (!myData) return;
+
+      const vWait = document.getElementById('player-view-waiting');
+      const vHand = document.getElementById('player-view-hand');
+      const vTable = document.getElementById('player-view-table');
+
+      if (status === 'waiting' || myData.state === 'waiting') {
+        vWait.classList.remove('hidden');
+        vHand.classList.add('hidden');
+        vTable.classList.add('hidden');
+      } 
+      else if (myData.state === 'hand') {
+        vWait.classList.add('hidden');
+        vHand.classList.remove('hidden');
+        vTable.classList.add('hidden');
+        
+        document.getElementById('player-theme-display').innerText = theme;
+        document.getElementById('player-num-center').innerText = myData.number;
+        document.getElementById('player-num-tl').innerText = myData.number;
+        document.getElementById('player-num-br').innerText = myData.number;
+      } 
+      else {
+        // Table view (faceDown or faceUp)
+        vWait.classList.add('hidden');
+        vHand.classList.add('hidden');
+        vTable.classList.remove('hidden');
+
+        const card3d = document.getElementById('player-card-3d');
+        const numCenter = document.getElementById('table-num-center');
+        const numTl = document.getElementById('table-num-tl');
+        const numBr = document.getElementById('table-num-br');
+        const statusText = document.getElementById('player-status-text');
+        const revealHint = document.getElementById('player-reveal-hint');
+
+        // Setup numbers
+        numCenter.innerText = myData.number;
+        numTl.innerText = myData.number;
+        numBr.innerText = myData.number;
+
+        if (myData.state === 'faceDown') {
+          // Card back facing up (rotation 0)
+          card3d.classList.remove('rotate-y-180');
+          vTable.classList.replace('bg-pink-100', 'bg-gray-900');
+          vTable.classList.replace('bg-gray-100', 'bg-gray-900'); // ensuring dark bg
+          statusText.classList.remove('hidden');
+          
+          if (status === 'revealing') {
+            revealHint.classList.remove('hidden');
+            statusText.classList.add('hidden');
+          } else {
+            revealHint.classList.add('hidden');
+          }
+        } else if (myData.state === 'faceUp') {
+          // Card front facing up (rotation 180)
+          card3d.classList.add('rotate-y-180');
+          // Change background to bright
+          vTable.classList.replace('bg-gray-900', 'bg-pink-100');
+          statusText.classList.add('hidden');
+          revealHint.classList.add('hidden');
+        }
+      }
+    };
+
+    // Start
+    window.onload = init;
+
+  </script>
+</body>
+</html>
