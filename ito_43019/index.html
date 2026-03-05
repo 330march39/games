@@ -196,23 +196,24 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+    <main class="flex-1 overflow-y-auto lg:overflow-hidden p-4 md:p-6 flex flex-col items-center justify-start lg:justify-center">
       <!-- Host: Waiting View -->
-      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-8 animate-pop-in">
+      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-pop-in lg:h-full lg:min-h-0 pb-8 lg:pb-0">
         
-        <div class="w-full lg:w-1/2 flex flex-col">
-          <div class="bg-white rounded-[3rem] shadow-xl p-6 md:p-12 w-full text-center border-8 border-cyan-100 relative overflow-hidden flex flex-col justify-center">
+        <div class="w-full lg:w-1/2 flex flex-col lg:h-full lg:min-h-0">
+          <div class="bg-white rounded-[3rem] shadow-xl p-6 lg:p-10 w-full flex-1 flex flex-col justify-center items-center border-8 border-cyan-100 relative overflow-hidden min-h-min lg:min-h-0">
             <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
             <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
-
-            <h2 class="text-xl md:text-2xl text-cyan-600 font-black mb-4 relative z-10">参加用 ルームID</h2>
-            <div class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-widest text-gray-800 bg-gray-50 py-4 px-2 md:py-6 md:px-8 rounded-[2rem] border-4 border-gray-200 mb-6 w-full max-w-[90%] mx-auto break-words relative z-10 shadow-inner">
-              <span id="host-room-id-display">------</span>
+            
+            <h2 class="text-xl lg:text-2xl text-cyan-600 font-black mb-4 relative z-10 shrink-0">参加用 ルームID</h2>
+            
+            <div class="w-full bg-gray-50 py-4 px-2 lg:py-6 rounded-[2rem] border-4 border-gray-200 mb-6 flex justify-center items-center relative z-10 shadow-inner overflow-hidden shrink-0">
+              <span id="host-room-id-display" class="font-black tracking-widest text-gray-800 whitespace-nowrap text-[clamp(2.5rem,10vw,4.5rem)] lg:text-[clamp(3rem,5vw,6rem)] leading-none">------</span>
             </div>
             
-            <div class="relative z-10 flex flex-col items-center gap-4">
+            <div class="relative z-10 flex flex-col items-center gap-4 shrink-0">
               <div class="bg-white p-2 rounded-xl shadow-sm border-4 border-gray-100">
-                <img id="host-qr-waiting" class="w-32 h-32" alt="参加用QRコード" />
+                <img id="host-qr-waiting" class="w-24 h-24 lg:w-32 lg:h-32 object-contain" alt="参加用QRコード" />
               </div>
               <button onclick="copyRoomUrl()" class="inline-flex items-center justify-center gap-2 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 px-6 py-3 rounded-2xl font-bold border-2 border-cyan-200 transition-all active:scale-95">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
@@ -222,21 +223,21 @@
           </div>
         </div>
 
-        <div class="w-full lg:w-1/2 flex flex-col gap-6">
-          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-8 border-4 border-white shadow-lg flex-1 flex flex-col">
-            <div class="flex justify-between items-center mb-6 border-b-2 border-gray-200 pb-4">
-              <h3 class="text-2xl font-black text-gray-700">あつまった人たち</h3>
-              <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-xl shadow-sm" id="host-player-count">0 人</span>
+        <div class="w-full lg:w-1/2 flex flex-col gap-4 lg:gap-6 lg:h-full lg:min-h-0">
+          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-6 lg:p-8 border-4 border-white shadow-lg flex-1 flex flex-col min-h-[300px] lg:min-h-0">
+            <div class="flex justify-between items-center mb-4 lg:mb-6 border-b-2 border-gray-200 pb-4 shrink-0">
+              <h3 class="text-xl lg:text-2xl font-black text-gray-700">あつまった人たち</h3>
+              <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-lg lg:text-xl shadow-sm" id="host-player-count">0 人</span>
             </div>
             
-            <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-3 gap-4 flex-1 content-start">
+            <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-3 gap-3 flex-1 content-start overflow-y-auto pr-2 pb-2">
               <div class="col-span-full text-center py-8 text-gray-400 font-bold">プレイヤーを待っています...</div>
             </div>
           </div>
 
-          <button id="btn-start-game" onclick="startGame()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed shrink-0">
+          <button id="btn-start-game" onclick="startGame()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-8 lg:mb-0">
             <div class="absolute inset-0 bg-yellow-600 rounded-full transform translate-y-2 transition-transform group-active:translate-y-0"></div>
-            <div class="relative w-full py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full font-black text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 text-center">
+            <div class="relative w-full py-4 lg:py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full font-black text-2xl lg:text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 text-center">
               ゲームスタート！
             </div>
           </button>
