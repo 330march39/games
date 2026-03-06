@@ -101,8 +101,7 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-cyan-100 to-pink-100 min-h-screen text-gray-800 overflow-hidden flex flex-col">
-
+<body class="bg-gradient-to-br from-cyan-100 to-pink-100 h-[100dvh] w-screen relative text-gray-800 overflow-hidden flex flex-col">
   <!-- ================= Loading Screen ================= -->
   <div id="screen-loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white">
     <div class="text-center">
@@ -185,7 +184,7 @@
   </div>
 
   <!-- ================= Host Screen ================= -->
-  <div id="screen-host" class="hidden flex-col h-[100dvh]">
+  <div id="screen-host" class="hidden flex-col absolute inset-0 w-full h-full">
     <header class="bg-white/90 backdrop-blur shadow-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] flex justify-between items-center px-6 border-b-4 border-cyan-100 z-50 shrink-0">
       <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
       <div class="flex items-center gap-3">
@@ -196,7 +195,7 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start lg:justify-center">
+    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start lg:justify-center">
       <!-- Host: Waiting View -->
       <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-pop-in lg:h-[70vh] lg:max-h-[700px] lg:min-h-[500px] pb-8 lg:pb-0">
         
@@ -229,9 +228,9 @@
 
         <div class="w-full lg:w-1/2 flex flex-col gap-4 lg:gap-6 lg:h-full lg:min-h-0">
           
-          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-5 lg:p-8 border-4 border-white shadow-lg flex-col transition-all duration-300">
+          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-5 lg:p-8 border-4 border-white shadow-lg flex flex-col lg:flex-1 lg:min-h-0 transition-all duration-300">
             
-            <div class="flex justify-between items-center cursor-pointer lg:cursor-default" onclick="togglePlayerList()">
+            <div class="flex justify-between items-center cursor-pointer lg:cursor-default shrink-0" onclick="togglePlayerList()">
               <div class="flex items-center gap-2">
                 <h3 class="text-lg lg:text-2xl font-black text-gray-700">参加プレイヤー</h3>
                 <svg id="icon-player-toggle" class="w-6 h-6 text-gray-400 transition-transform lg:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
@@ -239,7 +238,7 @@
               <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-lg lg:text-xl shadow-sm" id="host-player-count">0 人</span>
             </div>
             
-            <div id="container-player-list" class="hidden lg:block mt-0 lg:mt-6 border-transparent lg:border-gray-200 border-t-2 pt-0 lg:pt-4 flex-1 overflow-y-auto max-h-[40vh] lg:max-h-full transition-all">
+            <div id="container-player-list" class="hidden lg:flex flex-col mt-0 lg:mt-6 border-transparent lg:border-gray-200 border-t-2 pt-0 lg:pt-4 flex-1 overflow-y-auto max-h-[40vh] lg:max-h-full lg:min-h-0 transition-all">
               <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-3 gap-3 content-start pt-4 lg:pt-0 pb-2">
                 <div class="col-span-full text-center py-8 text-gray-400 font-bold">プレイヤーを待っています...</div>
               </div>
