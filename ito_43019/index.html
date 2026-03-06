@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>ito - ポップデジタル版</title>
+  <title>ito advance</title>
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -126,13 +126,13 @@
           </h1>
         </div>
         <p class="text-xl font-bold text-purple-600 tracking-widest mt-2 bg-white/50 inline-block px-4 py-1 rounded-full shadow-sm">
-          価値観シンクロゲーム
+          advance
         </p>
       </div>
 
       <div class="space-y-6">
         <button onclick="navToJoin()" class="w-full group relative">
-          <div class="absolute inset-0 bg-pink-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="absolute inset-0 bg-pink-600 rounded-3xl transform translate-y-2 "></div>
           <div class="relative w-full py-5 bg-pink-500 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
             ルームIDで参加する
@@ -140,7 +140,7 @@
         </button>
         
         <button onclick="handleCreateRoom()" class="w-full group relative mt-4">
-          <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+          <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2 "></div>
           <div class="relative w-full py-4 bg-cyan-400 text-white rounded-3xl font-black text-xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             ルームをつくる
@@ -199,7 +199,7 @@
 
     <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start">
       <!-- Host: Waiting View -->
-      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8 animate-pop-in my-auto min-h-[65vh] lg:min-h-[70vh] pb-8 lg:pb-0">
+      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8 animate-pop-in mt-[5vh] lg:mt-[8vh] mb-auto min-h-[65vh] lg:min-h-[70vh] pb-8 lg:pb-0">
         
         <div class="w-full lg:w-1/2 flex flex-col">
           <div class="bg-white rounded-[3rem] shadow-xl p-6 lg:p-10 w-full h-full flex flex-col justify-evenly items-center border-8 border-cyan-100 relative min-h-[400px]">
@@ -246,7 +246,7 @@
         </div>
       </div>
       
-      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in my-auto">
+      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in mt-[10vh] lg:mt-[15vh] mb-auto">
         <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-10 text-center">お題の決め方は？</h2>
         <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto">
           <button onclick="startThemeRoulette()" class="flex-1 group relative">
@@ -267,7 +267,7 @@
         </div>
       </div>
 
-      <div id="host-view-roulette" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in my-auto px-4">
+      <div id="host-view-roulette" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in mt-[10vh] lg:mt-[15vh] mb-auto px-4">
         <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 text-center relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
           <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
