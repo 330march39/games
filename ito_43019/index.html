@@ -197,9 +197,9 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start lg:justify-center">
+    <main class="flex-1 overflow-y-auto w-full p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center">
       <!-- Host: Waiting View -->
-      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-pop-in lg:h-[70vh] lg:max-h-[700px] lg:min-h-[500px] pb-8 lg:pb-0">
+      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-pop-in my-auto pb-8 lg:pb-0">
         
         <div class="w-full lg:w-1/2 flex flex-col lg:h-full lg:min-h-0">
           <div class="bg-white rounded-[3rem] shadow-xl p-6 lg:p-10 w-full flex-1 flex flex-col justify-center items-center border-8 border-cyan-100 relative min-h-min lg:min-h-0">
@@ -252,7 +252,7 @@
         </div>
       </div>
       
-      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in h-full">
+      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in my-auto">
         <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-10 text-center">お題の決め方は？</h2>
         <div class="flex flex-col md:flex-row gap-6 w-full max-w-2xl px-4">
           <button onclick="startThemeRoulette()" class="flex-1 group relative">
@@ -273,11 +273,11 @@
         </div>
       </div>
 
-      <div id="host-view-roulette" class="hidden w-full max-w-5xl flex-col items-center justify-center animate-pop-in h-full px-4">
-        <h2 class="text-3xl font-black text-gray-500 mb-8 animate-pulse">お題を抽選中...</h2>
-        <div class="w-full bg-white rounded-[2rem] shadow-2xl p-10 border-8 border-yellow-300 text-center relative overflow-hidden flex items-center justify-center min-h-[300px]">
-          <div class="absolute top-0 left-0 w-full h-full bg-yellow-100 bg-stripes opacity-50"></div>
-          <h2 id="roulette-text" class="text-4xl md:text-5xl lg:text-6xl font-black text-gray-800 drop-shadow-sm leading-tight relative z-10 transition-all">
+      <div id="host-view-roulette" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in my-auto px-4">
+        <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 text-center relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+          <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
+          <h2 id="roulette-text" class="text-4xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 transition-all">
             ...
           </h2>
         </div>
