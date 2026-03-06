@@ -101,7 +101,7 @@
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-cyan-100 to-pink-100 h-[100dvh] w-screen relative text-gray-800 overflow-hidden flex flex-col">
+<body class="bg-gradient-to-br from-cyan-100 to-pink-100 fixed inset-0 w-full h-full bg-no-repeat bg-cover text-gray-800 overflow-hidden flex flex-col">
   <!-- ================= Loading Screen ================= -->
   <div id="screen-loading" class="absolute inset-0 z-50 flex items-center justify-center bg-white">
     <div class="text-center">
@@ -325,7 +325,7 @@
   </div>
 
   <!-- ================= Player Screen ================= -->
-  <div id="screen-player" class="hidden flex-col h-[100dvh] relative">
+  <div id="screen-player" class="hidden flex-col absolute inset-0 w-full h-full">
     
     <!-- Player: Waiting View -->
     <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
