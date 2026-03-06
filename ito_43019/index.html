@@ -197,12 +197,12 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-center">
+    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start">
       <!-- Host: Waiting View -->
-      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8 animate-pop-in m-auto pb-8 lg:pb-0">
+      <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8 animate-pop-in my-auto min-h-[65vh] lg:min-h-[70vh] pb-8 lg:pb-0">
         
         <div class="w-full lg:w-1/2 flex flex-col">
-          <div class="bg-white rounded-[3rem] shadow-xl p-6 lg:p-10 w-full h-full flex flex-col justify-center items-center border-8 border-cyan-100 relative">
+          <div class="bg-white rounded-[3rem] shadow-xl p-6 lg:p-10 w-full h-full flex flex-col justify-evenly items-center border-8 border-cyan-100 relative min-h-[400px]">
             <div class="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
               <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
               <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
@@ -246,7 +246,7 @@
         </div>
       </div>
       
-      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in m-auto">
+      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in my-auto">
         <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-10 text-center">お題の決め方は？</h2>
         <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto">
           <button onclick="startThemeRoulette()" class="flex-1 group relative">
@@ -278,7 +278,7 @@
       </div>
 
       <!-- Host: Playing/Revealing View -->
-      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in m-auto">
+      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
         <!-- Theme Board -->
         <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 mb-8 text-center relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
