@@ -133,7 +133,7 @@
           <div class="absolute inset-0 bg-pink-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
           <div class="relative w-full py-5 bg-pink-500 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-            プレイヤーとして遊ぶ
+            ルームIDで参加する（プレイヤー）
           </div>
         </button>
         
@@ -141,7 +141,7 @@
           <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
           <div class="relative w-full py-4 bg-cyan-400 text-white rounded-3xl font-black text-xl border-4 border-white shadow-xl flex items-center justify-center gap-3 transform transition-transform group-active:translate-y-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            ホスト画面を作る
+            ルームをつくる（ホスト）
           </div>
         </button>
       </div>
@@ -161,14 +161,14 @@
 
       <div class="space-y-6">
         <div>
-          <label class="block text-gray-500 font-black mb-2 ml-2">ルームID (数字6ケタ)</label>
+          <label class="block text-gray-500 font-black mb-2 ml-2">ルームID</label>
           <input type="text" id="input-room-id" inputmode="numeric" maxlength="6" placeholder="123456"
             class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-3xl tracking-widest font-black text-gray-800 focus:border-pink-400 focus:bg-white outline-none transition-all"
           />
         </div>
         <div>
-          <label class="block text-gray-500 font-black mb-2 ml-2">あなたのなまえ</label>
-          <input type="text" id="input-player-name" placeholder="なまえを入力！"
+          <label class="block text-gray-500 font-black mb-2 ml-2">ニックネーム</label>
+          <input type="text" id="input-player-name" placeholder="ニックネームを入力！"
             class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-2xl font-black text-gray-800 focus:border-pink-400 focus:bg-white outline-none transition-all"
           />
         </div>
@@ -176,7 +176,7 @@
         <button onclick="joinRoom()" class="w-full group relative pt-4">
           <div class="absolute inset-x-0 bottom-0 top-4 bg-pink-600 rounded-3xl transform translate-y-2 transition-transform group-active:translate-y-0"></div>
           <div class="relative w-full py-4 bg-gradient-to-r from-pink-500 to-rose-400 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-            とびこむ！
+            参加する！
           </div>
         </button>
       </div>
@@ -305,19 +305,19 @@
             <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
             <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
               <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-              答え合わせ（開示）へ
+              答え合わせへ
             </div>
           </button>
           
           <button id="btn-next-game" onclick="nextGame()" class="w-full group relative hidden">
             <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
             <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-              次のゲームへ進む
+              次のお題を決める
             </div>
           </button>
           
           <div id="host-waiting-msg" class="w-full py-5 bg-gray-200 text-gray-500 rounded-[2rem] font-black text-xl text-center border-4 border-white shadow-sm">
-            みんなが場に出すのを待っています...
+            全員が場に出すのを待っています
           </div>
         </div>
       </div>
