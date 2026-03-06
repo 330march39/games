@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ito - ポップデジタル版</title>
   
   <!-- Tailwind CSS -->
@@ -186,7 +186,7 @@
 
   <!-- ================= Host Screen ================= -->
   <div id="screen-host" class="hidden flex-col h-[100dvh]">
-    <header class="bg-white/90 backdrop-blur shadow-sm p-4 flex justify-between items-center px-6 border-b-4 border-cyan-100 z-10">
+    <header class="bg-white/90 backdrop-blur shadow-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] flex justify-between items-center px-6 border-b-4 border-cyan-100 z-50 shrink-0">
       <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
       <div class="flex items-center gap-3">
         <button id="btn-header-qr" onclick="showRoomIdModal()" class="hidden w-12 h-12 bg-cyan-100 text-cyan-600 rounded-full flex items-center justify-center hover:bg-cyan-200 transition-colors shadow-sm active:scale-95">
@@ -196,7 +196,7 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto lg:overflow-hidden p-4 md:p-6 flex flex-col items-center justify-start lg:justify-center">
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start lg:justify-center">
       <!-- Host: Waiting View -->
       <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row gap-6 lg:gap-8 animate-pop-in lg:h-[70vh] lg:max-h-[700px] lg:min-h-[500px] pb-8 lg:pb-0">
         
@@ -229,14 +229,20 @@
 
         <div class="w-full lg:w-1/2 flex flex-col gap-4 lg:gap-6 lg:h-full lg:min-h-0">
           
-          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-6 lg:p-8 border-4 border-white shadow-lg flex-1 flex flex-col min-h-0">
-            <div class="flex justify-between items-center mb-4 lg:mb-6 border-b-2 border-gray-200 pb-4 shrink-0">
-              <h3 class="text-xl lg:text-2xl font-black text-gray-700">参加したプレイヤー</h3>
+          <div class="w-full bg-white/60 backdrop-blur rounded-[2rem] p-5 lg:p-8 border-4 border-white shadow-lg flex-col transition-all duration-300">
+            
+            <div class="flex justify-between items-center cursor-pointer lg:cursor-default" onclick="togglePlayerList()">
+              <div class="flex items-center gap-2">
+                <h3 class="text-lg lg:text-2xl font-black text-gray-700">参加プレイヤー</h3>
+                <svg id="icon-player-toggle" class="w-6 h-6 text-gray-400 transition-transform lg:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path></svg>
+              </div>
               <span class="bg-cyan-500 text-white py-1 px-4 rounded-full font-black text-lg lg:text-xl shadow-sm" id="host-player-count">0 人</span>
             </div>
             
-            <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-3 gap-3 flex-1 content-start overflow-y-auto pr-2 pb-2 min-h-0">
-              <div class="col-span-full text-center py-8 text-gray-400 font-bold">プレイヤーを待っています...</div>
+            <div id="container-player-list" class="hidden lg:block mt-0 lg:mt-6 border-transparent lg:border-gray-200 border-t-2 pt-0 lg:pt-4 flex-1 overflow-y-auto max-h-[40vh] lg:max-h-full transition-all">
+              <div id="host-player-list" class="grid grid-cols-2 md:grid-cols-3 gap-3 content-start pt-4 lg:pt-0 pb-2">
+                <div class="col-span-full text-center py-8 text-gray-400 font-bold">プレイヤーを待っています...</div>
+              </div>
             </div>
           </div>
 
@@ -323,7 +329,7 @@
   <div id="screen-player" class="hidden flex-col h-[100dvh] relative">
     
     <!-- Player: Waiting View -->
-    <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
+    <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
       <div class="bg-white/90 backdrop-blur rounded-[3rem] shadow-2xl p-10 max-w-sm w-full text-center border-4 border-white animate-pop-in">
         <div class="w-24 h-24 bg-cyan-100 text-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce shadow-inner">
           <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -337,7 +343,7 @@
       </div>
     </div>
     <!-- Player: Hand View (Looking at own number) -->
-    <div id="player-view-hand" class="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6 z-10 bg-gradient-to-b from-yellow-50 to-orange-100 hidden overflow-hidden">
+    <div id="player-view-hand" class="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-10 bg-gradient-to-b from-yellow-50 to-orange-100 hidden overflow-hidden">
       
       <div class="w-full max-w-sm mt-2 shrink-0 animate-pop-in z-20">
         <div class="bg-white rounded-3xl shadow-md p-3 text-center border-4 border-yellow-200 relative">
@@ -375,7 +381,7 @@
     </div>
 
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
-    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
+    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
 
       <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
@@ -691,6 +697,23 @@
         modal.classList.add('hidden');
         modal.classList.remove('flex');
       }, 300);
+    };
+
+    window.togglePlayerList = () => {
+      // PCサイズ（画面幅1024px以上）の場合は何もしない
+      if (window.innerWidth >= 1024) return;
+
+      const container = document.getElementById('container-player-list');
+      const icon = document.getElementById('icon-player-toggle');
+      
+      // hiddenクラスの付け外しで開閉をコントロール
+      if (container.classList.contains('hidden')) {
+        container.classList.remove('hidden');
+        icon.classList.add('rotate-180'); // 矢印を上向きに
+      } else {
+        container.classList.add('hidden');
+        icon.classList.remove('rotate-180'); // 矢印を下向きに
+      }
     };
 
     window.copyRoomUrlPopup = (btn) => {
