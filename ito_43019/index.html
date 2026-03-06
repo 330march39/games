@@ -236,12 +236,43 @@
             </div>
           </div>
 
-          <button id="btn-start-game" onclick="startGame()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-8 lg:mb-0">
+          <button id="btn-start-game" onclick="goToThemeSelect()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed shrink-0 mb-8 lg:mb-0">
             <div class="absolute inset-0 bg-yellow-600 rounded-full transform translate-y-2 transition-transform group-active:translate-y-0"></div>
             <div class="relative w-full py-4 lg:py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-full font-black text-2xl lg:text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 text-center">
               ゲームスタート！
             </div>
           </button>
+        </div>
+      </div>
+
+      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in h-full">
+        <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-10 text-center">お題の決め方は？</h2>
+        <div class="flex flex-col md:flex-row gap-6 w-full max-w-2xl px-4">
+          <button onclick="startThemeRoulette()" class="flex-1 group relative">
+            <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+            <div class="relative w-full py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+              <span class="text-6xl">🎲</span>
+              ランダムに出題
+            </div>
+          </button>
+          
+          <button onclick="startFreeTheme()" class="flex-1 group relative">
+            <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2 transition-transform group-active:translate-y-0"></div>
+            <div class="relative w-full py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+              <span class="text-6xl">💬</span>
+              自分たちで出題
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div id="host-view-roulette" class="hidden w-full max-w-5xl flex-col items-center justify-center animate-pop-in h-full px-4">
+        <h2 class="text-3xl font-black text-gray-500 mb-8 animate-pulse">お題を抽選中...</h2>
+        <div class="w-full bg-white rounded-[2rem] shadow-2xl p-10 border-8 border-yellow-300 text-center relative overflow-hidden flex items-center justify-center min-h-[300px]">
+          <div class="absolute top-0 left-0 w-full h-full bg-yellow-100 bg-stripes opacity-50"></div>
+          <h2 id="roulette-text" class="text-4xl md:text-5xl lg:text-6xl font-black text-gray-800 drop-shadow-sm leading-tight relative z-10 transition-all">
+            ...
+          </h2>
         </div>
       </div>
 
@@ -462,7 +493,8 @@
       playerName: '',
       roomData: null,
       isHost: false,
-      hasSeenRule: localStorage.getItem('ito_hasSeenRule') === 'true'
+      hasSeenRule: localStorage.getItem('ito_hasSeenRule') === 'true',
+      isRouletteSpinning: false // ←これを追加
     };
 
     const THEMES = [
@@ -705,13 +737,52 @@
       });
     };
 
-    window.startGame = async () => {
+    // === ここから追加・変更 ===
+    window.goToThemeSelect = async () => {
       if (!state.roomData || Object.keys(state.roomData.players).length === 0) return;
-      const theme = THEMES[Math.floor(Math.random() * THEMES.length)];
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      // ステータスを「お題選択中」にする
+      await updateDoc(roomRef, { status: 'choosing_theme' });
+    };
+
+    window.startFreeTheme = async () => {
+      await executeGameStart("フリー（自分たちで決める）");
+    };
+
+    window.startThemeRoulette = async () => {
+      state.isRouletteSpinning = true;
+      renderHostView(); // ルーレット画面に切り替え
+
+      const rouletteText = document.getElementById('roulette-text');
+      let count = 0;
+      const maxCount = 20; // ルーレットが回る回数
+      const interval = 100; // 切り替わりの速度(ミリ秒)
+      
+      const rouletteInterval = setInterval(() => {
+        rouletteText.innerText = THEMES[Math.floor(Math.random() * THEMES.length)];
+        count++;
+        if (count >= maxCount) {
+          clearInterval(rouletteInterval);
+          const finalTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+          rouletteText.innerText = finalTheme;
+          // 決定時のポップアクション
+          rouletteText.classList.add('text-pink-500', 'scale-110');
+          
+          setTimeout(async () => {
+            rouletteText.classList.remove('text-pink-500', 'scale-110');
+            state.isRouletteSpinning = false;
+            await executeGameStart(finalTheme);
+          }, 2000); // お題決定から2秒後にゲームスタート
+        }
+      }, interval);
+    };
+
+    // 実際のカード配布とゲーム画面への遷移処理
+    const executeGameStart = async (selectedTheme) => {
       const playerIds = Object.keys(state.roomData.players);
       const numbers = shuffleArray(Array.from({length: 100}, (_, i) => i + 1));
       
-      const updates = { status: 'playing', theme: theme };
+      const updates = { status: 'playing', theme: selectedTheme };
       playerIds.forEach((uid, index) => {
         updates[`players.${uid}.number`] = numbers[index];
         updates[`players.${uid}.state`] = 'hand';
@@ -721,19 +792,22 @@
       await updateDoc(roomRef, updates);
     };
 
-    window.enableRevealMode = async () => {
-      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
-      await updateDoc(roomRef, { status: 'revealing' });
-    };
-
+    // 次のゲームへ進む処理（QR待機ではなくお題選択に戻る）
     window.nextGame = async () => {
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
-      const updates = { status: 'waiting', theme: '' };
+      // waitingではなくchoosing_themeに戻す
+      const updates = { status: 'choosing_theme', theme: '' };
       Object.keys(state.roomData.players).forEach(uid => {
         updates[`players.${uid}.state`] = 'waiting';
         updates[`players.${uid}.number`] = null;
       });
       await updateDoc(roomRef, updates);
+    };
+    // === ここまで ===
+
+    window.enableRevealMode = async () => {
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      await updateDoc(roomRef, { status: 'revealing' });
     };
 
     // --- PLAYER LOGIC ---
@@ -942,14 +1016,20 @@
       
       const vWaiting = document.getElementById('host-view-waiting');
       const vGame = document.getElementById('host-view-game');
-      const btnHeaderQr = document.getElementById('btn-header-qr'); // ヘッダーのボタン取得
+      // ▼ 追加 ▼
+      const vThemeSelect = document.getElementById('host-view-theme-select');
+      const vRoulette = document.getElementById('host-view-roulette');
+      // ▲ 追加 ▲
+      const btnHeaderQr = document.getElementById('btn-header-qr');
+
+      // ▼ 追加: 全ビューを一旦隠す ▼
+      vWaiting.classList.add('hidden');
+      vThemeSelect.classList.add('hidden');
+      vRoulette.classList.add('hidden');
+      vGame.classList.add('hidden');
 
       if (status === 'waiting') {
-        vWaiting.classList.remove('hidden');
-        vGame.classList.add('hidden');
-        vGame.classList.remove('flex');
-        
-        // 待機中はヘッダーのQRボタンを隠す
+        vWaiting.classList.remove('hidden'); // 待機画面ON
         if (btnHeaderQr) btnHeaderQr.classList.add('hidden');
         
         document.getElementById('host-room-id-display').innerText = state.roomId;
@@ -980,13 +1060,18 @@
         
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
+      // ▼ 追加: お題選択中の表示ロジック ▼
+      } else if (status === 'choosing_theme') {
+        if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
+        if (state.isRouletteSpinning) {
+          vRoulette.classList.remove('hidden'); // ルーレット画面ON
+        } else {
+          vThemeSelect.classList.remove('hidden'); // お題選択画面ON
+        }
+
       } else {
         // Playing or Revealing (ゲーム中)
-        vWaiting.classList.add('hidden');
-        vGame.classList.remove('hidden');
-        vGame.classList.add('flex');
-
-        // ゲーム中はヘッダーのQRボタンを表示する
+        vGame.classList.remove('hidden'); // ゲーム画面ON
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
         
         document.getElementById('host-theme-display').innerText = theme;
@@ -1057,10 +1142,20 @@
       const vHand = document.getElementById('player-view-hand');
       const vTable = document.getElementById('player-view-table');
 
-      if (status === 'waiting' || myData.state === 'waiting') {
+      // ▼ 修正: status === 'choosing_theme' の条件を追加 ▼
+      if (status === 'waiting' || status === 'choosing_theme' || myData.state === 'waiting') {
         vWait.classList.remove('hidden');
         vHand.classList.add('hidden');
         vTable.classList.add('hidden');
+
+        // ▼ 追加: ホストの状態に合わせてメッセージを変える ▼
+        const waitMsg = document.querySelector('#player-view-waiting p');
+        if (status === 'choosing_theme') {
+          waitMsg.innerHTML = "ホストがお題を決めているよ！<br/>少し待っててね！";
+        } else {
+          waitMsg.innerHTML = "ホストがゲームをはじめるのを<br/>待っててね！";
+        }
+
       } 
       else if (myData.state === 'hand') {
         vWait.classList.add('hidden');
