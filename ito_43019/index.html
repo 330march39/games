@@ -319,6 +319,10 @@
   <!-- ================= Player Screen ================= -->
   <div id="screen-player" class="hidden flex-col absolute inset-0 w-full h-full">
     
+    <button id="btn-player-host-menu" onclick="showPlayerHostMenu()" class="hidden absolute top-4 right-4 w-12 h-12 bg-white/30 backdrop-blur-sm text-white rounded-full flex items-center justify-center shadow-md z-50 border-2 border-white/50 active:scale-95 transition-transform">
+      <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+    </button>
+    
     <!-- Player: Waiting View -->
     <div id="player-view-waiting" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-20 bg-gradient-to-br from-cyan-100 to-blue-200">
       <div class="bg-white/90 backdrop-blur rounded-[3rem] shadow-2xl p-10 max-w-sm w-full text-center border-4 border-white animate-pop-in">
@@ -374,6 +378,24 @@
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
     <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
 
+      <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm px-4 z-50 flex-col items-center gap-3">
+        <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
+          全員が場に出すのを待っています...
+        </div>
+        <button id="btn-player-reveal" onclick="enableRevealMode()" class="hidden w-full group relative">
+          <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-1"></div>
+          <div class="relative w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl animate-pulse-ring flex items-center justify-center gap-2">
+            答え合わせへ
+          </div>
+        </button>
+        <button id="btn-player-next" onclick="nextGame()" class="hidden w-full group relative">
+          <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-1"></div>
+          <div class="relative w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl flex items-center justify-center">
+            次のお題を決める
+          </div>
+        </button>
+      </div>
+
       <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
         <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]">
@@ -400,6 +422,42 @@
   </div>
 
   <!-- ================= Modals ================= -->
+
+  <div id="modal-host-type" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
+      <h2 class="text-2xl font-black text-cyan-600 mb-6">どうやって遊ぶ？</h2>
+      <div class="space-y-4">
+        <button onclick="selectHostType(true)" class="w-full py-4 bg-gradient-to-r from-cyan-400 to-blue-400 text-white rounded-2xl font-black text-xl shadow-md border-2 border-white hover:scale-105 transition-transform">
+          自分もプレイヤーとして参加
+        </button>
+        <button onclick="selectHostType(false)" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-xl shadow-md border-2 border-white hover:scale-105 transition-transform">
+          ホスト画面専用にする（観戦）
+        </button>
+      </div>
+      <button onclick="closeHostTypeModal()" class="mt-6 text-gray-500 font-bold underline">キャンセル</button>
+    </div>
+  </div>
+
+  <div id="modal-host-nickname" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
+      <h2 class="text-2xl font-black text-cyan-600 mb-6">あなたのニックネーム</h2>
+      <input type="text" id="input-host-name" placeholder="ニックネームを入力" class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-2xl text-center text-xl font-black text-gray-800 focus:border-cyan-400 outline-none mb-6"/>
+      <button onclick="startRoomWithNickname()" class="w-full py-4 bg-cyan-500 text-white rounded-2xl font-black text-xl shadow-md border-2 border-white active:scale-95 transition-transform">
+        ルームをつくる！
+      </button>
+      <button onclick="closeHostNicknameModal()" class="mt-6 text-gray-500 font-bold underline">戻る</button>
+    </div>
+  </div>
+
+  <div id="modal-player-host-menu" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
+      <h3 class="text-2xl font-black text-gray-800 mb-6">ホストメニュー</h3>
+      <button onclick="closePlayerHostMenu(); showRoomIdModal();" class="w-full py-4 bg-cyan-100 text-cyan-700 rounded-2xl font-black text-lg mb-4 active:scale-95 transition-transform">途中参加用QRコード</button>
+      <button onclick="closePlayerHostMenu(); showHostExitConfirm();" class="w-full py-4 bg-red-100 text-red-600 rounded-2xl font-black text-lg mb-6 active:scale-95 transition-transform">ルームを終了する</button>
+      <button onclick="closePlayerHostMenu()" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:scale-95 transition-transform">閉じる</button>
+    </div>
+  </div>
+  
   <div id="modal-host-exit" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-host-exit-content">
       <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -520,6 +578,7 @@
       playerName: '',
       roomData: null,
       isHost: false,
+      isPlayingHost: false, // ← これを追加！
       hasSeenRule: localStorage.getItem('ito_hasSeenRule') === 'true',
       isRouletteSpinning: false // ←これを追加
     };
@@ -772,22 +831,101 @@
     };
 
     // --- HOST LOGIC ---
-    window.handleCreateRoom = async () => {
-      requestFullScreen(); // 追加
+    // --- HOST & PLAYER CREATION LOGIC ---
+    window.handleCreateRoom = () => {
+      const modal = document.getElementById('modal-host-type');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    };
+
+    window.closeHostTypeModal = () => {
+      document.getElementById('modal-host-type').classList.add('opacity-0');
+      setTimeout(() => {
+        document.getElementById('modal-host-type').classList.add('hidden');
+        document.getElementById('modal-host-type').classList.remove('flex');
+      }, 300);
+    };
+
+    window.selectHostType = (isPlayer) => {
+      window.closeHostTypeModal();
+      if (isPlayer) {
+        setTimeout(() => {
+          const nameInput = document.getElementById('input-host-name');
+          nameInput.value = localStorage.getItem('ito_playerName') || '';
+          const modal = document.getElementById('modal-host-nickname');
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+          setTimeout(() => modal.classList.remove('opacity-0'), 10);
+        }, 300);
+      } else {
+        executeCreateRoom(false, '');
+      }
+    };
+
+    window.closeHostNicknameModal = () => {
+      document.getElementById('modal-host-nickname').classList.add('opacity-0');
+      setTimeout(() => {
+        document.getElementById('modal-host-nickname').classList.add('hidden');
+        document.getElementById('modal-host-nickname').classList.remove('flex');
+      }, 300);
+    };
+
+    window.startRoomWithNickname = () => {
+      const name = document.getElementById('input-host-name').value.trim();
+      if (!name) {
+        showAlert("ニックネームを入力してね！");
+        return;
+      }
+      localStorage.setItem('ito_playerName', name);
+      window.closeHostNicknameModal();
+      executeCreateRoom(true, name);
+    };
+
+    const executeCreateRoom = async (isPlayer, nickname) => {
+      requestFullScreen();
       state.roomId = generateRoomId();
       state.isHost = true;
-      showScreen('host');
+      state.isPlayingHost = isPlayer;
       
+      const playersData = {};
+      if (isPlayer) {
+        state.playerName = nickname;
+        playersData[currentUser.uid] = {
+          name: nickname,
+          joinedAt: Date.now(),
+          state: 'waiting',
+          number: null
+        };
+      }
+
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
       await setDoc(roomRef, {
         hostId: currentUser.uid,
         status: 'waiting',
         theme: '',
-        players: {},
+        players: playersData,
         createdAt: Date.now()
       });
 
       listenToRoom();
+    };
+
+    // ホスト兼プレイヤー用メニュー制御
+    window.showPlayerHostMenu = () => {
+      const modal = document.getElementById('modal-player-host-menu');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    };
+
+    window.closePlayerHostMenu = () => {
+      const modal = document.getElementById('modal-player-host-menu');
+      modal.classList.add('opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }, 300);
     };
 
     window.copyRoomUrl = () => {
@@ -1040,15 +1178,32 @@
               return; // ここで処理を止める
             }
 
+            // 【追加】ホストが終了（解散）ステータスにした場合の処理
+            if (state.roomData.status === 'deleted') {
+              if (!state.isHost) {
+                showAlert("ホストがルームを解散しました。");
+                navToTitle();
+              }
+              return; 
+            }
+
             if (state.isHost) {
-              // --- 途中参加者へカードを配る処理 ---
               const { status, players } = state.roomData;
+              
+              // ホスト兼プレイヤーの場合、ゲーム中ならプレイヤー画面を見せる
+              if (state.isPlayingHost && (status === 'playing' || status === 'revealing')) {
+                if (state.appState !== 'player') showScreen('player');
+                renderPlayerView();
+              } else {
+                if (state.appState !== 'host') showScreen('host');
+                renderHostView();
+              }
+
+              // --- 途中参加者へカードを配る処理 ---
               if (status === 'playing' || status === 'revealing') {
                 const lateJoiners = Object.entries(players).filter(([uid, p]) => p.number === null);
                 if (lateJoiners.length > 0) {
-                  // すでに使われている数字のリスト
                   const usedNumbers = Object.values(players).map(p => p.number).filter(n => n !== null);
-                  // 1〜100の中で、まだ使われていない数字を抽出してシャッフル
                   let availableNumbers = Array.from({length: 100}, (_, i) => i + 1).filter(n => !usedNumbers.includes(n));
                   availableNumbers = shuffleArray(availableNumbers);
                   
@@ -1056,7 +1211,7 @@
                   lateJoiners.forEach(([uid, p], index) => {
                     if (availableNumbers.length > index) {
                       updates[`players.${uid}.number`] = availableNumbers[index];
-                      updates[`players.${uid}.state`] = 'hand'; // 途中参加でもまずは手札状態から
+                      updates[`players.${uid}.state`] = 'hand';
                     }
                   });
                   
@@ -1066,8 +1221,8 @@
                   }
                 }
               }
-              renderHostView();
             } else {
+              if (state.appState !== 'player') showScreen('player');
               renderPlayerView();
             }
           } else {
@@ -1276,6 +1431,51 @@
           vTable.classList.replace('bg-gray-900', 'bg-pink-100');
         }
       }
+
+      // --- ホスト兼プレイヤーの場合のUI制御を追加 ---
+      const btnHostMenu = document.getElementById('btn-player-host-menu');
+      const hostActions = document.getElementById('player-host-actions');
+      const msgWait = document.getElementById('player-host-waiting-msg');
+      const btnReveal = document.getElementById('btn-player-reveal');
+      const btnNext = document.getElementById('btn-player-next');
+
+      if (state.isHost && state.isPlayingHost) {
+        btnHostMenu.classList.remove('hidden');
+        
+        // カードを場に出した状態(faceDown)か、答え合わせ中(faceUp)ならアクションエリアを表示
+        if (myData.state === 'faceDown' || myData.state === 'faceUp') {
+          hostActions.classList.remove('hidden');
+          hostActions.classList.add('flex');
+          
+          const playersList = Object.values(players);
+          const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+
+          if (status === 'playing') {
+            btnNext.classList.add('hidden');
+            if (allReady) {
+              msgWait.classList.add('hidden');
+              btnReveal.classList.remove('hidden');
+            } else {
+              msgWait.classList.remove('hidden');
+              btnReveal.classList.add('hidden');
+            }
+          } else if (status === 'revealing') {
+            msgWait.classList.add('hidden');
+            btnReveal.classList.add('hidden');
+            btnNext.classList.remove('hidden');
+          }
+        } else {
+          hostActions.classList.add('hidden');
+          hostActions.classList.remove('flex');
+        }
+      } else {
+        if(btnHostMenu) btnHostMenu.classList.add('hidden');
+        if(hostActions) {
+          hostActions.classList.add('hidden');
+          hostActions.classList.remove('flex');
+        }
+      }
+      
     };
 
     // Start
