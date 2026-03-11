@@ -186,6 +186,42 @@
   </div>
 
   <!-- ================= Host Screen ================= -->
+<div id="screen-host-type" class="hidden flex-col items-center justify-center flex-1 p-6">
+    <div class="max-w-md w-full bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-8 border-4 border-white relative animate-pop-in text-center">
+      <button onclick="navToTitle()" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90">
+        ←
+      </button>
+      <h2 class="text-3xl font-black text-cyan-600 mb-8 mt-2">どうやって遊ぶ？</h2>
+      <div class="space-y-6">
+        <button onclick="selectHostType(true)" class="w-full flex flex-col items-center justify-center py-6 bg-gradient-to-r from-cyan-400 to-blue-400 text-white rounded-[2rem] font-black text-2xl shadow-xl border-4 border-white transform transition-transform active:scale-95">
+          <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          自分もプレイヤーとして参加
+        </button>
+        <button onclick="selectHostType(false)" class="w-full flex flex-col items-center justify-center py-6 bg-gray-200 text-gray-700 rounded-[2rem] font-black text-2xl shadow-xl border-4 border-white transform transition-transform active:scale-95">
+          <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+          ホスト画面専用にする（観戦）
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-host-nickname" class="hidden flex-col items-center justify-center flex-1 p-6">
+    <div class="max-w-md w-full bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-8 border-4 border-white relative animate-pop-in text-center">
+      <button onclick="showScreen('hostType')" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90">
+        ←
+      </button>
+      <h2 class="text-3xl font-black text-cyan-600 mb-8 mt-2">あなたのニックネーム</h2>
+      <input type="text" id="input-host-name" placeholder="ニックネームを入力" class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-2xl font-black text-gray-800 focus:border-cyan-400 focus:bg-white outline-none transition-all mb-8"/>
+      
+      <button onclick="startRoomWithNickname()" class="w-full group relative">
+        <div class="absolute inset-x-0 bottom-0 top-4 bg-cyan-700 rounded-3xl transform translate-y-2"></div>
+        <div class="relative w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+          ルームをつくる！
+        </div>
+      </button>
+    </div>
+  </div>
+  
   <div id="screen-host" class="hidden flex-col absolute inset-0 w-full h-full">
     <header class="bg-white/90 backdrop-blur shadow-sm p-4 pt-[max(1rem,env(safe-area-inset-top))] flex justify-between items-center px-6 border-b-4 border-cyan-100 z-50 shrink-0">
       <h1 class="text-3xl font-black text-cyan-500 drop-shadow-sm">ito <span class="text-gray-400 text-lg">HOST</span></h1>
@@ -378,7 +414,7 @@
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
     <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
 
-      <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm px-4 z-50 flex-col items-center gap-3">
+      <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm px-4 z-50 flex-col items-center gap-3" onclick="event.stopPropagation()">
         <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
           全員が場に出すのを待っています...
         </div>
@@ -422,32 +458,6 @@
   </div>
 
   <!-- ================= Modals ================= -->
-
-  <div id="modal-host-type" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
-    <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
-      <h2 class="text-2xl font-black text-cyan-600 mb-6">どうやって遊ぶ？</h2>
-      <div class="space-y-4">
-        <button onclick="selectHostType(true)" class="w-full py-4 bg-gradient-to-r from-cyan-400 to-blue-400 text-white rounded-2xl font-black text-xl shadow-md border-2 border-white hover:scale-105 transition-transform">
-          自分もプレイヤーとして参加
-        </button>
-        <button onclick="selectHostType(false)" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-xl shadow-md border-2 border-white hover:scale-105 transition-transform">
-          ホスト画面専用にする（観戦）
-        </button>
-      </div>
-      <button onclick="closeHostTypeModal()" class="mt-6 text-gray-500 font-bold underline">キャンセル</button>
-    </div>
-  </div>
-
-  <div id="modal-host-nickname" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
-    <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
-      <h2 class="text-2xl font-black text-cyan-600 mb-6">あなたのニックネーム</h2>
-      <input type="text" id="input-host-name" placeholder="ニックネームを入力" class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-2xl text-center text-xl font-black text-gray-800 focus:border-cyan-400 outline-none mb-6"/>
-      <button onclick="startRoomWithNickname()" class="w-full py-4 bg-cyan-500 text-white rounded-2xl font-black text-xl shadow-md border-2 border-white active:scale-95 transition-transform">
-        ルームをつくる！
-      </button>
-      <button onclick="closeHostNicknameModal()" class="mt-6 text-gray-500 font-bold underline">戻る</button>
-    </div>
-  </div>
 
   <div id="modal-player-host-menu" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
@@ -596,6 +606,8 @@
       loading: document.getElementById('screen-loading'),
       title: document.getElementById('screen-title'),
       join: document.getElementById('screen-join'),
+      hostType: document.getElementById('screen-host-type'), // ←追加
+      hostNickname: document.getElementById('screen-host-nickname'), // ←追加
       host: document.getElementById('screen-host'),
       player: document.getElementById('screen-player')
     };
@@ -640,8 +652,11 @@
     
     // UI Navigation
     const showScreen = (screenName) => {
-      Object.values(screens).forEach(s => s.classList.add('hidden'));
-      if(screenName === 'title' || screenName === 'join') {
+      Object.values(screens).forEach(s => {
+        if (s) s.classList.add('hidden');
+      });
+      // フレックスボックスで中央揃えにする画面リスト
+      if (['title', 'join', 'hostType', 'hostNickname'].includes(screenName)) {
         screens[screenName].classList.add('flex');
         screens[screenName].classList.remove('hidden');
       } else {
@@ -830,45 +845,20 @@
       });
     };
 
-    // --- HOST LOGIC ---
     // --- HOST & PLAYER CREATION LOGIC ---
     window.handleCreateRoom = () => {
-      const modal = document.getElementById('modal-host-type');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      setTimeout(() => modal.classList.remove('opacity-0'), 10);
-    };
-
-    window.closeHostTypeModal = () => {
-      document.getElementById('modal-host-type').classList.add('opacity-0');
-      setTimeout(() => {
-        document.getElementById('modal-host-type').classList.add('hidden');
-        document.getElementById('modal-host-type').classList.remove('flex');
-      }, 300);
+      showScreen('hostType');
     };
 
     window.selectHostType = (isPlayer) => {
-      window.closeHostTypeModal();
       if (isPlayer) {
-        setTimeout(() => {
-          const nameInput = document.getElementById('input-host-name');
-          nameInput.value = localStorage.getItem('ito_playerName') || '';
-          const modal = document.getElementById('modal-host-nickname');
-          modal.classList.remove('hidden');
-          modal.classList.add('flex');
-          setTimeout(() => modal.classList.remove('opacity-0'), 10);
-        }, 300);
+        // 保存されている名前があればセットしてニックネーム画面へ
+        const nameInput = document.getElementById('input-host-name');
+        nameInput.value = localStorage.getItem('ito_playerName') || '';
+        showScreen('hostNickname');
       } else {
         executeCreateRoom(false, '');
       }
-    };
-
-    window.closeHostNicknameModal = () => {
-      document.getElementById('modal-host-nickname').classList.add('opacity-0');
-      setTimeout(() => {
-        document.getElementById('modal-host-nickname').classList.add('hidden');
-        document.getElementById('modal-host-nickname').classList.remove('flex');
-      }, 300);
     };
 
     window.startRoomWithNickname = () => {
@@ -878,7 +868,6 @@
         return;
       }
       localStorage.setItem('ito_playerName', name);
-      window.closeHostNicknameModal();
       executeCreateRoom(true, name);
     };
 
