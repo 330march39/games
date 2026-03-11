@@ -191,13 +191,13 @@
       <button onclick="navToTitle()" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90 z-10">
         ←
       </button>
-      <h2 class="text-2xl md:text-3xl font-black text-cyan-600 mb-8 mt-2">どうやって遊ぶ？</h2>
+      <h2 class="text-2xl md:text-3xl font-black text-cyan-600 mb-8 mt-2">この端末はどうする？</h2>
       
       <div class="flex flex-col gap-6">
         
         <button onclick="selectHostType(true)" class="w-full group relative">
-          <div class="absolute inset-0 bg-blue-700 rounded-[2rem] transform translate-y-2"></div>
-          <div class="relative w-full py-5 md:py-6 bg-gradient-to-r from-cyan-400 to-blue-500 text-white rounded-[2rem] font-black text-lg md:text-2xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
+          <div class="absolute inset-0 bg-cyan-600 rounded-[2rem] transform translate-y-2"></div>
+          <div class="relative w-full py-5 md:py-6 bg-cyan-400 text-white rounded-[2rem] font-black text-lg md:text-2xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
             <svg class="w-10 h-10 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
             自分もプレイヤーとして参加
           </div>
@@ -207,7 +207,7 @@
           <div class="absolute inset-0 bg-gray-400 rounded-[2rem] transform translate-y-2"></div>
           <div class="relative w-full py-5 md:py-6 bg-gray-200 text-gray-700 rounded-[2rem] font-black text-lg md:text-2xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
             <svg class="w-10 h-10 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            ホスト画面専用にする（観戦）
+            ホスト画面専用にする
           </div>
         </button>
 
@@ -220,12 +220,12 @@
       <button onclick="showScreen('hostType')" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90">
         ←
       </button>
-      <h2 class="text-3xl font-black text-cyan-600 mb-8 mt-2">あなたのニックネーム</h2>
+      <h2 class="text-3xl font-black text-cyan-600 mb-8 mt-2">ニックネーム</h2>
       <input type="text" id="input-host-name" placeholder="ニックネームを入力" class="w-full p-4 bg-gray-100 border-4 border-gray-200 rounded-3xl text-center text-2xl font-black text-gray-800 focus:border-cyan-400 focus:bg-white outline-none transition-all mb-8"/>
       
       <button onclick="startRoomWithNickname()" class="w-full group relative">
-        <div class="absolute inset-x-0 bottom-0 top-4 bg-cyan-700 rounded-3xl transform translate-y-2"></div>
-        <div class="relative w-full py-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+        <div class="absolute inset-0 bg-cyan-600 rounded-3xl transform translate-y-2"></div>
+        <div class="relative w-full py-4 bg-cyan-400 text-white rounded-3xl font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
           ルームをつくる！
         </div>
       </button>
@@ -359,6 +359,7 @@
           </div>
         </div>
       </div>
+      <div class="w-full h-32 shrink-0 lg:hidden"></div>
     </main>
   </div>
 
