@@ -187,20 +187,30 @@
 
   <!-- ================= Host Screen ================= -->
 <div id="screen-host-type" class="hidden flex-col items-center justify-center flex-1 p-6">
-    <div class="max-w-md w-full bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-8 border-4 border-white relative animate-pop-in text-center">
-      <button onclick="navToTitle()" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90">
+    <div class="max-w-md w-full bg-white/80 backdrop-blur-md rounded-[2.5rem] shadow-2xl p-6 md:p-8 border-4 border-white relative animate-pop-in text-center">
+      <button onclick="navToTitle()" class="absolute -top-4 -left-4 w-12 h-12 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center shadow-md hover:bg-gray-300 font-black text-xl border-4 border-white transition-transform active:scale-90 z-10">
         ←
       </button>
-      <h2 class="text-3xl font-black text-cyan-600 mb-8 mt-2">どうやって遊ぶ？</h2>
-      <div class="space-y-6">
-        <button onclick="selectHostType(true)" class="w-full flex flex-col items-center justify-center py-6 bg-gradient-to-r from-cyan-400 to-blue-400 text-white rounded-[2rem] font-black text-2xl shadow-xl border-4 border-white transform transition-transform active:scale-95">
-          <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-          自分もプレイヤーとして参加
+      <h2 class="text-2xl md:text-3xl font-black text-cyan-600 mb-8 mt-2">どうやって遊ぶ？</h2>
+      
+      <div class="flex flex-col gap-6">
+        
+        <button onclick="selectHostType(true)" class="w-full group relative">
+          <div class="absolute inset-0 bg-blue-700 rounded-[2rem] transform translate-y-2"></div>
+          <div class="relative w-full py-5 md:py-6 bg-gradient-to-r from-cyan-400 to-blue-500 text-white rounded-[2rem] font-black text-lg md:text-2xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
+            <svg class="w-10 h-10 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+            自分もプレイヤーとして参加
+          </div>
         </button>
-        <button onclick="selectHostType(false)" class="w-full flex flex-col items-center justify-center py-6 bg-gray-200 text-gray-700 rounded-[2rem] font-black text-2xl shadow-xl border-4 border-white transform transition-transform active:scale-95">
-          <svg class="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-          ホスト画面専用にする（観戦）
+
+        <button onclick="selectHostType(false)" class="w-full group relative">
+          <div class="absolute inset-0 bg-gray-400 rounded-[2rem] transform translate-y-2"></div>
+          <div class="relative w-full py-5 md:py-6 bg-gray-200 text-gray-700 rounded-[2rem] font-black text-lg md:text-2xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-2 transform transition-transform group-active:translate-y-2">
+            <svg class="w-10 h-10 md:w-12 md:h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            ホスト画面専用にする（観戦）
+          </div>
         </button>
+
       </div>
     </div>
   </div>
@@ -233,7 +243,7 @@
       </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start">
+    <main class="flex-1 overflow-y-auto w-full h-full min-h-0 p-4 md:p-6 pb-32 lg:pb-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center justify-start">
       <!-- Host: Waiting View -->
       <div id="host-view-waiting" class="w-full max-w-6xl flex flex-col lg:flex-row items-stretch gap-6 lg:gap-8 animate-pop-in mt-[5vh] lg:mt-[8vh] mb-auto min-h-[65vh] lg:min-h-[70vh] pb-8 lg:pb-0">
         
