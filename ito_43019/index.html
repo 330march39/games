@@ -331,7 +331,9 @@
         <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 mb-8 text-center relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
           <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-          <h2 id="host-theme-display" class="text-4xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2">...</h2>
+          
+          <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." readonly />
+          <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
         </div>
 
         <!-- Players Grid -->
@@ -389,12 +391,12 @@
     <!-- Player: Hand View (Looking at own number) -->
     <div id="player-view-hand" class="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-10 bg-gradient-to-b from-yellow-50 to-orange-100 hidden overflow-hidden">
       
-      <div class="w-full max-w-sm mt-2 shrink-0 animate-pop-in z-20">
-        <div class="bg-white rounded-3xl shadow-md p-3 text-center border-4 border-yellow-200 relative">
+      <div class="bg-white rounded-3xl shadow-md p-3 text-center border-4 border-yellow-200 relative">
           <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-yellow-900 text-xs font-black px-3 py-1 rounded-full border-2 border-white">お題</span>
-          <h2 id="player-theme-display" class="text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight">...</h2>
+          
+          <input type="text" id="player-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight outline-none transition-colors" value="..." readonly />
+          <p id="player-theme-edit-msg" class="text-xs font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
         </div>
-      </div>
 
       <div id="player-rule-hint" class="w-full max-w-sm mt-3 shrink-0 bg-white/80 backdrop-blur text-gray-700 text-xs md:text-sm font-bold p-3 rounded-2xl shadow-sm border-2 border-white flex gap-2 items-start relative animate-pop-in z-20">
         <div class="bg-yellow-400 text-white rounded-full p-1.5 shrink-0 mt-0.5">
@@ -966,17 +968,18 @@
     };
 
     window.startFreeTheme = async () => {
-      await executeGameStart("フリー");
+      // フリーテーマの場合は「フリーフラグ」を立てて初期テキストをセット
+      await executeGameStart("フリー", true);
     };
 
     window.startThemeRoulette = async () => {
       state.isRouletteSpinning = true;
-      renderHostView(); // ルーレット画面に切り替え
+      renderHostView(); 
 
       const rouletteText = document.getElementById('roulette-text');
       let count = 0;
-      const maxCount = 20; // ルーレットが回る回数
-      const interval = 100; // 切り替わりの速度(ミリ秒)
+      const maxCount = 20; 
+      const interval = 100; 
       
       const rouletteInterval = setInterval(() => {
         rouletteText.innerText = THEMES[Math.floor(Math.random() * THEMES.length)];
@@ -985,24 +988,29 @@
           clearInterval(rouletteInterval);
           const finalTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
           rouletteText.innerText = finalTheme;
-          // 決定時のポップアクション
           rouletteText.classList.add('text-pink-500', 'scale-110');
           
           setTimeout(async () => {
             rouletteText.classList.remove('text-pink-500', 'scale-110');
             state.isRouletteSpinning = false;
-            await executeGameStart(finalTheme);
-          }, 2000); // お題決定から2秒後にゲームスタート
+            // ルーレットの場合はフリーフラグを折る(false)
+            await executeGameStart(finalTheme, false);
+          }, 2000); 
         }
       }, interval);
     };
 
-    // 実際のカード配布とゲーム画面への遷移処理
-    const executeGameStart = async (selectedTheme) => {
+    // 引数に isFreeTheme を追加
+    const executeGameStart = async (selectedTheme, isFreeTheme = false) => {
       const playerIds = Object.keys(state.roomData.players);
       const numbers = shuffleArray(Array.from({length: 100}, (_, i) => i + 1));
       
-      const updates = { status: 'playing', theme: selectedTheme };
+      const updates = { 
+        status: 'playing', 
+        theme: selectedTheme,
+        isFreeTheme: isFreeTheme,   // フリー入力可能かの判定フラグ
+        themeEditorId: null         // 現在入力している人のID（ロック用）
+      };
       playerIds.forEach((uid, index) => {
         updates[`players.${uid}.number`] = numbers[index];
         updates[`players.${uid}.state`] = 'hand';
@@ -1010,6 +1018,42 @@
 
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
       await updateDoc(roomRef, updates);
+    };
+
+    // --- ここから追加：お題のリアルタイム編集ロジック ---
+
+    window.handleThemeTap = (el) => {
+      // フリー入力モードでない場合、または他の人が入力中の場合は弾く
+      if (!state.roomData || !state.roomData.isFreeTheme) return;
+      if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser.uid) return;
+
+      // 編集権限（ロック）を獲得
+      el.readOnly = false;
+      el.focus();
+      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+      updateDoc(roomRef, { themeEditorId: currentUser.uid });
+      
+      // 初期テキストならタップ時に空にする
+      if (el.value === "フリー") {
+         el.value = "";
+         updateDoc(roomRef, { theme: "" });
+      }
+    };
+
+    window.handleThemeInput = (el) => {
+      // 自分が編集中なら文字をFirestoreに同期
+      if (state.roomData.themeEditorId === currentUser.uid) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+        updateDoc(roomRef, { theme: el.value });
+      }
+    };
+
+    window.handleThemeBlur = () => {
+      // フォーカスが外れたら編集権限（ロック）を手放す
+      if (state.roomData && state.roomData.themeEditorId === currentUser.uid) {
+        const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+        updateDoc(roomRef, { themeEditorId: null }).catch(()=>{});
+      }
     };
 
     // 次のゲームへ進む処理（QR待機ではなくお題選択に戻る）
@@ -1160,6 +1204,7 @@
     window.addEventListener('beforeunload', () => {
       if (state.roomId) {
         const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+        if (state.roomData && state.roomData.themeEditorId === currentUser?.uid) updateDoc(roomRef, { themeEditorId: null }).catch(()=>{});
         if (state.isHost) {
           updateDoc(roomRef, { status: 'deleted' }).catch(()=>{});
         } else if (currentUser) {
@@ -1312,7 +1357,30 @@
         vGame.classList.remove('hidden'); // ゲーム画面ON
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
         
-        document.getElementById('host-theme-display').innerText = theme;
+        const hostThemeInput = document.getElementById('host-theme-input');
+        const hostThemeMsg = document.getElementById('host-theme-edit-msg');
+        
+        if (hostThemeInput) {
+          // 自分が入力中でなければ、他人の文字をリアルタイム反映させる
+          if (state.roomData.themeEditorId !== currentUser?.uid) {
+            hostThemeInput.value = theme;
+            hostThemeInput.readOnly = true;
+          } else {
+            hostThemeInput.readOnly = false;
+          }
+          
+          if (state.roomData.isFreeTheme) {
+            hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
+            if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
+              hostThemeMsg.classList.remove('hidden'); // 誰かが入力中
+            } else {
+              hostThemeMsg.classList.add('hidden');
+            }
+          } else {
+            hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
+            hostThemeMsg.classList.add('hidden');
+          }
+        }
         
         const isRevealing = status === 'revealing';
         const sortedPlayers = isRevealing ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
@@ -1400,7 +1468,29 @@
         vHand.classList.remove('hidden');
         vTable.classList.add('hidden');
         
-        document.getElementById('player-theme-display').innerText = theme;
+        const playerThemeInput = document.getElementById('player-theme-input');
+        const playerThemeMsg = document.getElementById('player-theme-edit-msg');
+        
+        if (playerThemeInput) {
+          if (state.roomData.themeEditorId !== currentUser?.uid) {
+            playerThemeInput.value = theme;
+            playerThemeInput.readOnly = true;
+          } else {
+            playerThemeInput.readOnly = false;
+          }
+
+          if (state.roomData.isFreeTheme) {
+            playerThemeInput.classList.add('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
+            if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
+              playerThemeMsg.classList.remove('hidden');
+            } else {
+              playerThemeMsg.classList.add('hidden');
+            }
+          } else {
+            playerThemeInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
+            playerThemeMsg.classList.add('hidden');
+          }
+        }
         document.getElementById('player-num-center').innerText = myData.number;
         document.getElementById('player-num-tl').innerText = myData.number;
         document.getElementById('player-num-br').innerText = myData.number;
