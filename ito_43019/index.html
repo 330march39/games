@@ -475,7 +475,14 @@
   <div id="modal-player-host-menu" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
       <h3 class="text-2xl font-black text-gray-800 mb-6">ホストメニュー</h3>
-      <button onclick="closePlayerHostMenu(); showRoomIdModal();" class="w-full py-4 bg-cyan-100 text-cyan-700 rounded-2xl font-black text-lg mb-4 active:scale-95 transition-transform">ルームID</button>
+      
+      <button onclick="closePlayerHostMenu(); showRoomIdModal();" class="w-full py-4 bg-cyan-100 text-cyan-700 rounded-2xl font-black text-lg mb-4 active:scale-95 transition-transform flex items-center justify-center gap-2">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+        </svg>
+        ルームID
+      </button>
+
       <button onclick="closePlayerHostMenu(); showHostExitConfirm();" class="w-full py-4 bg-red-100 text-red-600 rounded-2xl font-black text-lg mb-6 active:scale-95 transition-transform">ルームを終了する</button>
       <button onclick="closePlayerHostMenu()" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:scale-95 transition-transform">閉じる</button>
     </div>
