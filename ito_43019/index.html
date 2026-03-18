@@ -78,9 +78,9 @@
     .animate-float { animation: float 4s ease-in-out infinite; }
 
     @keyframes pulse-ring {
-      0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7); }
-      70% { box-shadow: 0 0 0 20px rgba(250, 204, 21, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
+      0% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0.7); } /* 紫・ピンク系に変更 */
+      70% { box-shadow: 0 0 0 20px rgba(219, 39, 119, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(219, 39, 119, 0); }
     }
     .animate-pulse-ring { animation: pulse-ring 2s infinite; }
 
@@ -359,8 +359,8 @@
         </button>
       </div>
 
-      <div class="flex-1 flex items-center justify-center w-full max-w-sm py-4 perspective-1000 min-h-0 z-10" onclick="updatePlayerState('faceDown')">
-        <div class="h-full max-h-[60vh] aspect-[2/3] bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-8 border-gray-100 flex flex-col items-center justify-center relative overflow-hidden animate-pop-in cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform">
+      <div class="flex-1 flex items-center justify-center w-full max-w-sm py-4 perspective-1000 min-h-0 z-10">
+  <div class="h-full max-h-[60vh] aspect-[2/3] bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl border-8 border-gray-100 flex flex-col items-center justify-center relative overflow-hidden animate-pop-in cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform" onclick="updatePlayerState('faceDown')">
           <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden">
             <div id="player-role-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-2xl bg-white border-2 shadow-sm">🧑‍🌾</div>
             <span id="player-role-text" class="text-xs font-black text-gray-800 bg-white/80 px-2 rounded-full mt-1">村人</span>
@@ -382,8 +382,7 @@
     </div>
 
     <!-- Player: Table View (Card is on the table, FaceDown or FaceUp) -->
-    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden" onclick="handleCardTap()">
-
+    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden">
       <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm px-4 z-50 flex-col items-center gap-3" onclick="event.stopPropagation()">
         <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
           全員が場に出すのを待っています...
@@ -416,7 +415,7 @@
 
       <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
-        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]">
+        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]" onclick="handleCardTap()">
           
           <!-- Front Side (Number is hidden when rotated 180deg) -->
           <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center rotate-y-180" id="player-card-front">
@@ -1040,6 +1039,22 @@ window.selectExile = (uid) => {
     const voteBtn = document.getElementById('btn-execute-vote');
     if (voteBtn) voteBtn.disabled = false;
   }
+};
+
+    // 追放の実行と勝敗判定
+window.executeVote = async () => {
+  if (!selectedExileId) return;
+  const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+  
+  // 追放された人がきつねかどうか判定
+  const exiledPlayer = state.roomData.players[selectedExileId];
+  const isFoxExiled = exiledPlayer.role === 'fox';
+  
+  await updateDoc(roomRef, { 
+    status: 'result',
+    winner: isFoxExiled ? 'villagers' : 'foxes',
+    exiledId: selectedExileId
+  });
 };
     
     // --- ここから追加：お題のリアルタイム編集ロジック ---
