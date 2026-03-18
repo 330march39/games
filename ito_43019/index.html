@@ -305,129 +305,14 @@
         </div>
       </div>
       
-      <div id="host-view-theme-select" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in mt-[10vh] lg:mt-[15vh] mb-auto">
-        <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-10 text-center">お題の決め方は？</h2>
-        <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto">
-          <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
-            <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-              <span class="text-5xl md:text-6xl">🎲</span>
-              ランダムに出題
-            </div>
-          </button>
-          
-          <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
-            <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-              <span class="text-5xl md:text-6xl">💬</span>
-              自分たちで出題
-            </div>
-          </button>
-        </div>
-      </div>
+      <div id="host-view-unified-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8 px-2 pb-16">
+        
+        <div id="unified-header" class="w-full text-center mb-8 shrink-0 z-20"></div>
 
-      <div id="host-view-roulette" class="hidden w-full max-w-4xl flex-col items-center justify-center animate-pop-in mt-[10vh] lg:mt-[15vh] mb-auto px-4">
-        <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 text-center relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-          <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-          <h2 id="roulette-text" class="text-4xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 transition-all">
-            ...
-          </h2>
-        </div>
-      </div>
+        <div id="unified-card-grid" class="w-full flex flex-wrap justify-center gap-4 md:gap-8 mb-10 z-10"></div>
 
-      <!-- Host: Playing/Revealing View -->
-      <div id="host-view-voting" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
-        <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-purple-300 mb-8 text-center relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-4 bg-purple-300 bg-stripes opacity-50"></div>
-          <h2 class="text-3xl md:text-4xl font-black text-purple-600 mt-4 mb-2">話し合い＆追放</h2>
-          <p class="text-gray-500 font-bold mb-4">きつねだと思う人をタップして追放してください</p>
-        </div>
+        <div id="unified-action-area" class="w-full max-w-md mx-auto sticky bottom-4 flex flex-col items-center gap-3 z-50"></div>
 
-        <div id="voting-players" class="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 mb-8">
-          </div>
-
-        <div class="w-full max-w-md mx-auto sticky bottom-4 flex flex-col items-center">
-          <button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300">
-            <div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">
-              この人を追放する
-            </div>
-          </button>
-        </div>
-      </div>
-      
-      <div id="host-view-result" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
-        <div id="result-banner" class="w-full bg-white rounded-[2rem] shadow-xl p-8 border-8 text-center relative overflow-hidden mb-8 transition-colors duration-500">
-          <h2 id="result-winner" class="text-5xl md:text-6xl font-black mt-4 mb-4 drop-shadow-sm">〇〇の勝ち！</h2>
-          <p id="result-reason" class="text-xl font-bold mb-4"></p>
-        </div>
-
-        <div class="bg-white rounded-[2rem] shadow-md p-6 border-4 border-gray-100 text-center w-full max-w-md mb-8 animate-pop-in" style="animation-delay: 0.3s;">
-          <p class="text-gray-500 font-bold mb-2">今回のきつねは...</p>
-          <p id="result-fox-name" class="text-4xl font-black text-orange-500 drop-shadow-sm">🦊 プレイヤー名</p>
-        </div>
-
-        <div class="w-full max-w-md mx-auto sticky bottom-4 flex flex-col items-center animate-pop-in" style="animation-delay: 0.6s;">
-          <button onclick="nextGame()" class="w-full group relative">
-            <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-              次のお題を決める
-            </div>
-          </button>
-        </div>
-      </div>
-      
-      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
-        <!-- Theme Board -->
-        <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 mb-8 text-center relative overflow-hidden">
-          <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-          <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-          
-          <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." readonly />
-          <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
-        </div>
-
-        <!-- Players Grid -->
-        <div id="host-game-players" class="w-full grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6 mb-auto">
-          <!-- Player status cards inserted here -->
-        </div>
-
-        <!-- Action Area -->
-        <div class="w-full max-w-md mx-auto mt-8 sticky bottom-4 flex flex-col items-center">
-          <button id="btn-reveal-mode" onclick="enableRevealMode()" class="w-full group relative hidden">
-            <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2 "></div>
-            <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-3xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-              答え合わせへ
-            </div>
-          </button>
-          
-          <button id="btn-next-game" onclick="nextGame()" class="w-full group relative hidden">
-            <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2 "></div>
-            <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-              次のお題を決める
-            </div>
-          </button>
-          
-          <button id="btn-wolf-win" onclick="bridgeCompleted()" class="w-full group relative hidden mb-3">
-            <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-              橋が完成した！（村人の勝ち）
-            </div>
-          </button>
-          
-          <button id="btn-wolf-discuss" onclick="startVoting()" class="w-full group relative hidden">
-            <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
-            <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-              話し合いをする（追放へ）
-            </div>
-          </button>
-          
-          <div id="host-waiting-msg" class="w-full py-5 bg-gray-200 text-gray-500 rounded-[2rem] font-black text-xl text-center border-4 border-white shadow-sm">
-            全員が場に出すのを待っています
-          </div>
-        </div>
       </div>
       <div class="w-full h-32 shrink-0 lg:hidden"></div>
     </main>
@@ -1132,19 +1017,9 @@ window.startVoting = async () => {
 // 追放先の選択（ホスト画面のUI用）
 window.selectExile = (uid) => {
   selectedExileId = uid;
-  // 全てのカードのデザインをリセット
-  document.querySelectorAll('.voting-card').forEach(el => {
-    el.classList.remove('border-red-500', 'bg-red-50', 'scale-105', 'shadow-xl', '-translate-y-2');
-    el.classList.add('border-gray-200', 'bg-white');
-  });
-  // 選んだカードを赤枠にして少し浮かせ、拡大する
-  const selectedCard = document.getElementById(`vote-card-${uid}`);
-  selectedCard.classList.remove('border-gray-200', 'bg-white');
-  selectedCard.classList.add('border-red-500', 'bg-red-50', 'scale-105', 'shadow-xl', '-translate-y-2');
-  
-  document.getElementById('btn-execute-vote').disabled = false;
+  // 画面を再描画して、選んだカードに赤い枠とアニメーションをつける
+  if (state.isHost) renderHostView();
 };
-
 // 追放の実行と勝敗判定
 window.executeVote = async () => {
   if (!selectedExileId) return;
@@ -1439,21 +1314,12 @@ window.executeVote = async () => {
       const playersList = Object.entries(players || {}).map(([id, p]) => ({ id, ...p }));
       
       const vWaiting = document.getElementById('host-view-waiting');
-      const vGame = document.getElementById('host-view-game');
-      const vThemeSelect = document.getElementById('host-view-theme-select');
-      const vRoulette = document.getElementById('host-view-roulette');
+      const vUnifiedGame = document.getElementById('host-view-unified-game');
       const btnHeaderQr = document.getElementById('btn-header-qr');
 
       // 全ビューを一旦隠す
       vWaiting.classList.add('hidden');
-      vThemeSelect.classList.add('hidden');
-      vRoulette.classList.add('hidden');
-      vGame.classList.add('hidden');
-
-      const vVoting = document.getElementById('host-view-voting');
-      const vResult = document.getElementById('host-view-result');
-      vVoting?.classList.add('hidden');
-      vResult?.classList.add('hidden');
+      vUnifiedGame.classList.add('hidden');
 
       if (status === 'waiting') {
         vWaiting.classList.remove('hidden'); // 待機画面ON
@@ -1462,10 +1328,8 @@ window.executeVote = async () => {
         document.getElementById('host-room-id-display').innerText = state.roomId;
         document.getElementById('host-player-count').innerText = `${playersList.length} 人`;
 
-        // 待機画面のQRコードURLを生成してセット
         const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
-        
         const qrImgHost = document.getElementById('host-qr-waiting');
         if (qrImgHost.src !== qrApiUrl) {
           qrImgHost.classList.add('opacity-0');
@@ -1478,161 +1342,224 @@ window.executeVote = async () => {
           listContainer.innerHTML = `<div class="col-span-full text-center py-8 text-gray-400 font-bold text-xl">プレイヤーを待っています...</div>`;
         } else {
           listContainer.innerHTML = playersList.map(p => `
-            <div class="bg-white py-4 px-4 rounded-2xl shadow-sm border-2 border-cyan-100 font-black text-gray-700 text-center text-xl animate-pop-in">
-              ${p.name}
-            </div>
+            <div class="bg-white py-4 px-4 rounded-2xl shadow-sm border-2 border-cyan-100 font-black text-gray-700 text-center text-xl animate-pop-in">${p.name}</div>
           `).join('');
         }
-        
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
-      } else if (status === 'choosing_theme') {
-        if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
-        if (state.isRouletteSpinning) {
-          vRoulette.classList.remove('hidden'); // ルーレット画面ON
-        } else {
-          vThemeSelect.classList.remove('hidden'); // お題選択画面ON
-        }
-
-      } else if (status === 'voting') {
-        // ★ 投票画面の処理
-        vVoting.classList.remove('hidden');
-        if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
-        
-        const grid = document.getElementById('voting-players');
-        grid.innerHTML = playersList.map(p => `
-          <div id="vote-card-${p.id}" onclick="selectExile('${p.id}')" class="voting-card bg-white rounded-[2rem] p-6 border-4 border-gray-200 cursor-pointer text-center transition-all duration-300 transform">
-            <div class="font-black text-xl text-gray-800 break-words w-full">${p.name}</div>
-            <div class="mt-3 bg-gray-100 rounded-xl py-2">
-              <span class="text-xs text-gray-500 font-bold block">出した数字</span>
-              <span class="text-3xl font-black text-gray-800">${p.number}</span>
-            </div>
-          </div>
-        `).join('');
-
-      } else if (status === 'result') {
-        // ★ 結果画面の処理
-        vResult.classList.remove('hidden');
-        
-        const banner = document.getElementById('result-banner');
-        const winnerText = document.getElementById('result-winner');
-        const reasonText = document.getElementById('result-reason');
-        const foxNameEl = document.getElementById('result-fox-name');
-        
-        // きつねだった人を探す
-        const foxPlayer = playersList.find(p => p.role === 'fox');
-        foxNameEl.innerText = foxPlayer ? `🦊 ${foxPlayer.name}` : "いませんでした";
-
-        if (state.roomData.winner === 'villagers') {
-          banner.className = "w-full bg-green-50 rounded-[2rem] shadow-xl p-8 border-8 border-green-400 text-center relative overflow-hidden mb-8";
-          winnerText.innerHTML = "<span class='text-green-600'>村人の勝ち！🎉</span>";
-          reasonText.innerText = state.roomData.reason === 'completed' ? "橋が見事完成しました！" : "きつねを追放しました！";
-          reasonText.className = "text-xl font-bold mt-2 text-green-700";
-        } else {
-          banner.className = "w-full bg-orange-50 rounded-[2rem] shadow-xl p-8 border-8 border-orange-400 text-center relative overflow-hidden mb-8";
-          winnerText.innerHTML = "<span class='text-orange-600'>きつねの勝ち！🦊</span>";
-          reasonText.innerText = "間違った人を追放してしまいました...";
-          reasonText.className = "text-xl font-bold mt-2 text-orange-700";
-        }
-
       } else {
-        // ★ Playing or Revealing (ゲーム中)の処理
-        vGame.classList.remove('hidden'); // ゲーム画面ON
+        // ★ 統合されたゲームボードの処理 (choosing_theme, playing, revealing, voting, result)
+        vUnifiedGame.classList.remove('hidden');
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
-        
-        const hostThemeInput = document.getElementById('host-theme-input');
-        const hostThemeMsg = document.getElementById('host-theme-edit-msg');
-        
-        if (hostThemeInput) {
-          if (state.roomData.themeEditorId !== currentUser?.uid) {
-            hostThemeInput.value = theme;
-            hostThemeInput.readOnly = true;
-          } else {
-            hostThemeInput.readOnly = false;
-          }
-          
-          if (state.roomData.isFreeTheme) {
-            hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-            if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
-              hostThemeMsg.classList.remove('hidden');
-            } else {
-              hostThemeMsg.classList.add('hidden');
-            }
-          } else {
-            hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-            hostThemeMsg.classList.add('hidden');
-          }
-        }
-        
-        const isRevealing = status === 'revealing';
-        const sortedPlayers = isRevealing ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
-        const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
 
-        const grid = document.getElementById('host-game-players');
-        grid.innerHTML = sortedPlayers.map(p => {
-          let stateHtml = '';
-          let borderClass = 'border-gray-200';
-          let bgClass = 'bg-white';
+        const headerEl = document.getElementById('unified-header');
+        const gridEl = document.getElementById('unified-card-grid');
+        const actionEl = document.getElementById('unified-action-area');
+
+        const isRevealing = status === 'revealing';
+        const isVoting = status === 'voting';
+        const isResult = status === 'result';
+        
+        // --- 1. ヘッダーの描画 ---
+        if (status === 'choosing_theme') {
+          headerEl.innerHTML = `
+            <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
+            <div class="flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-2xl px-4 mx-auto animate-pop-in">
+              <button onclick="startThemeRoulette()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">🎲 ランダムに出題</button>
+              <button onclick="startFreeTheme()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">💬 自分たちで出題</button>
+            </div>
+            ${state.isRouletteSpinning ? '<div class="mt-8 text-4xl font-black text-gray-800 animate-pulse">ルーレット回転中...</div>' : ''}
+          `;
+          gridEl.innerHTML = ''; actionEl.innerHTML = ''; return; // お題選択中はカードを出さない
+        } else if (isVoting) {
+          headerEl.innerHTML = `
+            <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-purple-300 relative overflow-hidden animate-pop-in">
+              <div class="absolute top-0 left-0 w-full h-4 bg-purple-300 bg-stripes opacity-50"></div>
+              <h2 class="text-3xl md:text-4xl font-black text-purple-600 mb-2">話し合い＆追放</h2>
+              <p class="text-gray-500 font-bold">きつねだと思う人のカードをタップしてね</p>
+            </div>
+          `;
+        } else if (isResult) {
+          const isVillagerWin = state.roomData.winner === 'villagers';
+          const bgColor = isVillagerWin ? 'bg-green-50 border-green-400' : 'bg-orange-50 border-orange-400';
+          const titleColor = isVillagerWin ? 'text-green-600' : 'text-orange-600';
+          const titleText = isVillagerWin ? '村人の勝ち！🎉' : 'きつねの勝ち！🦊';
+          const reasonText = state.roomData.reason === 'completed' ? '橋が見事完成しました！' : (isVillagerWin ? 'きつねを追放しました！' : '間違った人を追放してしまいました...');
           
-          if (p.state === 'hand') {
-            stateHtml = `<span class="bg-gray-100 text-gray-500 px-4 py-1.5 rounded-full text-sm font-black mt-3 block">考え中...</span>`;
-          } else if (p.state === 'faceDown') {
-            borderClass = 'border-cyan-400 shadow-cyan-100 shadow-lg transform -translate-y-1';
-            bgClass = 'bg-cyan-50';
-            stateHtml = `<span class="bg-cyan-500 text-white px-4 py-1.5 rounded-full text-sm font-black mt-3 block animate-pop-in">場に出した！</span>`;
-          } else if (p.state === 'faceUp') {
-            borderClass = 'border-pink-400 shadow-pink-100 shadow-lg';
-            bgClass = 'bg-pink-50';
-            stateHtml = `
-              <div class="flex flex-col items-center mt-2 animate-pop-in">
-                <span class="text-xs text-pink-600 font-bold mb-1">オープン</span>
-                <span class="text-5xl font-black text-gray-900">${p.number}</span>
-              </div>
-            `;
+          headerEl.innerHTML = `
+            <div class="w-full ${bgColor} rounded-[2rem] shadow-xl p-6 border-8 relative overflow-hidden animate-pop-in">
+              <h2 class="text-4xl md:text-5xl font-black ${titleColor} mb-2">${titleText}</h2>
+              <p class="text-xl font-bold ${titleColor} opacity-80">${reasonText}</p>
+            </div>
+          `;
+        } else {
+          // Playing or Revealing (Theme Board)
+          headerEl.innerHTML = `
+            <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
+              <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+              <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
+              <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." readonly />
+              <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
+            </div>
+          `;
+          setTimeout(() => {
+            const hostThemeInput = document.getElementById('host-theme-input');
+            const hostThemeMsg = document.getElementById('host-theme-edit-msg');
+            if (hostThemeInput) {
+              if (state.roomData.themeEditorId !== currentUser?.uid) {
+                hostThemeInput.value = theme; hostThemeInput.readOnly = true;
+              } else { hostThemeInput.readOnly = false; }
+              if (state.roomData.isFreeTheme) {
+                hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
+                if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
+                  hostThemeMsg?.classList.remove('hidden');
+                } else { hostThemeMsg?.classList.add('hidden'); }
+              } else {
+                hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
+                hostThemeMsg?.classList.add('hidden');
+              }
+            }
+          }, 0);
+        }
+
+        // --- 2. カードグリッドの描画 ---
+        // 答え合わせ以降は数字順、それ以外は参加順に並べる
+        const sortedPlayers = (isRevealing || isVoting || isResult) ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
+        
+        gridEl.innerHTML = sortedPlayers.map(p => {
+          // めくられているかの判定
+          const isFlipped = p.state === 'faceUp' || isRevealing || isVoting || isResult;
+          
+          // 投票モード時のタップ設定
+          const isSelected = isVoting && selectedExileId === p.id;
+          const voteRing = isSelected ? 'ring-8 ring-red-500 ring-offset-4 scale-110 -translate-y-4' : (isVoting ? 'hover:scale-105 hover:-translate-y-2 cursor-pointer' : '');
+          const clickAttr = isVoting ? `onclick="selectExile('${p.id}')"` : '';
+
+          // 結果画面でのキツネ発表アニメーション
+          let resultFxClass = 'bg-white';
+          let frontContent = `
+            <div class="absolute top-2 left-3 text-gray-300 font-black text-xl">${p.number}</div>
+            <div class="absolute bottom-2 right-3 text-gray-300 font-black text-xl rotate-180">${p.number}</div>
+            <span class="text-5xl md:text-6xl font-black text-gray-800 drop-shadow-sm">${p.number}</span>
+          `;
+
+          if (isResult) {
+            if (p.role === 'fox') {
+              // きつねのカード：オレンジ色に光って浮かび上がる
+              resultFxClass = 'bg-gradient-to-br from-orange-400 to-red-500 shadow-2xl shadow-orange-400 scale-125 -translate-y-6 z-50 ring-4 ring-yellow-300';
+              frontContent = `
+                <div class="flex flex-col items-center justify-center h-full animate-pop-in" style="animation-delay: 0.8s;">
+                  <span class="text-6xl drop-shadow-md mb-2">🦊</span>
+                  <span class="text-white font-black text-xl drop-shadow-md tracking-widest bg-black/20 px-4 py-1 rounded-full">きつね</span>
+                  <span class="text-white/90 font-bold text-sm mt-2">数字: ${p.number}</span>
+                </div>
+              `;
+            } else {
+              // 村人のカード：グレーになって少し沈む
+              resultFxClass = 'bg-gray-200 grayscale opacity-60 scale-95';
+              frontContent = `
+                <div class="absolute top-2 left-3 text-gray-400 font-black text-xl">${p.number}</div>
+                <div class="absolute bottom-2 right-3 text-gray-400 font-black text-xl rotate-180">${p.number}</div>
+                <span class="text-5xl md:text-6xl font-black text-gray-500">${p.number}</span>
+                <span class="absolute bottom-3 text-sm font-bold text-gray-400 bg-white/50 px-3 py-0.5 rounded-full border border-gray-300">村人</span>
+              `;
+            }
+          }
+
+          let statusBadge = '';
+          if (status === 'playing') {
+            if (p.state === 'hand') statusBadge = '<span class="bg-gray-100 text-gray-500 px-3 py-1 rounded-full text-xs font-black mt-3 block">考え中...</span>';
+            if (p.state === 'faceDown') statusBadge = '<span class="bg-cyan-500 text-white px-3 py-1 rounded-full text-xs font-black mt-3 block shadow-md animate-pop-in">場に出した!</span>';
           }
 
           return `
-            <div class="${bgClass} rounded-[2rem] p-6 border-4 ${borderClass} flex flex-col items-center justify-center text-center transition-all duration-300">
-              <div class="font-black text-xl text-gray-800 break-words w-full">${p.name}</div>
-              ${stateHtml}
+            <div class="flex flex-col items-center justify-start w-24 md:w-32 transition-all duration-500 z-10" ${clickAttr}>
+              <div class="w-full aspect-[2/3] perspective-1000 mb-3 relative">
+                <div class="w-full h-full relative transform-style-3d transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFlipped ? 'rotate-y-180' : ''} ${voteRing} rounded-2xl shadow-lg">
+                  
+                  <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-2xl border-4 border-white/40 flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
+                    <span class="text-white text-2xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">hashi</span>
+                  </div>
+
+                  <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 border-gray-100 ${isFlipped ? resultFxClass : 'bg-white'} rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-[800ms]">
+                    ${frontContent}
+                  </div>
+
+                </div>
+              </div>
+              <div class="font-black text-sm md:text-base text-gray-800 bg-white/90 px-3 py-1.5 rounded-full shadow-sm text-center w-full truncate border-2 border-white">
+                ${p.name}
+              </div>
+              ${statusBadge}
             </div>
           `;
         }).join('');
 
-        // Action Buttons
-        const btnReveal = document.getElementById('btn-reveal-mode');
-        const btnNext = document.getElementById('btn-next-game');
-        const btnWolfWin = document.getElementById('btn-wolf-win');
-        const btnWolfDiscuss = document.getElementById('btn-wolf-discuss');
-        const msgWait = document.getElementById('host-waiting-msg');
+        // --- 3. アクションエリアの描画 ---
+        let buttonsHtml = '';
+        const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
 
-        if (!isRevealing) {
-          btnNext.classList.add('hidden');
-          btnWolfWin?.classList.add('hidden');
-          btnWolfDiscuss?.classList.add('hidden');
+        if (status === 'playing') {
           if (allReady) {
-            btnReveal.classList.remove('hidden');
-            msgWait.classList.add('hidden');
+            buttonsHtml = `
+              <button onclick="enableRevealMode()" class="w-full group relative animate-pop-in">
+                <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
+                  答え合わせへ
+                </div>
+              </button>
+            `;
           } else {
-            btnReveal.classList.add('hidden');
-            msgWait.classList.remove('hidden');
+            buttonsHtml = `<div class="w-full py-4 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-full font-black text-lg text-center shadow-lg animate-pulse border-2 border-gray-600">全員が場に出すのを待っています...</div>`;
           }
-        } else {
-          // 答え合わせ中（全員オープン後）
-          btnReveal.classList.add('hidden');
-          msgWait.classList.add('hidden');
-          
-          // きつねモードかどうかでボタンを分岐
+        } else if (isRevealing) {
           if (state.roomData.isWolfMode) {
-            btnNext.classList.add('hidden');
-            btnWolfWin?.classList.remove('hidden');
-            btnWolfDiscuss?.classList.remove('hidden');
+            buttonsHtml = `
+              <button onclick="bridgeCompleted()" class="w-full group relative mb-2 animate-pop-in">
+                <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+                  橋が完成した！（村人の勝ち）
+                </div>
+              </button>
+              <button onclick="startVoting()" class="w-full group relative animate-pop-in" style="animation-delay: 0.1s;">
+                <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+                  話し合いをする（追放へ）
+                </div>
+              </button>
+            `;
           } else {
-            btnNext.classList.remove('hidden');
-            btnWolfWin?.classList.add('hidden');
-            btnWolfDiscuss?.classList.add('hidden');
+            buttonsHtml = `
+              <button onclick="nextGame()" class="w-full group relative animate-pop-in">
+                <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+                  次のお題を決める
+                </div>
+              </button>
+            `;
           }
+        } else if (isVoting) {
+          buttonsHtml = `
+            <button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300">
+              <div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div>
+              <div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">
+                この人を追放する
+              </div>
+            </button>
+          `;
+          setTimeout(() => { document.getElementById('btn-execute-vote').disabled = !selectedExileId; }, 0);
+        } else if (isResult) {
+          buttonsHtml = `
+            <button onclick="nextGame()" class="w-full group relative animate-pop-in" style="animation-delay: 2s;">
+              <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
+              <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
+                次のお題を決める
+              </div>
+            </button>
+          `;
         }
+        actionEl.innerHTML = buttonsHtml;
       }
     };
 
