@@ -393,7 +393,7 @@
 
     </div>
 
-    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gray-900 transition-colors duration-700 hidden">
+    <div id="player-view-table" class="absolute inset-0 flex flex-col items-center justify-center p-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] z-0 bg-gradient-to-b from-yellow-50 to-orange-100 hidden">
 
       <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm px-4 z-50 flex-col items-center gap-3" onclick="event.stopPropagation()">
         <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
@@ -1823,12 +1823,12 @@ window.executeVote = async () => {
       } 
       else {
         // テーブル（場）画面の処理
+        const roleBadge = document.getElementById('player-role-badge');
+        if (roleBadge) roleBadge.classList.add('hidden');
+        
         vWait.classList.add('hidden');
         vHand.classList.add('hidden');
         vTable.classList.remove('hidden');
-
-        if (myData.state === 'faceDown') vTable.classList.replace('bg-pink-100', 'bg-gray-900');
-        else if (myData.state === 'faceUp') vTable.classList.replace('bg-gray-900', 'bg-pink-100');
       }
 
       // --- ホスト用アクションボタンの表示制御 ---
