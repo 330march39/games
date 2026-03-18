@@ -671,9 +671,9 @@
       isPlayingHost: false, // ← これを追加！
       hasSeenRule: localStorage.getItem('ito_hasSeenRule') === 'true',
       isRouletteSpinning: false // ←これを追加
-      let selectedExileId = null; // 投票画面で選択されたプレイヤーID
     };
-
+    let selectedExileId = null; // 投票画面で選択されたプレイヤーID
+    
     const THEMES = [
       "人気のある食べ物", "強い動物", "子供のころ怖かったもの", "無人島に持っていきたいもの",
       "一生に一度は行きたい場所", "テンションが上がること", "コンビニでよく買うもの",
@@ -1409,19 +1409,16 @@ window.executeVote = async () => {
       
       const vWaiting = document.getElementById('host-view-waiting');
       const vGame = document.getElementById('host-view-game');
-      // ▼ 追加 ▼
       const vThemeSelect = document.getElementById('host-view-theme-select');
       const vRoulette = document.getElementById('host-view-roulette');
-      // ▲ 追加 ▲
       const btnHeaderQr = document.getElementById('btn-header-qr');
 
-      // ▼ 追加: 全ビューを一旦隠す ▼
+      // 全ビューを一旦隠す
       vWaiting.classList.add('hidden');
       vThemeSelect.classList.add('hidden');
       vRoulette.classList.add('hidden');
       vGame.classList.add('hidden');
 
-      // renderHostView 関数内の初めの方、全ビューを隠す部分に追加
       const vVoting = document.getElementById('host-view-voting');
       const vResult = document.getElementById('host-view-result');
       vVoting?.classList.add('hidden');
@@ -1439,7 +1436,6 @@ window.executeVote = async () => {
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
         
         const qrImgHost = document.getElementById('host-qr-waiting');
-        // すでに同じ画像URLなら再読み込みしない
         if (qrImgHost.src !== qrApiUrl) {
           qrImgHost.classList.add('opacity-0');
           document.getElementById('host-qr-loading').classList.remove('hidden');
@@ -1459,7 +1455,6 @@ window.executeVote = async () => {
         
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
-      // ▼ 追加: お題選択中の表示ロジック ▼
       } else if (status === 'choosing_theme') {
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
         if (state.isRouletteSpinning) {
@@ -1468,8 +1463,41 @@ window.executeVote = async () => {
           vThemeSelect.classList.remove('hidden'); // お題選択画面ON
         }
 
+      } else if (status === 'voting') {
+        // ★ 投票画面の処理
+        vVoting.classList.remove('hidden');
+        if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
+        
+        const grid = document.getElementById('voting-players');
+        grid.innerHTML = playersList.map(p => `
+          <div id="vote-card-${p.id}" onclick="selectExile('${p.id}')" class="voting-card bg-white rounded-2xl p-4 border-4 border-gray-200 cursor-pointer text-center transition-all">
+            <div class="font-black text-lg text-gray-800 break-words">${p.name}</div>
+            <div class="text-3xl mt-2">${p.number}</div>
+          </div>
+        `).join('');
+
+      } else if (status === 'result') {
+        // ★ 結果画面の処理
+        vResult.classList.remove('hidden');
+        
+        const banner = document.getElementById('result-banner');
+        const winnerText = document.getElementById('result-winner');
+        const foxNameEl = document.getElementById('result-fox-name');
+        
+        // きつねだった人を探す
+        const foxPlayer = playersList.find(p => p.role === 'fox');
+        foxNameEl.innerText = foxPlayer ? `🦊 ${foxPlayer.name}` : "いませんでした";
+
+        if (state.roomData.winner === 'villagers') {
+          banner.className = "w-full py-8 text-center rounded-[2rem] border-8 shadow-xl mb-8 bg-green-100 border-green-400 text-green-700";
+          winnerText.innerText = "村人の勝ち！🎉";
+        } else {
+          banner.className = "w-full py-8 text-center rounded-[2rem] border-8 shadow-xl mb-8 bg-orange-100 border-orange-400 text-orange-700";
+          winnerText.innerText = "きつねの勝ち！🦊";
+        }
+
       } else {
-        // Playing or Revealing (ゲーム中)
+        // ★ Playing or Revealing (ゲーム中)の処理
         vGame.classList.remove('hidden'); // ゲーム画面ON
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
         
@@ -1477,7 +1505,6 @@ window.executeVote = async () => {
         const hostThemeMsg = document.getElementById('host-theme-edit-msg');
         
         if (hostThemeInput) {
-          // 自分が入力中でなければ、他人の文字をリアルタイム反映させる
           if (state.roomData.themeEditorId !== currentUser?.uid) {
             hostThemeInput.value = theme;
             hostThemeInput.readOnly = true;
@@ -1488,7 +1515,7 @@ window.executeVote = async () => {
           if (state.roomData.isFreeTheme) {
             hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
             if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
-              hostThemeMsg.classList.remove('hidden'); // 誰かが入力中
+              hostThemeMsg.classList.remove('hidden');
             } else {
               hostThemeMsg.classList.add('hidden');
             }
@@ -1535,71 +1562,40 @@ window.executeVote = async () => {
 
         // Action Buttons
         const btnReveal = document.getElementById('btn-reveal-mode');
-const btnNext = document.getElementById('btn-next-game');
-const btnWolfWin = document.getElementById('btn-wolf-win');
-const btnWolfDiscuss = document.getElementById('btn-wolf-discuss');
-const msgWait = document.getElementById('host-waiting-msg');
+        const btnNext = document.getElementById('btn-next-game');
+        const btnWolfWin = document.getElementById('btn-wolf-win');
+        const btnWolfDiscuss = document.getElementById('btn-wolf-discuss');
+        const msgWait = document.getElementById('host-waiting-msg');
 
-if (!isRevealing) {
-  btnNext.classList.add('hidden');
-  btnWolfWin?.classList.add('hidden');
-  btnWolfDiscuss?.classList.add('hidden');
-  if (allReady) {
-    btnReveal.classList.remove('hidden');
-    msgWait.classList.add('hidden');
-  } else {
-    btnReveal.classList.add('hidden');
-    msgWait.classList.remove('hidden');
-  }
-} else {
-  // 答え合わせ中（全員オープン後）
-  btnReveal.classList.add('hidden');
-  msgWait.classList.add('hidden');
-  
-  // きつねモードかどうかでボタンを分岐
-  if (state.roomData.isWolfMode) {
-    btnNext.classList.add('hidden');
-    btnWolfWin?.classList.remove('hidden');
-    btnWolfDiscuss?.classList.remove('hidden');
-  } else {
-    btnNext.classList.remove('hidden');
-    btnWolfWin?.classList.add('hidden');
-    btnWolfDiscuss?.classList.add('hidden');
-  }
-}
-
-// ===== ここから、ifステートメントの一番最後（else if）に追加 =====
-} else if (status === 'voting') {
-  vVoting.classList.remove('hidden');
-  if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
-  
-  const grid = document.getElementById('voting-players');
-  grid.innerHTML = playersList.map(p => `
-    <div id="vote-card-${p.id}" onclick="selectExile('${p.id}')" class="voting-card bg-white rounded-2xl p-4 border-4 border-gray-200 cursor-pointer text-center transition-all">
-      <div class="font-black text-lg text-gray-800 break-words">${p.name}</div>
-      <div class="text-3xl mt-2">${p.number}</div>
-    </div>
-  `).join('');
-
-} else if (status === 'result') {
-  vResult.classList.remove('hidden');
-  
-  const banner = document.getElementById('result-banner');
-  const winnerText = document.getElementById('result-winner');
-  const foxNameEl = document.getElementById('result-fox-name');
-  
-  // きつねだった人を探す
-  const foxPlayer = playersList.find(p => p.role === 'fox');
-  foxNameEl.innerText = foxPlayer ? `🦊 ${foxPlayer.name}` : "いませんでした";
-
-  if (state.roomData.winner === 'villagers') {
-    banner.className = "w-full py-8 text-center rounded-[2rem] border-8 shadow-xl mb-8 bg-green-100 border-green-400 text-green-700";
-    winnerText.innerText = "村人の勝ち！🎉";
-  } else {
-    banner.className = "w-full py-8 text-center rounded-[2rem] border-8 shadow-xl mb-8 bg-orange-100 border-orange-400 text-orange-700";
-    winnerText.innerText = "きつねの勝ち！🦊";
-  }
-}
+        if (!isRevealing) {
+          btnNext.classList.add('hidden');
+          btnWolfWin?.classList.add('hidden');
+          btnWolfDiscuss?.classList.add('hidden');
+          if (allReady) {
+            btnReveal.classList.remove('hidden');
+            msgWait.classList.add('hidden');
+          } else {
+            btnReveal.classList.add('hidden');
+            msgWait.classList.remove('hidden');
+          }
+        } else {
+          // 答え合わせ中（全員オープン後）
+          btnReveal.classList.add('hidden');
+          msgWait.classList.add('hidden');
+          
+          // きつねモードかどうかでボタンを分岐
+          if (state.roomData.isWolfMode) {
+            btnNext.classList.add('hidden');
+            btnWolfWin?.classList.remove('hidden');
+            btnWolfDiscuss?.classList.remove('hidden');
+          } else {
+            btnNext.classList.remove('hidden');
+            btnWolfWin?.classList.add('hidden');
+            btnWolfDiscuss?.classList.add('hidden');
+          }
+        }
+      }
+    };
 
     const renderPlayerView = () => {
       const { status, players, theme } = state.roomData;
