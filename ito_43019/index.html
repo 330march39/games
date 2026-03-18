@@ -1050,24 +1050,6 @@ window.executeVote = async () => {
   });
 };
     
-    window.handleHandCardTap = () => {
-      const card = document.getElementById('hand-card-3d');
-      const hint = document.getElementById('hand-card-hint');
-      
-      if (card && !card.classList.contains('rotate-y-180')) {
-        // 「タップして裏返す」の青いバッジを消す
-        if (hint) hint.classList.add('hidden');
-        
-        // カードを裏返すCSSクラスをつける
-        card.classList.add('rotate-y-180');
-        
-        // 裏返るアニメーションが終わる頃（600ミリ秒後）に、場に出したことをサーバーに送信して画面を切り替える
-        setTimeout(() => {
-          window.updatePlayerState('faceDown');
-        }, 600);
-      }
-    };
-    
     // --- ここから追加：お題のリアルタイム編集ロジック ---
 
     window.handleThemeTap = (el) => {
@@ -1170,25 +1152,6 @@ window.executeVote = async () => {
       await updateDoc(roomRef, { [`players.${currentUser.uid}.state`]: newState });
     };
 
-    // 🌟 新規：手札のカードをタップして「場に出す」処理
-    window.handleHandCardTap = () => {
-      const card = document.getElementById('shared-player-card');
-      const hint = document.getElementById('shared-card-hand-hint');
-      
-      // まだ裏返っていない（表面）なら
-      if (card && !card.classList.contains('rotate-y-180')) {
-        if (hint) hint.classList.add('hidden'); // ヒントを消す
-        
-        // その場で裏面（180deg）に向かって回転させる
-        card.classList.add('rotate-y-180');
-        
-        // 0.6秒（回転アニメーション）待ってからサーバーに状態を送信
-        setTimeout(() => {
-          window.updatePlayerState('faceDown');
-        }, 600);
-      }
-    };
-
     // 🌟 変更：場にあるカードを「確認する（手札に戻す）」処理
     window.confirmReturnToHand = () => {
       window.closeConfirmModal();
@@ -1205,39 +1168,66 @@ window.executeVote = async () => {
       }, 600);
     };
 
-    // 🌟 新規：場に出ているカードをタップした時の処理
+    // 🌟 統合版：共通カードをタップした時の処理（手札＆場の両方に対応）
     window.handleSharedCardTap = () => {
       if (!state.roomData || !currentUser) return;
       const myData = state.roomData.players[currentUser.uid];
       if (!myData) return;
 
-      const tableContainer = document.getElementById('table-card-container');
       const sharedCard = document.getElementById('shared-player-card');
-      // カードが場（テーブル）にある場合のみ反応させる
-      if (!tableContainer || !sharedCard || !tableContainer.contains(sharedCard)) return;
+      const handContainer = document.getElementById('hand-card-container');
+      const tableContainer = document.getElementById('table-card-container');
+      
+      if (!sharedCard) return;
 
-      if (myData.state === 'faceUp') return; // すでに表なら何もしない
+      // ------------------------------------------------
+      // ① カードが「手札」にある場合の処理（場に出す）
+      // ------------------------------------------------
+      if (handContainer && handContainer.contains(sharedCard)) {
+        const hint = document.getElementById('shared-card-hand-hint');
+        
+        // まだ裏返っていない（表面）なら
+        if (!sharedCard.classList.contains('rotate-y-180')) {
+          if (hint) hint.classList.add('hidden'); // ヒントを消す
+          
+          // その場で裏面（180deg）に向かって回転させる
+          sharedCard.classList.add('rotate-y-180');
+          
+          // 0.6秒（回転アニメーション）待ってからサーバーに状態を送信
+          setTimeout(() => {
+            window.updatePlayerState('faceDown');
+          }, 600);
+        }
+        return; // 手札の処理はここで終了
+      }
 
-      if (state.roomData.status === 'revealing') {
-        // 答え合わせフェーズ：その場で表にする
-        sharedCard.classList.remove('rotate-y-180');
-        setTimeout(() => {
-          window.updatePlayerState('faceUp');
-        }, 600);
-      } else if (myData.state === 'faceDown') {
-        // 答え合わせ前：確認モーダルを出す
-        const modal = document.getElementById('modal-confirm');
-        const content = document.getElementById('modal-confirm-content');
-        if (!modal || !content) return;
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
-        setTimeout(() => {
-          modal.classList.remove('opacity-0');
-          content.classList.remove('scale-90', 'opacity-0');
-        }, 10);
+      // ------------------------------------------------
+      // ② カードが「場（テーブル）」にある場合の処理
+      // ------------------------------------------------
+      if (tableContainer && tableContainer.contains(sharedCard)) {
+        if (myData.state === 'faceUp') return; // すでに表なら何もしない
+
+        if (state.roomData.status === 'revealing') {
+          // 答え合わせフェーズ：その場で表にする
+          sharedCard.classList.remove('rotate-y-180');
+          setTimeout(() => {
+            window.updatePlayerState('faceUp');
+          }, 600);
+        } else if (myData.state === 'faceDown') {
+          // 答え合わせ前：確認モーダルを出す
+          const modal = document.getElementById('modal-confirm');
+          const content = document.getElementById('modal-confirm-content');
+          if (!modal || !content) return;
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+          setTimeout(() => {
+            modal.classList.remove('opacity-0');
+            content.classList.remove('scale-90', 'opacity-0');
+          }, 10);
+        }
       }
     };
-
+    
     window.closeConfirmModal = () => {
       const modal = document.getElementById('modal-confirm');
       const content = document.getElementById('modal-confirm-content');
