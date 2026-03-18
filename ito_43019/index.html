@@ -341,7 +341,7 @@
     <div id="player-info-wrapper" class="w-full px-4 pt-[max(1.5rem,env(safe-area-inset-top))] z-20 flex flex-col items-center shrink-0">
       <div id="player-info-box" class="bg-white rounded-3xl shadow-md p-3 text-center border-4 border-yellow-200 relative w-full max-w-sm transition-colors duration-500">
         <span id="player-info-label" class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-white transition-colors duration-500">お題</span>
-        <input type="text" id="player-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight outline-none transition-colors" value="..." readonly />
+        <textarea id="player-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight outline-none transition-colors resize-none overflow-y-auto" rows="2" readonly>...</textarea>
         <p id="player-theme-edit-msg" class="text-xs font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
       </div>
     </div>
@@ -356,8 +356,8 @@
       </button>
     </div>
 
-    <div class="flex-1 flex items-center justify-center w-full max-w-sm mx-auto py-4 min-h-0 z-10 relative perspective-1000">
-      <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem]" onclick="handleSharedCardTap()">
+    <div class="absolute inset-0 flex items-center justify-center w-full min-h-0 z-10 perspective-1000 pointer-events-none">
+      <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem] pointer-events-auto" onclick="handleSharedCardTap()">
         
         <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center overflow-hidden">
           <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden">
@@ -386,7 +386,6 @@
 
       </div>
     </div>
-
     <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm left-1/2 transform -translate-x-1/2 px-4 z-50 flex-col items-center gap-3 transition-opacity duration-500" onclick="event.stopPropagation()">
       <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
         全員が場に出すのを待っています...
@@ -1387,36 +1386,40 @@ window.executeVote = async () => {
         const isRevealing = status === 'revealing';
         const isVoting = status === 'voting';
         const isResult = status === 'result';
-        
+
         // --- 1. ヘッダーの描画 ---
         if (status === 'choosing_theme') {
+          // 「お題はどうする？」画面と「ルーレット」画面を縦の中央に配置するためのラッパーを追加
           if (state.isRouletteSpinning) {
             headerEl.innerHTML = `
-              <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
-                <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-                <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
-                <input type="text" id="host-theme-input" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-all duration-300" value="..." readonly />
+              <div class="flex flex-col items-center justify-center min-h-[60vh] w-full">
+                <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
+                  <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+                  <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
+                  <textarea id="host-theme-input" class="w-full text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-all duration-300 resize-none overflow-y-auto" rows="2" readonly>...</textarea>
+                </div>
               </div>
             `;
           } else {
-            // ★修正：お題ボタンを従来のリッチなデザイン（巨大な正方形風）に復元
             headerEl.innerHTML = `
-              <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
-              <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto animate-pop-in">
-                <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
-                  <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
-                  <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-                    <span class="text-5xl md:text-6xl">🎲</span>
-                    ランダムに出題
-                  </div>
-                </button>
-                <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
-                  <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
-                  <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-                    <span class="text-5xl md:text-6xl">💬</span>
-                    自分たちで出題
-                  </div>
-                </button>
+              <div class="flex flex-col justify-center min-h-[60vh] w-full">
+                <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
+                <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto animate-pop-in">
+                  <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
+                    <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
+                    <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                      <span class="text-5xl md:text-6xl">🎲</span>
+                      ランダムに出題
+                    </div>
+                  </button>
+                  <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
+                    <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
+                    <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                      <span class="text-5xl md:text-6xl">💬</span>
+                      自分たちで出題
+                    </div>
+                  </button>
+                </div>
               </div>
             `;
           }
@@ -1447,7 +1450,7 @@ window.executeVote = async () => {
             <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
               <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
               <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-              <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." />
+              <textarea id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors resize-none overflow-y-auto" rows="2">...</textarea>
               <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
             </div>
           `;
