@@ -321,7 +321,7 @@
   <!-- ================= Player Screen ================= -->
   <div id="screen-player" class="hidden flex-col absolute inset-0 w-full h-full overflow-hidden perspective-1000">
     
-    <div id="shared-player-card" class="hidden fixed transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 card-aspect" onclick="handleSharedCardTap()">
+    <div id="shared-player-card" class="hidden w-full h-full relative transition-all duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 card-aspect" onclick="handleSharedCardTap()">
       
       <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center overflow-hidden">
         <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden">
@@ -433,7 +433,7 @@
 
       <!-- 3D Card Container -->
       <div class="w-full max-w-sm card-aspect perspective-1000 w-full relative">
-        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]" onclick="handleCardTap()">
+        <div id="player-card-3d" class="w-full h-full relative transform-style-3d transition-transform duration-700 ease-out cursor-pointer shadow-2xl rounded-[2.5rem]" >
           
           <!-- Front Side (Number is hidden when rotated 180deg) -->
           <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center rotate-y-180" id="player-card-front">
