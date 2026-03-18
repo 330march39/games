@@ -341,7 +341,7 @@
     <div id="player-info-wrapper" class="w-full px-4 pt-[max(1.5rem,env(safe-area-inset-top))] z-20 flex flex-col items-center shrink-0">
       <div id="player-info-box" class="bg-white rounded-3xl shadow-md p-3 text-center border-4 border-yellow-200 relative w-full max-w-sm transition-colors duration-500">
         <span id="player-info-label" class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-white text-xs font-black px-3 py-1 rounded-full border-2 border-white transition-colors duration-500">お題</span>
-        <textarea id="player-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight outline-none transition-colors resize-none overflow-y-auto" rows="2" readonly>...</textarea>
+        <textarea id="player-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-xl md:text-2xl font-black text-gray-800 mt-2 leading-tight outline-none transition-colors resize-none overflow-hidden" rows="1" style="height: 40px;" readonly>...</textarea>
         <p id="player-theme-edit-msg" class="text-xs font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
       </div>
     </div>
@@ -1035,6 +1035,25 @@ window.executeVote = async () => {
     exiledId: selectedExileId
   });
 };
+
+    // 🌟 新規：テキストエリアの高さを文字数に合わせて滑らかにアニメーションさせる関数
+    window.autoResizeTextarea = (el) => {
+      if (!el || el.offsetParent === null) return; // 非表示の時は計算しない
+      
+      const prevTransition = el.style.transition;
+      el.style.transition = 'none'; // 一旦アニメーションを切る
+      const currentHeight = el.style.height || el.offsetHeight + 'px';
+      
+      el.style.height = '1px'; // 極小にして本来のスクロール高さを測る
+      const targetHeight = el.scrollHeight + 'px';
+      
+      el.style.height = currentHeight; // 元の高さに戻す
+      el.offsetHeight; // ブラウザに変更を認識させる（リフロー）
+      
+      // アニメーションを再有効化して目的の高さへ！
+      el.style.transition = 'height 0.4s cubic-bezier(0.34,1.56,0.64,1), color 0.4s ease';
+      el.style.height = targetHeight;
+    };
     
     // --- ここから追加：お題のリアルタイム編集ロジック ---
 
@@ -1057,7 +1076,7 @@ window.executeVote = async () => {
     };
 
     window.handleThemeInput = (el) => {
-      // 自分が編集中なら文字をFirestoreに同期
+      window.autoResizeTextarea(el); // 🌟 これを追加！入力するたびに高さを合わせる
       if (state.roomData.themeEditorId === currentUser.uid) {
         const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
         updateDoc(roomRef, { theme: el.value });
@@ -1699,7 +1718,7 @@ window.executeVote = async () => {
         if (myData.state === 'hand') {
           // 【手札モード】
           sharedCard.classList.remove('rotate-y-180');
-          sharedCard.classList.add('active:scale-95'); // タップで沈み込む
+          sharedCard.classList.add('active:scale-95'); 
           if (handHint) { handHint.style.opacity = '1'; handHint.classList.remove('hidden'); }
           if (ruleHint && !state.hasSeenRule) { ruleHint.style.opacity = '1'; ruleHint.style.display = 'flex'; }
           
@@ -1707,10 +1726,14 @@ window.executeVote = async () => {
           infoBox.classList.replace('border-blue-200', 'border-yellow-200');
           infoLabel.classList.replace('bg-blue-500', 'bg-yellow-400');
           infoLabel.innerText = 'お題';
-          infoInput.value = theme;
           infoInput.classList.replace('text-blue-900', 'text-gray-800');
           
-          // 役職バッジ表示
+          // 🌟 文字が違えば更新し、アニメーション伸縮させる
+          if (infoInput.value !== theme) {
+            infoInput.value = theme;
+            setTimeout(() => window.autoResizeTextarea(infoInput), 10);
+          }
+          
           const roleBadge = document.getElementById('player-role-badge');
           if (state.roomData.isWolfMode && roleBadge) roleBadge.classList.remove('hidden');
 
@@ -1719,7 +1742,7 @@ window.executeVote = async () => {
           if (myData.state === 'faceDown') sharedCard.classList.add('rotate-y-180');
           else sharedCard.classList.remove('rotate-y-180');
           
-          sharedCard.classList.remove('active:scale-95'); // 沈み込み解除
+          sharedCard.classList.remove('active:scale-95'); 
           if (handHint) handHint.style.opacity = '0';
           if (ruleHint) { ruleHint.style.opacity = '0'; setTimeout(() => ruleHint.style.display = 'none', 300); }
           
@@ -1727,14 +1750,17 @@ window.executeVote = async () => {
           infoBox.classList.replace('border-yellow-200', 'border-blue-200');
           infoLabel.classList.replace('bg-yellow-400', 'bg-blue-500');
           infoLabel.innerText = 'プレイヤー';
-          infoInput.value = myData.name;
           infoInput.classList.replace('text-gray-800', 'text-blue-900');
+          
+          // 🌟 名前（1行）に更新し、アニメーションで縮ませる
+          if (infoInput.value !== myData.name) {
+            infoInput.value = myData.name;
+            setTimeout(() => window.autoResizeTextarea(infoInput), 10);
+          }
 
-          // 場に出たら役職は隠す
           const roleBadge = document.getElementById('player-role-badge');
           if (roleBadge) roleBadge.classList.add('hidden');
         }
-
         // --- ホスト用アクションボタンの表示制御 ---
         const btnHostMenu = document.getElementById('btn-player-host-menu');
         const hostActions = document.getElementById('player-host-actions');
