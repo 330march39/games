@@ -337,8 +337,7 @@
       </div>
 
       <!-- Host: Playing/Revealing View -->
-      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
-        <div id="host-view-voting" class="hidden w-full max-w-4xl flex-col items-center animate-pop-in mt-10 mb-auto">
+      <div id="host-view-voting" class="hidden w-full max-w-4xl flex-col items-center animate-pop-in mt-10 mb-auto">
           <h2 class="text-3xl font-black text-purple-600 mb-2">追放する人を選んでね</h2>
           <p class="text-gray-500 font-bold mb-6">きつねだと思う人をタップして追放します</p>
           <div id="voting-players" class="w-full grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -366,7 +365,8 @@
             </div>
           </button>
         </div>
-        
+      
+      <div id="host-view-game" class="hidden w-full max-w-5xl flex-col items-center animate-pop-in mt-4 md:mt-8">
         <!-- Theme Board -->
         <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 mb-8 text-center relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
@@ -501,6 +501,18 @@
           <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-1"></div>
           <div class="relative w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl flex items-center justify-center">
             次のお題を決める
+          </div>
+        </button>
+        <button id="btn-player-wolf-win" onclick="bridgeCompleted()" class="hidden w-full group relative">
+          <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-1"></div>
+          <div class="relative w-full py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl flex items-center justify-center">
+            橋が完成した！（村人の勝ち）
+          </div>
+        </button>
+        <button id="btn-player-wolf-discuss" onclick="startVoting()" class="hidden w-full group relative">
+          <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-1"></div>
+          <div class="relative w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl flex items-center justify-center">
+            話し合いをする（追放へ）
           </div>
         </button>
       </div>
@@ -1717,6 +1729,8 @@ if (state.roomData.isWolfMode) {
       const msgWait = document.getElementById('player-host-waiting-msg');
       const btnReveal = document.getElementById('btn-player-reveal');
       const btnNext = document.getElementById('btn-player-next');
+      const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); // 追加
+      const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); // 追加
 
       if (state.isHost && state.isPlayingHost) {
         btnHostMenu.classList.remove('hidden');
@@ -1731,6 +1745,9 @@ if (state.roomData.isWolfMode) {
 
           if (status === 'playing') {
             btnNext.classList.add('hidden');
+            btnPlayerWolfWin?.classList.add('hidden'); // 追加
+            btnPlayerWolfDiscuss?.classList.add('hidden'); // 追加
+
             if (allReady) {
               msgWait.classList.add('hidden');
               btnReveal.classList.remove('hidden');
@@ -1741,7 +1758,17 @@ if (state.roomData.isWolfMode) {
           } else if (status === 'revealing') {
             msgWait.classList.add('hidden');
             btnReveal.classList.add('hidden');
-            btnNext.classList.remove('hidden');
+            
+            // ▼ きつねモードかどうかでボタンを分岐 ▼
+            if (state.roomData.isWolfMode) {
+              btnNext.classList.add('hidden');
+              btnPlayerWolfWin?.classList.remove('hidden');
+              btnPlayerWolfDiscuss?.classList.remove('hidden');
+            } else {
+              btnNext.classList.remove('hidden');
+              btnPlayerWolfWin?.classList.add('hidden');
+              btnPlayerWolfDiscuss?.classList.add('hidden');
+            }
           }
         } else {
           hostActions.classList.add('hidden');
@@ -1754,8 +1781,6 @@ if (state.roomData.isWolfMode) {
           hostActions.classList.remove('flex');
         }
       }
-      
-    };
 
     // Start
     window.onload = init;
