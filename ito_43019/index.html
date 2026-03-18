@@ -1369,7 +1369,6 @@ window.executeVote = async () => {
         // --- 1. ヘッダーの描画 ---
         if (status === 'choosing_theme') {
           if (state.isRouletteSpinning) {
-            // ★ルーレット中の表示
             headerEl.innerHTML = `
               <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
                 <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
@@ -1378,12 +1377,24 @@ window.executeVote = async () => {
               </div>
             `;
           } else {
-            // ★お題選択ボタン
+            // ★修正：お題ボタンを従来のリッチなデザイン（巨大な正方形風）に復元
             headerEl.innerHTML = `
               <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
-              <div class="flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-2xl px-4 mx-auto animate-pop-in">
-                <button onclick="startThemeRoulette()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">🎲 ランダムに出題</button>
-                <button onclick="startFreeTheme()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">💬 自分たちで出題</button>
+              <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto animate-pop-in">
+                <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
+                  <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
+                  <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                    <span class="text-5xl md:text-6xl">🎲</span>
+                    ランダムに出題
+                  </div>
+                </button>
+                <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
+                  <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
+                  <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                    <span class="text-5xl md:text-6xl">💬</span>
+                    自分たちで出題
+                  </div>
+                </button>
               </div>
             `;
           }
@@ -1414,25 +1425,34 @@ window.executeVote = async () => {
             <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
               <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
               <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-              <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." readonly />
+              <input type="text" id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors" value="..." />
               <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
             </div>
           `;
+          
+          // ★修正：スマホでキーボードが出るように、タップ前から `readOnly` を適切に外しておく
           setTimeout(() => {
             const hostThemeInput = document.getElementById('host-theme-input');
             const hostThemeMsg = document.getElementById('host-theme-edit-msg');
             if (hostThemeInput) {
-              if (state.roomData.themeEditorId !== currentUser?.uid) {
-                hostThemeInput.value = theme; hostThemeInput.readOnly = true;
-              } else { hostThemeInput.readOnly = false; }
-              if (state.roomData.isFreeTheme) {
+              hostThemeInput.value = theme; 
+              
+              const isFree = state.roomData.isFreeTheme;
+              const currentEditor = state.roomData.themeEditorId;
+              const canEdit = isFree && (!currentEditor || currentEditor === currentUser?.uid);
+              
+              hostThemeInput.readOnly = !canEdit; // 入力可能なら最初からreadOnlyを外す
+
+              if (isFree) {
                 hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-                if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
-                  hostThemeMsg?.classList.remove('hidden');
-                } else { hostThemeMsg?.classList.add('hidden'); }
+                if (currentEditor && currentEditor !== currentUser?.uid) {
+                  if(hostThemeMsg) hostThemeMsg.classList.remove('hidden');
+                } else { 
+                  if(hostThemeMsg) hostThemeMsg.classList.add('hidden'); 
+                }
               } else {
                 hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-                hostThemeMsg?.classList.add('hidden');
+                if(hostThemeMsg) hostThemeMsg.classList.add('hidden');
               }
             }
           }, 0);
@@ -1442,16 +1462,13 @@ window.executeVote = async () => {
         const sortedPlayers = (isRevealing || isVoting || isResult) ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
         
         gridEl.innerHTML = sortedPlayers.map(p => {
-          // ★修正ポイント：答え合わせ中（isRevealing）でも、プレイヤーがスマホでめくるまでは裏のままにする！
           const isFlipped = p.state === 'faceUp' || isVoting || isResult; 
-          
           const isSelected = isVoting && selectedExileId === p.id;
           const voteRing = isSelected ? 'ring-8 ring-red-500 ring-offset-4 scale-110 -translate-y-4' : (isVoting ? 'hover:scale-105 hover:-translate-y-2 cursor-pointer' : '');
           const clickAttr = isVoting ? `onclick="selectExile('${p.id}')"` : '';
 
           let wrapperFxClass = '';
           let resultFxClass = 'bg-white border-gray-100';
-          // ★スマホ向けに文字サイズを可変（text-4xl md:text-6xlなど）に修正
           let frontContent = `
             <div class="absolute top-2 left-2 text-gray-300 font-black text-sm md:text-xl">${p.number}</div>
             <div class="absolute bottom-2 right-2 text-gray-300 font-black text-sm md:text-xl rotate-180">${p.number}</div>
@@ -1460,8 +1477,8 @@ window.executeVote = async () => {
 
           if (isResult) {
             if (p.role === 'fox') {
-              // きつねのカード（スマホでははみ出さないように拡大率を少し下げる）
-              wrapperFxClass = 'scale-110 md:scale-125 -translate-y-4 md:-translate-y-6 z-50';
+              // ★修正：拡大（scale）や浮上（translate-y）を消し、色だけで強調
+              wrapperFxClass = 'z-50'; 
               resultFxClass = 'bg-gradient-to-br from-orange-400 to-red-500 border-yellow-300 shadow-xl shadow-orange-400';
               frontContent = `
                 <div class="flex flex-col items-center justify-center h-full animate-pop-in w-full px-1 text-center" style="animation-delay: 0.8s;">
@@ -1471,7 +1488,6 @@ window.executeVote = async () => {
                 </div>
               `;
             } else {
-              // 村人のカード
               wrapperFxClass = 'scale-90 md:scale-95 opacity-60 grayscale';
               resultFxClass = 'bg-gray-200 border-gray-300';
               frontContent = `
@@ -1485,7 +1501,6 @@ window.executeVote = async () => {
 
           let statusBadge = '';
           if (status === 'playing') {
-            // ★スマホでステータスバッジが折り返さないように whitespace-nowrap と小さいフォントを適用
             if (p.state === 'hand') statusBadge = '<span class="bg-gray-100 text-gray-500 px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-black mt-2 md:mt-3 block whitespace-nowrap">考え中...</span>';
             if (p.state === 'faceDown') statusBadge = '<span class="bg-cyan-500 text-white px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-black mt-2 md:mt-3 block shadow-md animate-pop-in whitespace-nowrap">場に出した!</span>';
           }
@@ -1630,27 +1645,29 @@ window.executeVote = async () => {
         vHand.classList.remove('hidden');
         vTable.classList.add('hidden');
         
+        // ★修正：スマホでキーボードが出るように、タップ前から `readOnly` を適切に外しておく
         const playerThemeInput = document.getElementById('player-theme-input');
         const playerThemeMsg = document.getElementById('player-theme-edit-msg');
         
         if (playerThemeInput) {
-          if (state.roomData.themeEditorId !== currentUser?.uid) {
-            playerThemeInput.value = theme;
-            playerThemeInput.readOnly = true;
-          } else {
-            playerThemeInput.readOnly = false;
-          }
+          playerThemeInput.value = theme;
+          
+          const isFree = state.roomData.isFreeTheme;
+          const currentEditor = state.roomData.themeEditorId;
+          const canEdit = isFree && (!currentEditor || currentEditor === currentUser?.uid);
+          
+          playerThemeInput.readOnly = !canEdit;
 
-          if (state.roomData.isFreeTheme) {
+          if (isFree) {
             playerThemeInput.classList.add('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
-            if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
-              playerThemeMsg?.classList.remove('hidden');
+            if (currentEditor && currentEditor !== currentUser?.uid) {
+              if(playerThemeMsg) playerThemeMsg.classList.remove('hidden');
             } else {
-              playerThemeMsg?.classList.add('hidden');
+              if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
             }
           } else {
             playerThemeInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
-            playerThemeMsg?.classList.add('hidden');
+            if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
           }
         }
         
