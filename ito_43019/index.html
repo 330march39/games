@@ -1318,11 +1318,11 @@ window.executeVote = async () => {
       const btnHeaderQr = document.getElementById('btn-header-qr');
 
       // 全ビューを一旦隠す
-      vWaiting.classList.add('hidden');
-      vUnifiedGame.classList.add('hidden');
+      if(vWaiting) vWaiting.classList.add('hidden');
+      if(vUnifiedGame) vUnifiedGame.classList.add('hidden');
 
       if (status === 'waiting') {
-        vWaiting.classList.remove('hidden'); // 待機画面ON
+        if(vWaiting) vWaiting.classList.remove('hidden');
         if (btnHeaderQr) btnHeaderQr.classList.add('hidden');
         
         document.getElementById('host-room-id-display').innerText = state.roomId;
@@ -1331,7 +1331,7 @@ window.executeVote = async () => {
         const gameUrl = `${window.location.origin}${window.location.pathname}?room=${state.roomId}`;
         const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(gameUrl)}`;
         const qrImgHost = document.getElementById('host-qr-waiting');
-        if (qrImgHost.src !== qrApiUrl) {
+        if (qrImgHost && qrImgHost.src !== qrApiUrl) {
           qrImgHost.classList.add('opacity-0');
           document.getElementById('host-qr-loading').classList.remove('hidden');
           qrImgHost.src = qrApiUrl;
@@ -1348,8 +1348,8 @@ window.executeVote = async () => {
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
       } else {
-        // ★ 統合されたゲームボードの処理 (choosing_theme, playing, revealing, voting, result)
-        vUnifiedGame.classList.remove('hidden');
+        // ★ 統合されたゲームボードの処理
+        if(vUnifiedGame) vUnifiedGame.classList.remove('hidden');
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
 
         const headerEl = document.getElementById('unified-header');
@@ -1370,7 +1370,7 @@ window.executeVote = async () => {
             </div>
             ${state.isRouletteSpinning ? '<div class="mt-8 text-4xl font-black text-gray-800 animate-pulse">ルーレット回転中...</div>' : ''}
           `;
-          gridEl.innerHTML = ''; actionEl.innerHTML = ''; return; // お題選択中はカードを出さない
+          gridEl.innerHTML = ''; actionEl.innerHTML = ''; return; 
         } else if (isVoting) {
           headerEl.innerHTML = `
             <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-purple-300 relative overflow-hidden animate-pop-in">
@@ -1393,7 +1393,6 @@ window.executeVote = async () => {
             </div>
           `;
         } else {
-          // Playing or Revealing (Theme Board)
           headerEl.innerHTML = `
             <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
               <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
@@ -1423,19 +1422,14 @@ window.executeVote = async () => {
         }
 
         // --- 2. カードグリッドの描画 ---
-        // 答え合わせ以降は数字順、それ以外は参加順に並べる
         const sortedPlayers = (isRevealing || isVoting || isResult) ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
         
         gridEl.innerHTML = sortedPlayers.map(p => {
-          // めくられているかの判定
           const isFlipped = p.state === 'faceUp' || isRevealing || isVoting || isResult;
-          
-          // 投票モード時のタップ設定
           const isSelected = isVoting && selectedExileId === p.id;
           const voteRing = isSelected ? 'ring-8 ring-red-500 ring-offset-4 scale-110 -translate-y-4' : (isVoting ? 'hover:scale-105 hover:-translate-y-2 cursor-pointer' : '');
           const clickAttr = isVoting ? `onclick="selectExile('${p.id}')"` : '';
 
-          // 結果画面でのキツネ発表アニメーション
           let resultFxClass = 'bg-white';
           let frontContent = `
             <div class="absolute top-2 left-3 text-gray-300 font-black text-xl">${p.number}</div>
@@ -1445,7 +1439,6 @@ window.executeVote = async () => {
 
           if (isResult) {
             if (p.role === 'fox') {
-              // きつねのカード：オレンジ色に光って浮かび上がる
               resultFxClass = 'bg-gradient-to-br from-orange-400 to-red-500 shadow-2xl shadow-orange-400 scale-125 -translate-y-6 z-50 ring-4 ring-yellow-300';
               frontContent = `
                 <div class="flex flex-col items-center justify-center h-full animate-pop-in" style="animation-delay: 0.8s;">
@@ -1455,7 +1448,6 @@ window.executeVote = async () => {
                 </div>
               `;
             } else {
-              // 村人のカード：グレーになって少し沈む
               resultFxClass = 'bg-gray-200 grayscale opacity-60 scale-95';
               frontContent = `
                 <div class="absolute top-2 left-3 text-gray-400 font-black text-xl">${p.number}</div>
@@ -1476,16 +1468,13 @@ window.executeVote = async () => {
             <div class="flex flex-col items-center justify-start w-24 md:w-32 transition-all duration-500 z-10" ${clickAttr}>
               <div class="w-full aspect-[2/3] perspective-1000 mb-3 relative">
                 <div class="w-full h-full relative transform-style-3d transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFlipped ? 'rotate-y-180' : ''} ${voteRing} rounded-2xl shadow-lg">
-                  
                   <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-2xl border-4 border-white/40 flex items-center justify-center overflow-hidden">
                     <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
                     <span class="text-white text-2xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">hashi</span>
                   </div>
-
-                  <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 border-gray-100 ${isFlipped ? resultFxClass : 'bg-white'} rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-[800ms]">
+                  <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 border-gray-100 ${resultFxClass} rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-[800ms]">
                     ${frontContent}
                   </div>
-
                 </div>
               </div>
               <div class="font-black text-sm md:text-base text-gray-800 bg-white/90 px-3 py-1.5 rounded-full shadow-sm text-center w-full truncate border-2 border-white">
@@ -1548,7 +1537,10 @@ window.executeVote = async () => {
               </div>
             </button>
           `;
-          setTimeout(() => { document.getElementById('btn-execute-vote').disabled = !selectedExileId; }, 0);
+          setTimeout(() => { 
+            const voteBtn = document.getElementById('btn-execute-vote');
+            if(voteBtn) voteBtn.disabled = !selectedExileId; 
+          }, 0);
         } else if (isResult) {
           buttonsHtml = `
             <button onclick="nextGame()" class="w-full group relative animate-pop-in" style="animation-delay: 2s;">
@@ -1572,43 +1564,41 @@ window.executeVote = async () => {
       const vHand = document.getElementById('player-view-hand');
       const vTable = document.getElementById('player-view-table');
 
-      // ▼ 修正: status === 'choosing_theme' の条件を追加 ▼
       if (status === 'waiting' || status === 'choosing_theme' || myData.state === 'waiting') {
         vWait.classList.remove('hidden');
         vHand.classList.add('hidden');
         vTable.classList.add('hidden');
 
-        // ▼ 追加: ホストの状態に合わせてメッセージを変える ▼
         const waitMsg = document.querySelector('#player-view-waiting p');
-        if (status === 'choosing_theme') {
-          waitMsg.innerHTML = "ホストがお題を決めているよ！<br/>少し待っててね！";
-        } else {
-          waitMsg.innerHTML = "ホストがゲームをはじめるのを<br/>待っててね！";
+        if (waitMsg) {
+          if (status === 'choosing_theme') {
+            waitMsg.innerHTML = "ホストがお題を決めているよ！<br/>少し待っててね！";
+          } else {
+            waitMsg.innerHTML = "ホストがゲームをはじめるのを<br/>待っててね！";
+          }
         }
-
       } 
       else if (myData.state === 'hand') {
-        // player-view-hand が表示される処理の中に追加
-const roleBadge = document.getElementById('player-role-badge');
-const roleIcon = document.getElementById('player-role-icon');
-const roleText = document.getElementById('player-role-text');
+        const roleBadge = document.getElementById('player-role-badge');
+        const roleIcon = document.getElementById('player-role-icon');
+        const roleText = document.getElementById('player-role-text');
 
-if (state.roomData.isWolfMode) {
-  roleBadge.classList.remove('hidden');
-  if (myData.role === 'fox') {
-    roleIcon.innerText = '🦊';
-    roleIcon.classList.add('border-orange-400', 'text-orange-500');
-    roleText.innerText = 'きつね';
-    roleText.classList.add('text-orange-600');
-  } else {
-    roleIcon.innerText = '🧑‍🌾';
-    roleIcon.classList.remove('border-orange-400', 'text-orange-500');
-    roleText.innerText = '村人';
-    roleText.classList.remove('text-orange-600');
-  }
-} else {
-  roleBadge.classList.add('hidden');
-}
+        if (state.roomData.isWolfMode && roleBadge && roleIcon && roleText) {
+          roleBadge.classList.remove('hidden');
+          if (myData.role === 'fox') {
+            roleIcon.innerText = '🦊';
+            roleIcon.classList.add('border-orange-400', 'text-orange-500');
+            roleText.innerText = 'きつね';
+            roleText.classList.add('text-orange-600');
+          } else {
+            roleIcon.innerText = '🧑‍🌾';
+            roleIcon.classList.remove('border-orange-400', 'text-orange-500');
+            roleText.innerText = '村人';
+            roleText.classList.remove('text-orange-600');
+          }
+        } else if (roleBadge) {
+          roleBadge.classList.add('hidden');
+        }
         
         vWait.classList.add('hidden');
         vHand.classList.remove('hidden');
@@ -1628,28 +1618,34 @@ if (state.roomData.isWolfMode) {
           if (state.roomData.isFreeTheme) {
             playerThemeInput.classList.add('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
             if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser?.uid) {
-              playerThemeMsg.classList.remove('hidden');
+              playerThemeMsg?.classList.remove('hidden');
             } else {
-              playerThemeMsg.classList.add('hidden');
+              playerThemeMsg?.classList.add('hidden');
             }
           } else {
             playerThemeInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
-            playerThemeMsg.classList.add('hidden');
+            playerThemeMsg?.classList.add('hidden');
           }
         }
-        document.getElementById('player-num-center').innerText = myData.number;
-        document.getElementById('player-num-tl').innerText = myData.number;
-        document.getElementById('player-num-br').innerText = myData.number;
-        // 【ここを追加】ルールをすでに見ていたら非表示にする
+        
+        const numCenter = document.getElementById('player-num-center');
+        if(numCenter) numCenter.innerText = myData.number;
+        const numTl = document.getElementById('player-num-tl');
+        if(numTl) numTl.innerText = myData.number;
+        const numBr = document.getElementById('player-num-br');
+        if(numBr) numBr.innerText = myData.number;
+        
         const ruleHint = document.getElementById('player-rule-hint');
-        if (state.hasSeenRule) {
-          ruleHint.classList.add('hidden');
-        } else {
-          ruleHint.classList.remove('hidden');
+        if (ruleHint) {
+          if (state.hasSeenRule) {
+            ruleHint.classList.add('hidden');
+          } else {
+            ruleHint.classList.remove('hidden');
+          }
         }
       } 
       else {
-        // Table view (faceDown or faceUp)
+        // Table view
         vWait.classList.add('hidden');
         vHand.classList.add('hidden');
         vTable.classList.remove('hidden');
@@ -1659,74 +1655,69 @@ if (state.roomData.isWolfMode) {
         const numTl = document.getElementById('table-num-tl');
         const numBr = document.getElementById('table-num-br');
 
-        // Setup numbers
-        numCenter.innerText = myData.number;
-        numTl.innerText = myData.number;
-        numBr.innerText = myData.number;
+        if(numCenter) numCenter.innerText = myData.number;
+        if(numTl) numTl.innerText = myData.number;
+        if(numBr) numBr.innerText = myData.number;
 
         if (myData.state === 'faceDown') {
-          // Card back facing up (rotation 0)
-          card3d.classList.remove('rotate-y-180');
+          if(card3d) card3d.classList.remove('rotate-y-180');
           vTable.classList.replace('bg-pink-100', 'bg-gray-900');
-          vTable.classList.replace('bg-gray-100', 'bg-gray-900'); // ensuring dark bg
+          vTable.classList.replace('bg-gray-100', 'bg-gray-900'); 
         } else if (myData.state === 'faceUp') {
-          // Card front facing up (rotation 180)
-          card3d.classList.add('rotate-y-180');
-          // Change background to bright
+          if(card3d) card3d.classList.add('rotate-y-180');
           vTable.classList.replace('bg-gray-900', 'bg-pink-100');
         }
       }
 
-      // --- ホスト兼プレイヤーの場合のUI制御を追加 ---
       const btnHostMenu = document.getElementById('btn-player-host-menu');
       const hostActions = document.getElementById('player-host-actions');
       const msgWait = document.getElementById('player-host-waiting-msg');
       const btnReveal = document.getElementById('btn-player-reveal');
       const btnNext = document.getElementById('btn-player-next');
-      const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); // 追加
-      const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); // 追加
+      const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
+      const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
 
       if (state.isHost && state.isPlayingHost) {
-        btnHostMenu.classList.remove('hidden');
-        
-        // カードを場に出した状態(faceDown)か、答え合わせ中(faceUp)ならアクションエリアを表示
+        if(btnHostMenu) btnHostMenu.classList.remove('hidden');
         if (myData.state === 'faceDown' || myData.state === 'faceUp') {
-          hostActions.classList.remove('hidden');
-          hostActions.classList.add('flex');
+          if(hostActions) {
+            hostActions.classList.remove('hidden');
+            hostActions.classList.add('flex');
+          }
           
           const playersList = Object.values(players);
           const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
 
           if (status === 'playing') {
-            btnNext.classList.add('hidden');
-            btnPlayerWolfWin?.classList.add('hidden'); // 追加
-            btnPlayerWolfDiscuss?.classList.add('hidden'); // 追加
+            if(btnNext) btnNext.classList.add('hidden');
+            if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
+            if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
 
             if (allReady) {
-              msgWait.classList.add('hidden');
-              btnReveal.classList.remove('hidden');
+              if(msgWait) msgWait.classList.add('hidden');
+              if(btnReveal) btnReveal.classList.remove('hidden');
             } else {
-              msgWait.classList.remove('hidden');
-              btnReveal.classList.add('hidden');
+              if(msgWait) msgWait.classList.remove('hidden');
+              if(btnReveal) btnReveal.classList.add('hidden');
             }
           } else if (status === 'revealing') {
-            msgWait.classList.add('hidden');
-            btnReveal.classList.add('hidden');
-            
-            // ▼ きつねモードかどうかでボタンを分岐 ▼
+            if(msgWait) msgWait.classList.add('hidden');
+            if(btnReveal) btnReveal.classList.add('hidden');
             if (state.roomData.isWolfMode) {
-              btnNext.classList.add('hidden');
-              btnPlayerWolfWin?.classList.remove('hidden');
-              btnPlayerWolfDiscuss?.classList.remove('hidden');
+              if(btnNext) btnNext.classList.add('hidden');
+              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.remove('hidden');
+              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.remove('hidden');
             } else {
-              btnNext.classList.remove('hidden');
-              btnPlayerWolfWin?.classList.add('hidden');
-              btnPlayerWolfDiscuss?.classList.add('hidden');
+              if(btnNext) btnNext.classList.remove('hidden');
+              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
+              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
             }
           }
         } else {
-          hostActions.classList.add('hidden');
-          hostActions.classList.remove('flex');
+          if(hostActions) {
+            hostActions.classList.add('hidden');
+            hostActions.classList.remove('flex');
+          }
         }
       } else {
         if(btnHostMenu) btnHostMenu.classList.add('hidden');
@@ -1736,6 +1727,7 @@ if (state.roomData.isWolfMode) {
         }
       }
     };
+
     // Start
     window.onload = init;
 
