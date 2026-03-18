@@ -942,30 +942,31 @@
 
     window.startThemeRoulette = async () => {
       state.isRouletteSpinning = true;
-      renderHostView(); 
+      if (state.isHost) renderHostView(); // ルーレット画面に切り替え
 
-      const rouletteText = document.getElementById('roulette-text');
       let count = 0;
-      const maxCount = 20; 
-      const interval = 100; 
+      const maxCount = 20; // ルーレットが回る回数
       
-      const rouletteInterval = setInterval(() => {
-        rouletteText.innerText = THEMES[Math.floor(Math.random() * THEMES.length)];
+      const intervalId = setInterval(() => {
+        const inputEl = document.getElementById('host-theme-input');
+        if (inputEl) {
+           inputEl.value = THEMES[Math.floor(Math.random() * THEMES.length)];
+        }
         count++;
         if (count >= maxCount) {
-          clearInterval(rouletteInterval);
-          const finalTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
-          rouletteText.innerText = finalTheme;
-          rouletteText.classList.add('text-pink-500', 'scale-110');
-          
-          setTimeout(async () => {
-            rouletteText.classList.remove('text-pink-500', 'scale-110');
-            state.isRouletteSpinning = false;
-            // ルーレットの場合はフリーフラグを折る(false)
-            await executeGameStart(finalTheme, false);
-          }, 2000); 
+           clearInterval(intervalId);
+           const finalTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
+           if (inputEl) {
+              inputEl.value = finalTheme;
+              inputEl.classList.add('text-pink-500', 'scale-110');
+           }
+           // 1.5秒後に実際のゲーム画面へ移行
+           setTimeout(async () => {
+             state.isRouletteSpinning = false;
+             await executeGameStart(finalTheme, false);
+           }, 1500);
         }
-      }, interval);
+      }, 100);
     };
 
     // 修正する関数
@@ -1317,7 +1318,6 @@ window.executeVote = async () => {
       const vUnifiedGame = document.getElementById('host-view-unified-game');
       const btnHeaderQr = document.getElementById('btn-header-qr');
 
-      // 全ビューを一旦隠す
       if(vWaiting) vWaiting.classList.add('hidden');
       if(vUnifiedGame) vUnifiedGame.classList.add('hidden');
 
@@ -1348,7 +1348,6 @@ window.executeVote = async () => {
         document.getElementById('btn-start-game').disabled = playersList.length === 0;
 
       } else {
-        // ★ 統合されたゲームボードの処理
         if(vUnifiedGame) vUnifiedGame.classList.remove('hidden');
         if (btnHeaderQr) btnHeaderQr.classList.remove('hidden');
 
@@ -1362,14 +1361,25 @@ window.executeVote = async () => {
         
         // --- 1. ヘッダーの描画 ---
         if (status === 'choosing_theme') {
-          headerEl.innerHTML = `
-            <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
-            <div class="flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-2xl px-4 mx-auto animate-pop-in">
-              <button onclick="startThemeRoulette()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">🎲 ランダムに出題</button>
-              <button onclick="startFreeTheme()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">💬 自分たちで出題</button>
-            </div>
-            ${state.isRouletteSpinning ? '<div class="mt-8 text-4xl font-black text-gray-800 animate-pulse">ルーレット回転中...</div>' : ''}
-          `;
+          if (state.isRouletteSpinning) {
+            // ★ルーレット中の表示
+            headerEl.innerHTML = `
+              <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
+                <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+                <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
+                <input type="text" id="host-theme-input" class="w-full text-center bg-transparent text-3xl md:text-5xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-all duration-300" value="..." readonly />
+              </div>
+            `;
+          } else {
+            // ★お題選択ボタン
+            headerEl.innerHTML = `
+              <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
+              <div class="flex flex-col md:flex-row justify-center items-center gap-4 w-full max-w-2xl px-4 mx-auto animate-pop-in">
+                <button onclick="startThemeRoulette()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">🎲 ランダムに出題</button>
+                <button onclick="startFreeTheme()" class="w-full md:flex-1 py-5 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl active:scale-95 transition-transform">💬 自分たちで出題</button>
+              </div>
+            `;
+          }
           gridEl.innerHTML = ''; actionEl.innerHTML = ''; return; 
         } else if (isVoting) {
           headerEl.innerHTML = `
@@ -1425,21 +1435,26 @@ window.executeVote = async () => {
         const sortedPlayers = (isRevealing || isVoting || isResult) ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
         
         gridEl.innerHTML = sortedPlayers.map(p => {
-          const isFlipped = p.state === 'faceUp' || isRevealing || isVoting || isResult;
+          // ★修正ポイント：答え合わせ中（isRevealing）でも、プレイヤーがスマホでめくるまでは裏のままにする！
+          const isFlipped = p.state === 'faceUp' || isVoting || isResult; 
+          
           const isSelected = isVoting && selectedExileId === p.id;
           const voteRing = isSelected ? 'ring-8 ring-red-500 ring-offset-4 scale-110 -translate-y-4' : (isVoting ? 'hover:scale-105 hover:-translate-y-2 cursor-pointer' : '');
           const clickAttr = isVoting ? `onclick="selectExile('${p.id}')"` : '';
 
-          let resultFxClass = 'bg-white';
+          let wrapperFxClass = '';
+          let resultFxClass = 'bg-white border-gray-100';
           let frontContent = `
             <div class="absolute top-2 left-3 text-gray-300 font-black text-xl">${p.number}</div>
             <div class="absolute bottom-2 right-3 text-gray-300 font-black text-xl rotate-180">${p.number}</div>
             <span class="text-5xl md:text-6xl font-black text-gray-800 drop-shadow-sm">${p.number}</span>
           `;
 
+          // ★キツネのアニメーション修正：コンテナ全体を拡大し、色は表面のdivに付ける
           if (isResult) {
             if (p.role === 'fox') {
-              resultFxClass = 'bg-gradient-to-br from-orange-400 to-red-500 shadow-2xl shadow-orange-400 scale-125 -translate-y-6 z-50 ring-4 ring-yellow-300';
+              wrapperFxClass = 'scale-125 -translate-y-6 z-50';
+              resultFxClass = 'bg-gradient-to-br from-orange-400 to-red-500 border-yellow-300 shadow-2xl shadow-orange-400';
               frontContent = `
                 <div class="flex flex-col items-center justify-center h-full animate-pop-in" style="animation-delay: 0.8s;">
                   <span class="text-6xl drop-shadow-md mb-2">🦊</span>
@@ -1448,12 +1463,13 @@ window.executeVote = async () => {
                 </div>
               `;
             } else {
-              resultFxClass = 'bg-gray-200 grayscale opacity-60 scale-95';
+              wrapperFxClass = 'scale-95 opacity-60 grayscale';
+              resultFxClass = 'bg-gray-200 border-gray-300';
               frontContent = `
                 <div class="absolute top-2 left-3 text-gray-400 font-black text-xl">${p.number}</div>
                 <div class="absolute bottom-2 right-3 text-gray-400 font-black text-xl rotate-180">${p.number}</div>
                 <span class="text-5xl md:text-6xl font-black text-gray-500">${p.number}</span>
-                <span class="absolute bottom-3 text-sm font-bold text-gray-400 bg-white/50 px-3 py-0.5 rounded-full border border-gray-300">村人</span>
+                <span class="absolute bottom-3 text-sm font-bold text-gray-400 bg-white/50 px-3 py-0.5 rounded-full border border-gray-400">村人</span>
               `;
             }
           }
@@ -1465,14 +1481,14 @@ window.executeVote = async () => {
           }
 
           return `
-            <div class="flex flex-col items-center justify-start w-24 md:w-32 transition-all duration-500 z-10" ${clickAttr}>
+            <div class="flex flex-col items-center justify-start w-24 md:w-32 transition-all duration-700 z-10 ${wrapperFxClass}" ${clickAttr}>
               <div class="w-full aspect-[2/3] perspective-1000 mb-3 relative">
                 <div class="w-full h-full relative transform-style-3d transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFlipped ? 'rotate-y-180' : ''} ${voteRing} rounded-2xl shadow-lg">
                   <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-2xl border-4 border-white/40 flex items-center justify-center overflow-hidden">
                     <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
                     <span class="text-white text-2xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">hashi</span>
                   </div>
-                  <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 border-gray-100 ${resultFxClass} rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-all duration-[800ms]">
+                  <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 ${resultFxClass} rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-colors duration-[800ms]">
                     ${frontContent}
                   </div>
                 </div>
