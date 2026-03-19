@@ -98,13 +98,21 @@
       transform: rotateY(180deg) translateZ(1px);
     }
     /* 波紋のように広がる色変更アニメーション */
-.wave-color-layer {
-  clip-path: circle(0% at 50% 50%);
-  transition: clip-path 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.is-ready .wave-color-layer {
-  clip-path: circle(150% at 50% 50%);
-}
+    .wave-color-layer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 150%;
+      padding-bottom: 150%; /* 完全な円を作るハック */
+      border-radius: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .is-ready .wave-color-layer {
+      transform: translate(-50%, -50%) scale(1);
+    }
   </style>
 </head>
 <body class="text-gray-800 overflow-hidden flex flex-col h-[100dvh] w-full relative">
@@ -397,22 +405,20 @@
     </div>
     
     <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm left-1/2 transform -translate-x-1/2 px-4 z-50 flex-col items-end gap-3 transition-opacity duration-500 pb-2" onclick="event.stopPropagation()">
-      <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
-        全員が場に出すのを待っています...
-      </div>
-
+      
       <button id="btn-player-reveal" onclick="enableRevealMode()" class="hidden w-full group relative transition-all duration-300">
         <div class="shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400"></div>
-        <div class="relative w-full py-3 bg-gray-200 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2 overflow-hidden">
-          <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500"></div>
+        <div class="pulse-layer absolute inset-0 rounded-[2rem]"></div> <div class="relative w-full py-3 bg-gray-200 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2 overflow-hidden">
+          <div class="wave-color-layer bg-gradient-to-r from-pink-500 to-rose-500"></div>
           <span class="text-layer relative z-10 transition-colors duration-500 text-gray-500">答え合わせへ</span>
         </div>
       </button>
 
       <button id="btn-player-next" onclick="nextGame()" class="hidden w-full group relative transition-all duration-300">
         <div class="shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400"></div>
+        <div class="pulse-layer absolute inset-0 rounded-[2rem]"></div>
         <div class="relative w-full py-3 bg-gray-200 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-          <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+          <div class="wave-color-layer bg-gradient-to-r from-cyan-500 to-blue-500"></div>
           <span class="text-layer relative z-10 transition-colors duration-500 text-gray-500">次のお題を決める</span>
         </div>
       </button>
@@ -420,16 +426,18 @@
       <div class="flex flex-col md:flex-row w-full gap-3 items-end">
         <button id="btn-player-wolf-discuss" onclick="startVoting()" class="hidden w-full group relative transition-all duration-300">
           <div class="shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400"></div>
+          <div class="pulse-layer absolute inset-0 rounded-[2rem]"></div>
           <div class="relative w-full py-3 bg-gray-200 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-            <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+            <div class="wave-color-layer bg-gradient-to-r from-purple-500 to-indigo-500"></div>
             <span class="text-layer relative z-10 transition-colors duration-500 text-gray-500">話し合いをする</span>
           </div>
         </button>
 
         <button id="btn-player-wolf-win" onclick="bridgeCompleted()" class="hidden w-full group relative transition-all duration-300">
           <div class="shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400"></div>
+          <div class="pulse-layer absolute inset-0 rounded-[2rem]"></div>
           <div class="relative w-full py-3 bg-gray-200 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-            <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500"></div>
+            <div class="wave-color-layer bg-gradient-to-r from-green-400 to-emerald-500"></div>
             <span class="text-layer relative z-10 transition-colors duration-500 text-gray-500">橋が完成した！</span>
           </div>
         </button>
@@ -1727,7 +1735,6 @@ window.executeVote = async () => {
         const allRevealed = playersList.every(p => p.state === 'faceUp'); 
         const currentActionState = status + '-' + (status === 'revealing' ? allRevealed : allReady);
 
-        // 状態が変わった時だけボタンのHTMLを再生成する（アニメーション暴発防止）
         if (actionEl.dataset.state !== currentActionState) {
           let buttonsHtml = '';
           const pressEvents = (action, isReadyFlag) => `onmousedown="startPress(event, '${action}', ${isReadyFlag})" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}', ${isReadyFlag})" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
@@ -1735,40 +1742,32 @@ window.executeVote = async () => {
           if (status === 'playing') {
             const isReady = allReady;
             const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; 
-            
-            let msgHtml = '';
-            if (!isReady) msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が場に出すのを待っています...</div>`;
-            
             buttonsHtml = `
-              ${msgHtml}
               <button onclick="${clickAction}" ${pressEvents('reveal', isReady)} class="w-full group relative transition-all duration-300 ${isReady ? 'is-ready cursor-pointer' : 'cursor-not-allowed'}">
                 <div class="absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 ${isReady ? 'bg-pink-600' : 'bg-gray-400'}"></div>
+                <div class="absolute inset-0 rounded-[2rem] ${isReady ? 'animate-pulse-ring' : ''}"></div>
                 <div class="relative w-full py-5 bg-gray-200 rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2 overflow-hidden">
-                  <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-pink-500 to-rose-500"></div>
+                  <div class="wave-color-layer bg-gradient-to-r from-pink-500 to-rose-500"></div>
                   <span class="relative z-10 transition-colors duration-500 ${isReady ? 'text-white' : 'text-gray-500'}">答え合わせへ</span>
                 </div>
               </button>
             `;
           } else if (isRevealing) {
             const isReady = allRevealed;
-            let msgHtml = '';
-            if (!isReady) msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が表にするのを待っています...</div>`;
-
             if (state.roomData.isWolfMode) {
                   buttonsHtml = `
-                    ${msgHtml}
                     <div class="flex flex-col md:flex-row w-full gap-3 items-end">
                       <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss', isReady)} class="w-full group relative transition-all duration-300 ${isReady ? 'is-ready cursor-pointer' : 'cursor-not-allowed'}">
                         <div class="absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 ${isReady ? 'bg-purple-700' : 'bg-gray-400'}"></div>
                         <div class="relative w-full py-4 bg-gray-200 rounded-[2rem] font-black text-xl md:text-lg border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-                          <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+                          <div class="wave-color-layer bg-gradient-to-r from-purple-500 to-indigo-500"></div>
                           <span class="relative z-10 transition-colors duration-500 ${isReady ? 'text-white' : 'text-gray-500'}">話し合いをする</span>
                         </div>
                       </button>
                       <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin', isReady)} class="w-full group relative transition-all duration-300 ${isReady ? 'is-ready cursor-pointer' : 'cursor-not-allowed'}">
                         <div class="absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 ${isReady ? 'bg-green-600' : 'bg-gray-400'}"></div>
                         <div class="relative w-full py-4 bg-gray-200 rounded-[2rem] font-black text-xl md:text-lg border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-                          <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-green-400 to-emerald-500"></div>
+                          <div class="wave-color-layer bg-gradient-to-r from-green-400 to-emerald-500"></div>
                           <span class="relative z-10 transition-colors duration-500 ${isReady ? 'text-white' : 'text-gray-500'}">橋が完成した！</span>
                         </div>
                       </button>
@@ -1776,11 +1775,10 @@ window.executeVote = async () => {
                   `;
             } else {
               buttonsHtml = `
-                ${msgHtml}
                 <button onclick="${isReady ? 'nextGame()' : 'void(0)'}" ${pressEvents('next', isReady)} class="w-full group relative transition-all duration-300 ${isReady ? 'is-ready cursor-pointer' : 'cursor-not-allowed'}">
                   <div class="absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 ${isReady ? 'bg-cyan-700' : 'bg-gray-400'}"></div>
                   <div class="relative w-full py-5 bg-gray-200 rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center overflow-hidden">
-                    <div class="wave-color-layer absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500"></div>
+                    <div class="wave-color-layer bg-gradient-to-r from-cyan-500 to-blue-500"></div>
                     <span class="relative z-10 transition-colors duration-500 ${isReady ? 'text-white' : 'text-gray-500'}">次のお題を決める</span>
                   </div>
                 </button>
@@ -1924,7 +1922,6 @@ window.executeVote = async () => {
         // --- ホスト用アクションボタンの表示制御 ---
         const btnHostMenu = document.getElementById('btn-player-host-menu');
         const hostActions = document.getElementById('player-host-actions');
-        const msgWait = document.getElementById('player-host-waiting-msg');
         const btnReveal = document.getElementById('btn-player-reveal');
         const btnNext = document.getElementById('btn-player-next');
         const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
@@ -1949,30 +1946,23 @@ window.executeVote = async () => {
               el.ontouchcancel = cancelPress;
             };
 
-            // 🌟 メッセージの長押しイベントをクリアする関数を追加
-            const clearPressEvents = (el) => {
-              if(!el) return;
-              el.onmousedown = null;
-              el.onmouseup = null;
-              el.onmouseleave = null;
-              el.ontouchstart = null;
-              el.ontouchend = null;
-              el.ontouchcancel = null;
-              el.classList.remove('cursor-pointer');
-            };
-
-            // 🌟 アニメーション制御用の関数に修正
+            // 🌟 アニメーション制御用の関数
             const setButtonState = (btn, isReady, actionName, clickFnStr) => {
               if(!btn) return;
               btn.classList.remove('hidden');
               
               const shadowLayer = btn.querySelector('.shadow-layer');
+              const pulseLayer = btn.querySelector('.pulse-layer');
               const textLayer = btn.querySelector('.text-layer');
               
               if (isReady) {
-                btn.classList.add('is-ready');
+                // すでに準備完了状態ならクラスを再追加しない（波紋の暴発リセットを防ぐ）
+                if (!btn.classList.contains('is-ready')) {
+                   btn.classList.add('is-ready');
+                }
                 btn.classList.remove('cursor-not-allowed');
                 btn.setAttribute('onclick', clickFnStr);
+                
                 if(textLayer) { textLayer.classList.add('text-white'); textLayer.classList.remove('text-gray-500'); }
                 if(shadowLayer) {
                   shadowLayer.classList.remove('bg-gray-400');
@@ -1981,14 +1971,15 @@ window.executeVote = async () => {
                   else if(actionName === 'discuss') shadowLayer.classList.add('bg-purple-700');
                   else if(actionName === 'next') shadowLayer.classList.add('bg-cyan-700');
                 }
+                // 答え合わせボタンだけ光らせる
+                if(pulseLayer && actionName === 'reveal') pulseLayer.classList.add('animate-pulse-ring');
               } else {
                 btn.classList.remove('is-ready');
                 btn.classList.add('cursor-not-allowed');
                 btn.setAttribute('onclick', 'void(0)');
                 if(textLayer) { textLayer.classList.remove('text-white'); textLayer.classList.add('text-gray-500'); }
-                if(shadowLayer) {
-                  shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
-                }
+                if(shadowLayer) shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
+                if(pulseLayer) pulseLayer.classList.remove('animate-pulse-ring');
               }
               setPressEvents(btn, actionName, isReady);
             };
@@ -1997,31 +1988,9 @@ window.executeVote = async () => {
               if(btnNext) btnNext.classList.add('hidden');
               if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
               if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
-              
               setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
-
-              if (msgWait) {
-                if (!allReady) {
-                  msgWait.classList.remove('hidden');
-                  msgWait.innerText = '全員が場に出すのを待っています...';
-                  clearPressEvents(msgWait); // 🌟 メッセージからは長押し反応を消す
-                } else {
-                  msgWait.classList.add('hidden');
-                }
-              }
             } else if (status === 'revealing') {
               if(btnReveal) btnReveal.classList.add('hidden');
-
-              if (msgWait) {
-                if (!allRevealed) {
-                  msgWait.classList.remove('hidden');
-                  msgWait.innerText = '全員が表にするのを待っています...';
-                  clearPressEvents(msgWait); // 🌟 メッセージからは長押し反応を消す
-                } else {
-                  msgWait.classList.add('hidden');
-                }
-              }
-
               if (state.roomData.isWolfMode) {
                 if(btnNext) btnNext.classList.add('hidden');
                 setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
