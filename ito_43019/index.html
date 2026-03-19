@@ -407,13 +407,13 @@
       <button id="btn-player-wolf-win" onclick="bridgeCompleted()" class="hidden w-full group relative">
         <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
         <div class="relative w-full py-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-          橋が完成した！（村人の勝ち）
+          橋が完成した！
         </div>
       </button>
       <button id="btn-player-wolf-discuss" onclick="startVoting()" class="hidden w-full group relative">
         <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
         <div class="relative w-full py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-          話し合いをする（追放へ）
+          話し合いをする
         </div>
       </button>
     </div>
@@ -1497,7 +1497,7 @@ window.executeVote = async () => {
                 <div class="flex flex-col items-center justify-center min-h-[50vh] w-full mt-[10vh]">
                   <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
                     <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-                    <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
+                    <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
                     <div class="w-full h-24 flex items-center justify-center px-4">
                       <div id="host-theme-input" class="text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight transition-all duration-300">...</div>
                     </div>
@@ -1743,13 +1743,13 @@ window.executeVote = async () => {
               <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin', isReady)} class="w-full group relative mb-3 animate-pop-in ${opacityClass} transition-all duration-300">
                 <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-                  橋が完成した！（村人の勝ち）
+                  橋が完成した！
                 </div>
               </button>
               <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300" style="animation-delay: 0.1s;">
                 <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
-                  話し合いをする（追放へ）
+                  話し合いをする
                 </div>
               </button>
             `;
