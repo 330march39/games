@@ -1704,24 +1704,25 @@ window.executeVote = async () => {
         const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
         const allRevealed = playersList.every(p => p.state === 'faceUp'); 
 
-        // 🌟 修正：長押しイベントに isReady フラグを渡す 🌟
         const pressEvents = (action, isReadyFlag) => `onmousedown="startPress(event, '${action}', ${isReadyFlag})" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}', ${isReadyFlag})" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
 
         if (status === 'playing') {
           const isReady = allReady;
           const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
           const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; 
+          const pulseClass = isReady ? 'animate-pulse-ring' : ''; // 🌟 光るアニメーションは準備完了時のみ
           
           let msgHtml = '';
           if (!isReady) {
-            msgHtml = `<div ${pressEvents('reveal', isReady)} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が場に出すのを待っています...</div>`;
+            // 🌟 メッセージからは長押しイベントと cursor-pointer を削除
+            msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が場に出すのを待っています...</div>`;
           }
           
           buttonsHtml = `
             ${msgHtml}
             <button onclick="${clickAction}" ${pressEvents('reveal', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
               <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
-              <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
+              <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 ${pulseClass} flex items-center justify-center gap-2">
                 答え合わせへ
               </div>
             </button>
@@ -1732,7 +1733,8 @@ window.executeVote = async () => {
 
           let msgHtml = '';
           if (!isReady) {
-            msgHtml = `<div ${pressEvents(state.roomData.isWolfMode ? 'discuss' : 'next', isReady)} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が表にするのを待っています...</div>`;
+            // 🌟 メッセージからは長押しイベントと cursor-pointer を削除
+            msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が表にするのを待っています...</div>`;
           }
 
           if (state.roomData.isWolfMode) {
@@ -1927,11 +1929,9 @@ window.executeVote = async () => {
             if(hostActions) { hostActions.classList.remove('hidden'); hostActions.classList.add('flex'); setTimeout(() => hostActions.style.opacity = '1', 10); }
             const playersList = Object.values(players);
             
-            // 🌟 ステータスチェック 🌟
             const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
             const allRevealed = playersList.every(p => p.state === 'faceUp');
 
-            // 🌟 修正：JSから長押しイベントを登録する関数に isReady を渡す 🌟
             const setPressEvents = (el, action, isReadyFlag) => {
               if(!el) return;
               el.onmousedown = (e) => startPress(e, action, isReadyFlag);
@@ -1942,16 +1942,33 @@ window.executeVote = async () => {
               el.ontouchcancel = cancelPress;
             };
 
-            // ボタンの灰色・活性化を切り替える関数
+            // 🌟 メッセージの長押しイベントをクリアする関数を追加
+            const clearPressEvents = (el) => {
+              if(!el) return;
+              el.onmousedown = null;
+              el.onmouseup = null;
+              el.onmouseleave = null;
+              el.ontouchstart = null;
+              el.ontouchend = null;
+              el.ontouchcancel = null;
+              el.classList.remove('cursor-pointer');
+            };
+
             const setButtonState = (btn, isReady, actionName, clickFnStr) => {
               if(!btn) return;
               btn.classList.remove('hidden');
+              
+              // 🌟 アニメーション制御：内側のdivを取得してパルスを付け外しする
+              const innerTextDiv = btn.children[1];
+              
               if (isReady) {
                 btn.classList.remove('opacity-50', 'grayscale', 'cursor-not-allowed');
                 btn.setAttribute('onclick', clickFnStr);
+                if (actionName === 'reveal' && innerTextDiv) innerTextDiv.classList.add('animate-pulse-ring');
               } else {
                 btn.classList.add('opacity-50', 'grayscale', 'cursor-not-allowed');
                 btn.setAttribute('onclick', 'void(0)');
+                if (actionName === 'reveal' && innerTextDiv) innerTextDiv.classList.remove('animate-pulse-ring');
               }
               setPressEvents(btn, actionName, isReady);
             };
@@ -1967,7 +1984,7 @@ window.executeVote = async () => {
                 if (!allReady) {
                   msgWait.classList.remove('hidden');
                   msgWait.innerText = '全員が場に出すのを待っています...';
-                  setPressEvents(msgWait, 'reveal');
+                  clearPressEvents(msgWait); // 🌟 メッセージからは長押し反応を消す
                 } else {
                   msgWait.classList.add('hidden');
                 }
@@ -1979,7 +1996,7 @@ window.executeVote = async () => {
                 if (!allRevealed) {
                   msgWait.classList.remove('hidden');
                   msgWait.innerText = '全員が表にするのを待っています...';
-                  setPressEvents(msgWait, state.roomData.isWolfMode ? 'discuss' : 'next');
+                  clearPressEvents(msgWait); // 🌟 メッセージからは長押し反応を消す
                 } else {
                   msgWait.classList.add('hidden');
                 }
