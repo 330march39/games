@@ -421,6 +421,24 @@
 
   <!-- ================= Modals ================= -->
 
+  <div id="modal-force-continue" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-force-continue-content">
+      <div class="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+      </div>
+      <p class="text-gray-800 text-2xl font-black mb-4">強制的に次に進みますか？</p>
+      <p class="text-red-500 font-bold text-sm mb-8 bg-red-50 p-3 rounded-xl border-2 border-red-100">※ まだ準備が完了していないプレイヤーがいますが、強制的に処理を続行します。</p>
+      <div class="flex gap-4">
+        <button onclick="closeForceContinueModal()" class="flex-1 py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:bg-gray-300 transition-colors">
+          やめる
+        </button>
+        <button onclick="executeForceContinue()" class="flex-1 py-4 bg-red-500 text-white rounded-2xl font-black text-lg active:bg-red-600 transition-colors shadow-lg">
+          続行する
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-player-host-menu" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-6 w-full max-w-sm text-center transform scale-90 transition-transform duration-300">
       <h3 class="text-2xl font-black text-gray-800 mb-6">ホストメニュー</h3>
@@ -1057,6 +1075,55 @@ window.executeVote = async () => {
       el.style.height = targetHeight;
     };
     
+    // 🌟 新規追加：長押し＆強制続行ロジック 🌟
+    let forceActionTarget = '';
+    let pressTimer = null;
+
+    window.startPress = (e, action) => {
+      if (pressTimer) clearTimeout(pressTimer);
+      // 3秒 (3000ms) 長押しされたらモーダルを表示
+      pressTimer = setTimeout(() => {
+        forceActionTarget = action;
+        if (navigator.vibrate) navigator.vibrate(50); // スマホのブルッを追加
+        
+        const modal = document.getElementById('modal-force-continue');
+        const content = document.getElementById('modal-force-continue-content');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => {
+          modal.classList.remove('opacity-0');
+          content.classList.remove('scale-90', 'opacity-0');
+        }, 10);
+      }, 3000);
+    };
+
+    window.cancelPress = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+
+    window.closeForceContinueModal = () => {
+      const modal = document.getElementById('modal-force-continue');
+      const content = document.getElementById('modal-force-continue-content');
+      modal.classList.add('opacity-0');
+      content.classList.add('scale-90');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }, 300);
+    };
+
+    window.executeForceContinue = () => {
+      closeForceContinueModal();
+      // 指定された本来の処理を強制実行
+      if (forceActionTarget === 'reveal') enableRevealMode();
+      else if (forceActionTarget === 'next') nextGame();
+      else if (forceActionTarget === 'wolfWin') bridgeCompleted();
+      else if (forceActionTarget === 'discuss') startVoting();
+    };
+
     // --- ここから追加：お題のリアルタイム編集ロジック ---
 
     window.handleThemeTap = (el) => {
@@ -1618,30 +1685,49 @@ window.executeVote = async () => {
         // --- 3. アクションエリアの描画 ---
         let buttonsHtml = '';
         const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+        const allRevealed = playersList.every(p => p.state === 'faceUp'); // 🌟 全員が表向きかどうかの判定
+
+        // 長押しイベントをタグに付与する関数
+        const pressEvents = (action) => `onmousedown="startPress(event, '${action}')" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}')" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
 
         if (status === 'playing') {
-          if (allReady) {
-            buttonsHtml = `
-              <button onclick="enableRevealMode()" class="w-full group relative animate-pop-in">
-                <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
-                <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
-                  答え合わせへ
-                </div>
-              </button>
-            `;
-          } else {
-            buttonsHtml = `<div class="w-full py-4 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-full font-black text-lg text-center shadow-lg animate-pulse border-2 border-gray-600">全員が場に出すのを待っています...</div>`;
+          const isReady = allReady;
+          const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
+          const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; // 未完了ならクリックを無効化
+          
+          let msgHtml = '';
+          if (!isReady) {
+            msgHtml = `<div ${pressEvents('reveal')} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が場に出すのを待っています...</div>`;
           }
+          
+          buttonsHtml = `
+            ${msgHtml}
+            <button onclick="${clickAction}" ${pressEvents('reveal')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
+              <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
+              <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
+                答え合わせへ
+              </div>
+            </button>
+          `;
         } else if (isRevealing) {
+          const isReady = allRevealed;
+          const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
+
+          let msgHtml = '';
+          if (!isReady) {
+            msgHtml = `<div ${pressEvents(state.roomData.isWolfMode ? 'discuss' : 'next')} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が表にするのを待っています...</div>`;
+          }
+
           if (state.roomData.isWolfMode) {
             buttonsHtml = `
-              <button onclick="bridgeCompleted()" class="w-full group relative mb-2 animate-pop-in">
+              ${msgHtml}
+              <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin')} class="w-full group relative mb-3 animate-pop-in ${opacityClass} transition-all duration-300">
                 <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   橋が完成した！（村人の勝ち）
                 </div>
               </button>
-              <button onclick="startVoting()" class="w-full group relative animate-pop-in" style="animation-delay: 0.1s;">
+              <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300" style="animation-delay: 0.1s;">
                 <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   話し合いをする（追放へ）
@@ -1650,7 +1736,8 @@ window.executeVote = async () => {
             `;
           } else {
             buttonsHtml = `
-              <button onclick="nextGame()" class="w-full group relative animate-pop-in">
+              ${msgHtml}
+              <button onclick="${isReady ? 'nextGame()' : 'void(0)'}" ${pressEvents('next')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
                 <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   次のお題を決める
@@ -1822,23 +1909,71 @@ window.executeVote = async () => {
           if (myData.state === 'faceDown' || myData.state === 'faceUp') {
             if(hostActions) { hostActions.classList.remove('hidden'); hostActions.classList.add('flex'); setTimeout(() => hostActions.style.opacity = '1', 10); }
             const playersList = Object.values(players);
+            
+            // 🌟 ステータスチェック 🌟
             const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+            const allRevealed = playersList.every(p => p.state === 'faceUp');
+
+            // JSから長押しイベントを登録する関数
+            const setPressEvents = (el, action) => {
+              if(!el) return;
+              el.onmousedown = (e) => startPress(e, action);
+              el.onmouseup = cancelPress;
+              el.onmouseleave = cancelPress;
+              el.ontouchstart = (e) => startPress(e, action);
+              el.ontouchend = cancelPress;
+              el.ontouchcancel = cancelPress;
+            };
+
+            // ボタンの灰色・活性化を切り替える関数
+            const setButtonState = (btn, isReady, actionName, clickFnStr) => {
+              if(!btn) return;
+              btn.classList.remove('hidden');
+              if (isReady) {
+                btn.classList.remove('opacity-50', 'grayscale', 'cursor-not-allowed');
+                btn.setAttribute('onclick', clickFnStr);
+              } else {
+                btn.classList.add('opacity-50', 'grayscale', 'cursor-not-allowed');
+                btn.setAttribute('onclick', 'void(0)');
+              }
+              setPressEvents(btn, actionName);
+            };
 
             if (status === 'playing') {
               if(btnNext) btnNext.classList.add('hidden');
               if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
               if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
-              if (allReady) { if(msgWait) msgWait.classList.add('hidden'); if(btnReveal) btnReveal.classList.remove('hidden'); }
-              else { if(msgWait) msgWait.classList.remove('hidden'); if(btnReveal) btnReveal.classList.add('hidden'); }
+              
+              setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
+
+              if (msgWait) {
+                if (!allReady) {
+                  msgWait.classList.remove('hidden');
+                  msgWait.innerText = '全員が場に出すのを待っています...';
+                  setPressEvents(msgWait, 'reveal');
+                } else {
+                  msgWait.classList.add('hidden');
+                }
+              }
             } else if (status === 'revealing') {
-              if(msgWait) msgWait.classList.add('hidden');
               if(btnReveal) btnReveal.classList.add('hidden');
+
+              if (msgWait) {
+                if (!allRevealed) {
+                  msgWait.classList.remove('hidden');
+                  msgWait.innerText = '全員が表にするのを待っています...';
+                  setPressEvents(msgWait, state.roomData.isWolfMode ? 'discuss' : 'next');
+                } else {
+                  msgWait.classList.add('hidden');
+                }
+              }
+
               if (state.roomData.isWolfMode) {
                 if(btnNext) btnNext.classList.add('hidden');
-                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.remove('hidden');
-                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.remove('hidden');
+                setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
+                setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
               } else {
-                if(btnNext) btnNext.classList.remove('hidden');
+                setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
                 if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
                 if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
               }
