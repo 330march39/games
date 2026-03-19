@@ -45,10 +45,6 @@
       -webkit-transform-style: preserve-3d;
       transform-style: preserve-3d; 
     }
-    .backface-hidden { 
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden; 
-    }
     .rotate-y-180 { 
       -webkit-transform: rotateY(180deg);
       transform: rotateY(180deg); 
@@ -89,15 +85,18 @@
 
     /* Card Layout constraints */
     .card-aspect { aspect-ratio: 2 / 3; }
-
-    /* iOSの3D透け・反転バグ対策 */
-    #player-card-front {
-      -webkit-transform: rotateY(180deg) translateZ(1px);
-      transform: rotateY(180deg) translateZ(1px);
-    }
-    #player-card-back {
+    /* 🌟 iOSの3D透け・反転バグ対策 🌟 */
+    .face-0 { 
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden; 
       -webkit-transform: rotateY(0deg) translateZ(1px);
       transform: rotateY(0deg) translateZ(1px);
+    }
+    .face-180 { 
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden; 
+      -webkit-transform: rotateY(180deg) translateZ(1px);
+      transform: rotateY(180deg) translateZ(1px);
     }
   </style>
 </head>
@@ -359,7 +358,7 @@
     <div class="absolute inset-0 flex items-center justify-center w-full min-h-0 z-10 perspective-1000 pointer-events-none">
       <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem] pointer-events-auto" onclick="handleSharedCardTap()">
         
-        <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] backface-hidden flex flex-col items-center justify-center overflow-hidden">
+        <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] face-0 flex flex-col items-center justify-center overflow-hidden">
           <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden">
             <div id="player-role-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-2xl bg-white border-2 shadow-sm">🧑‍🌾</div>
             <span id="player-role-text" class="text-xs font-black text-gray-800 bg-white/80 px-2 rounded-full mt-1">村人</span>
@@ -377,7 +376,7 @@
           </div>
         </div>
 
-        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2rem] md:rounded-[2.5rem] backface-hidden border-4 border-white/30 flex items-center justify-center overflow-hidden rotate-y-180">
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2rem] md:rounded-[2.5rem] face-180 border-4 border-white/30 flex items-center justify-center overflow-hidden">
           <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
           <div class="border-4 border-white/50 w-3/4 h-5/6 rounded-[2rem] flex items-center justify-center relative z-10 shadow-inner backdrop-blur-sm">
             <span class="text-white text-6xl md:text-7xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">ito</span>
@@ -1360,6 +1359,13 @@ window.executeVote = async () => {
     const renderHostView = () => {
       const { status, players, theme } = state.roomData;
       const playersList = Object.entries(players || {}).map(([id, p]) => ({ id, ...p }));
+
+      // 🌟 画面フェーズが切り替わった時に、スクロール位置を一番上に戻す
+      const hostMain = document.querySelector('#screen-host main');
+      if (hostMain && hostMain.dataset.phase !== status) {
+        hostMain.scrollTop = 0;
+        hostMain.dataset.phase = status;
+      }
       
       const vWaiting = document.getElementById('host-view-waiting');
       const vUnifiedGame = document.getElementById('host-view-unified-game');
@@ -1560,11 +1566,11 @@ window.executeVote = async () => {
               <div class="flex flex-col items-center justify-start w-20 sm:w-24 md:w-32 transition-all duration-700 z-10 ${wrapperFxClass}" ${clickAttr}>
                 <div class="w-full aspect-[2/3] perspective-1000 mb-2 md:mb-3 relative">
                   <div id="vote-card-${p.id}" class="vote-card-inner w-full h-full relative transform-style-3d transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFlipped ? 'rotate-y-180' : ''} ${voteRing} rounded-xl md:rounded-2xl shadow-lg">
-                    <div class="absolute inset-0 backface-hidden bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-xl md:rounded-2xl border-4 border-white/40 flex items-center justify-center overflow-hidden">
+                    <div class="absolute inset-0 face-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-xl md:rounded-2xl border-4 border-white/40 flex items-center justify-center overflow-hidden">
                       <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
                       <span class="text-white text-lg md:text-2xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">hashi</span>
                     </div>
-                    <div class="absolute inset-0 backface-hidden rotate-y-180 border-4 ${resultFxClass} rounded-xl md:rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-colors duration-[800ms]">
+                    <div class="absolute inset-0 face-180 border-4 ${resultFxClass} rounded-xl md:rounded-2xl flex flex-col items-center justify-center overflow-hidden transition-colors duration-[800ms]">
                       ${frontContent}
                     </div>
                   </div>
