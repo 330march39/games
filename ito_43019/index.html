@@ -947,25 +947,27 @@
 
     window.startThemeRoulette = async () => {
       state.isRouletteSpinning = true;
-      if (state.isHost) renderHostView(); // ルーレット画面に切り替え
+      if (state.isHost) renderHostView(); 
 
       let count = 0;
-      const maxCount = 20; // ルーレットが回る回数
+      const maxCount = 20; 
       
       const intervalId = setInterval(() => {
         const inputEl = document.getElementById('host-theme-input');
         if (inputEl) {
-           inputEl.value = THEMES[Math.floor(Math.random() * THEMES.length)];
+           // テキストエリアとdivのどちらにも対応
+           if (inputEl.tagName === 'TEXTAREA' || inputEl.tagName === 'INPUT') inputEl.value = THEMES[Math.floor(Math.random() * THEMES.length)];
+           else inputEl.innerText = THEMES[Math.floor(Math.random() * THEMES.length)];
         }
         count++;
         if (count >= maxCount) {
            clearInterval(intervalId);
            const finalTheme = THEMES[Math.floor(Math.random() * THEMES.length)];
            if (inputEl) {
-              inputEl.value = finalTheme;
+              if (inputEl.tagName === 'TEXTAREA' || inputEl.tagName === 'INPUT') inputEl.value = finalTheme;
+              else inputEl.innerText = finalTheme;
               inputEl.classList.add('text-pink-500', 'scale-110');
            }
-           // 1.5秒後に実際のゲーム画面へ移行
            setTimeout(async () => {
              state.isRouletteSpinning = false;
              await executeGameStart(finalTheme, false);
@@ -1075,16 +1077,19 @@ window.executeVote = async () => {
       el.style.height = targetHeight;
     };
     
-    // 🌟 新規追加：長押し＆強制続行ロジック 🌟
+    // 🌟 修正：長押し＆強制続行ロジック 🌟
     let forceActionTarget = '';
     let pressTimer = null;
 
-    window.startPress = (e, action) => {
+    // isReady が true の時（ボタンが光っている時）は長押しを無視する
+    window.startPress = (e, action, isReady) => {
+      const isActionReady = (typeof isReady === 'string') ? isReady === 'true' : !!isReady;
+      if (isActionReady) return; // 準備完了時は何もしない
+
       if (pressTimer) clearTimeout(pressTimer);
-      // 3秒 (3000ms) 長押しされたらモーダルを表示
       pressTimer = setTimeout(() => {
         forceActionTarget = action;
-        if (navigator.vibrate) navigator.vibrate(50); // スマホのブルッを追加
+        if (navigator.vibrate) navigator.vibrate(50); 
         
         const modal = document.getElementById('modal-force-continue');
         const content = document.getElementById('modal-force-continue-content');
@@ -1098,10 +1103,7 @@ window.executeVote = async () => {
     };
 
     window.cancelPress = () => {
-      if (pressTimer) {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
+      if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     };
 
     window.closeForceContinueModal = () => {
@@ -1109,15 +1111,11 @@ window.executeVote = async () => {
       const content = document.getElementById('modal-force-continue-content');
       modal.classList.add('opacity-0');
       content.classList.add('scale-90');
-      setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-      }, 300);
+      setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
     };
 
     window.executeForceContinue = () => {
       closeForceContinueModal();
-      // 指定された本来の処理を強制実行
       if (forceActionTarget === 'reveal') enableRevealMode();
       else if (forceActionTarget === 'next') nextGame();
       else if (forceActionTarget === 'wolfWin') bridgeCompleted();
@@ -1486,103 +1484,122 @@ window.executeVote = async () => {
         const isVoting = status === 'voting';
         const isResult = status === 'result';
 
-        // --- 1. ヘッダーの描画 ---
-        if (status === 'choosing_theme') {
-          // 「お題はどうする？」画面と「ルーレット」画面を縦の中央に配置するためのラッパーを追加
-          if (state.isRouletteSpinning) {
-            headerEl.innerHTML = `
-              <div class="flex flex-col items-center justify-center min-h-[60vh] w-full">
-                <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
-                  <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-                  <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
-                  <textarea id="host-theme-input" class="w-full text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-all duration-300 resize-none overflow-y-auto" rows="2" readonly>...</textarea>
+        // --- 1. ヘッダーの描画（再描画の抑制） ---
+        const currentHeaderPhase = headerEl.dataset.phase;
+        const currentRouletteState = headerEl.dataset.roulette === 'true';
+        const isThemeEditing = state.roomData.themeEditorId === currentUser.uid;
+
+        // フェーズが変わった時だけHTMLを生成する
+        if (currentHeaderPhase !== status || (status === 'choosing_theme' && state.isRouletteSpinning !== currentRouletteState)) {
+          if (status === 'choosing_theme') {
+            if (state.isRouletteSpinning) {
+              headerEl.innerHTML = `
+                <div class="flex flex-col items-center justify-center min-h-[50vh] w-full mt-[10vh]">
+                  <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden animate-pop-in">
+                    <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+                    <p class="text-yellow-600 font-black text-xl mb-2 mt-2">お題抽選中...</p>
+                    <div class="w-full h-24 flex items-center justify-center px-4">
+                      <div id="host-theme-input" class="text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight transition-all duration-300">...</div>
+                    </div>
+                  </div>
                 </div>
+              `;
+            } else {
+              headerEl.innerHTML = `
+                <div class="flex flex-col justify-center min-h-[50vh] w-full mt-[10vh]">
+                  <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
+                  <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto animate-pop-in">
+                    <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
+                      <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
+                      <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                        <span class="text-5xl md:text-6xl">🎲</span>
+                        ランダムに出題
+                      </div>
+                    </button>
+                    <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
+                      <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
+                      <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
+                        <span class="text-5xl md:text-6xl">💬</span>
+                        自分たちで出題
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              `;
+            }
+            gridEl.innerHTML = ''; actionEl.innerHTML = ''; 
+          } else if (isVoting) {
+            headerEl.innerHTML = `
+              <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-purple-300 relative overflow-hidden animate-pop-in">
+                <div class="absolute top-0 left-0 w-full h-4 bg-purple-300 bg-stripes opacity-50"></div>
+                <h2 class="text-3xl md:text-4xl font-black text-purple-600 mb-2">話し合い＆追放</h2>
+                <p class="text-gray-500 font-bold">きつねだと思う人のカードをタップしてね</p>
+              </div>
+            `;
+          } else if (isResult) {
+            const isVillagerWin = state.roomData.winner === 'villagers';
+            const bgColor = isVillagerWin ? 'bg-green-50 border-green-400' : 'bg-orange-50 border-orange-400';
+            const titleColor = isVillagerWin ? 'text-green-600' : 'text-orange-600';
+            const titleText = isVillagerWin ? '村人の勝ち！🎉' : 'きつねの勝ち！🦊';
+            const reasonText = state.roomData.reason === 'completed' ? '橋が見事完成しました！' : (isVillagerWin ? 'きつねを追放しました！' : '間違った人を追放してしまいました...');
+            
+            headerEl.innerHTML = `
+              <div class="w-full ${bgColor} rounded-[2rem] shadow-xl p-6 border-8 relative overflow-hidden animate-pop-in">
+                <h2 class="text-4xl md:text-5xl font-black ${titleColor} mb-2">${titleText}</h2>
+                <p class="text-xl font-bold ${titleColor} opacity-80">${reasonText}</p>
               </div>
             `;
           } else {
             headerEl.innerHTML = `
-              <div class="flex flex-col justify-center min-h-[60vh] w-full">
-                <h2 class="text-3xl md:text-4xl font-black text-cyan-600 mb-6 text-center animate-pop-in">お題の決め方は？</h2>
-                <div class="flex flex-col md:flex-row justify-center items-center gap-6 w-full max-w-2xl px-4 mx-auto animate-pop-in">
-                  <button onclick="startThemeRoulette()" class="w-full md:flex-1 group relative">
-                    <div class="absolute inset-0 bg-yellow-600 rounded-[2rem] transform translate-y-2"></div>
-                    <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-yellow-400 to-orange-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-                      <span class="text-5xl md:text-6xl">🎲</span>
-                      ランダムに出題
-                    </div>
-                  </button>
-                  <button onclick="startFreeTheme()" class="w-full md:flex-1 group relative">
-                    <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
-                    <div class="relative w-full py-6 md:py-10 bg-gradient-to-r from-green-400 to-emerald-400 text-white rounded-[2rem] font-black text-2xl md:text-3xl border-4 border-white shadow-xl flex flex-col items-center justify-center gap-4 transform transition-transform group-active:translate-y-2">
-                      <span class="text-5xl md:text-6xl">💬</span>
-                      自分たちで出題
-                    </div>
-                  </button>
-                </div>
+              <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
+                <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
+                <textarea id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none resize-none overflow-hidden" rows="1" style="min-height: 50px;">...</textarea>
+                <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
               </div>
             `;
           }
-          gridEl.innerHTML = ''; actionEl.innerHTML = ''; return; 
-        } else if (isVoting) {
-          headerEl.innerHTML = `
-            <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-purple-300 relative overflow-hidden animate-pop-in">
-              <div class="absolute top-0 left-0 w-full h-4 bg-purple-300 bg-stripes opacity-50"></div>
-              <h2 class="text-3xl md:text-4xl font-black text-purple-600 mb-2">話し合い＆追放</h2>
-              <p class="text-gray-500 font-bold">きつねだと思う人のカードをタップしてね</p>
-            </div>
-          `;
-        } else if (isResult) {
-          const isVillagerWin = state.roomData.winner === 'villagers';
-          const bgColor = isVillagerWin ? 'bg-green-50 border-green-400' : 'bg-orange-50 border-orange-400';
-          const titleColor = isVillagerWin ? 'text-green-600' : 'text-orange-600';
-          const titleText = isVillagerWin ? '村人の勝ち！🎉' : 'きつねの勝ち！🦊';
-          const reasonText = state.roomData.reason === 'completed' ? '橋が見事完成しました！' : (isVillagerWin ? 'きつねを追放しました！' : '間違った人を追放してしまいました...');
-          
-          headerEl.innerHTML = `
-            <div class="w-full ${bgColor} rounded-[2rem] shadow-xl p-6 border-8 relative overflow-hidden animate-pop-in">
-              <h2 class="text-4xl md:text-5xl font-black ${titleColor} mb-2">${titleText}</h2>
-              <p class="text-xl font-bold ${titleColor} opacity-80">${reasonText}</p>
-            </div>
-          `;
-        } else {
-          headerEl.innerHTML = `
-            <div class="w-full bg-white rounded-[2rem] shadow-xl p-6 border-8 border-yellow-300 relative overflow-hidden">
-              <div class="absolute top-0 left-0 w-full h-4 bg-yellow-300 bg-stripes opacity-50"></div>
-              <p class="text-yellow-600 font-black text-xl mb-2 mt-2">今回のお題</p>
-              <textarea id="host-theme-input" onclick="handleThemeTap(this)" oninput="handleThemeInput(this)" onblur="handleThemeBlur()" class="w-full text-center bg-transparent text-3xl md:text-4xl font-black text-gray-800 drop-shadow-sm leading-tight pb-2 outline-none transition-colors resize-none overflow-y-auto" rows="2">...</textarea>
-              <p id="host-theme-edit-msg" class="text-sm font-bold text-pink-500 mt-1 hidden animate-pulse">誰かが入力中...</p>
-            </div>
-          `;
-          
-          // ★修正：スマホでキーボードが出るように、タップ前から `readOnly` を適切に外しておく
-          setTimeout(() => {
-            const hostThemeInput = document.getElementById('host-theme-input');
-            const hostThemeMsg = document.getElementById('host-theme-edit-msg');
-            if (hostThemeInput) {
-              hostThemeInput.value = theme; 
-              
-              const isFree = state.roomData.isFreeTheme;
-              const currentEditor = state.roomData.themeEditorId;
-              const canEdit = isFree && (!currentEditor || currentEditor === currentUser?.uid);
-              
-              hostThemeInput.readOnly = !canEdit; // 入力可能なら最初からreadOnlyを外す
-
-              if (isFree) {
-                hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-                if (currentEditor && currentEditor !== currentUser?.uid) {
-                  if(hostThemeMsg) hostThemeMsg.classList.remove('hidden');
-                } else { 
-                  if(hostThemeMsg) hostThemeMsg.classList.add('hidden'); 
-                }
-              } else {
-                hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
-                if(hostThemeMsg) hostThemeMsg.classList.add('hidden');
-              }
-            }
-          }, 0);
+          headerEl.dataset.phase = status;
+          headerEl.dataset.roulette = state.isRouletteSpinning;
         }
 
-        // --- 2. カードグリッドの描画 ---
+        // 🌟 同じフェーズの場合は入力値と権限だけを静かに更新（再描画を防ぎ、PCでも入力可能に！）
+        if (status === 'playing' || status === 'revealing') {
+          const hostThemeInput = document.getElementById('host-theme-input');
+          const hostThemeMsg = document.getElementById('host-theme-edit-msg');
+          
+          if (hostThemeInput && !isThemeEditing) {
+             if (hostThemeInput.value !== theme) {
+                 hostThemeInput.value = theme;
+                 setTimeout(() => window.autoResizeTextarea(hostThemeInput), 10);
+             }
+          }
+          
+          const isFree = state.roomData.isFreeTheme;
+          const currentEditor = state.roomData.themeEditorId;
+          const canEdit = isFree && (!currentEditor || currentEditor === currentUser?.uid);
+          
+          if (hostThemeInput) {
+             hostThemeInput.readOnly = !canEdit;
+             if (isFree) {
+                 hostThemeInput.classList.add('border-b-4', 'border-dashed', 'border-gray-300');
+                 if (canEdit) hostThemeInput.classList.add('cursor-pointer');
+                 else hostThemeInput.classList.remove('cursor-pointer');
+                 
+                 if (currentEditor && currentEditor !== currentUser?.uid) {
+                     if (hostThemeMsg) hostThemeMsg.classList.remove('hidden');
+                 } else {
+                     if (hostThemeMsg) hostThemeMsg.classList.add('hidden');
+                 }
+             } else {
+                 hostThemeInput.classList.remove('border-b-4', 'border-dashed', 'border-gray-300', 'cursor-pointer');
+                 if (hostThemeMsg) hostThemeMsg.classList.add('hidden');
+             }
+          }
+        }
+        if (status === 'choosing_theme') return; // お題選択時はボタン等は描画しない
+
+        // --- 2. カードグリッドの描画 --- 
         const sortedPlayers = (isRevealing || isVoting || isResult) ? [...playersList].sort((a, b) => a.number - b.number) : playersList;
         
         // 前回のフェーズを記憶し、無駄な全体再描画（文字のアニメーション暴発）を防ぐ
@@ -1685,24 +1702,24 @@ window.executeVote = async () => {
         // --- 3. アクションエリアの描画 ---
         let buttonsHtml = '';
         const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
-        const allRevealed = playersList.every(p => p.state === 'faceUp'); // 🌟 全員が表向きかどうかの判定
+        const allRevealed = playersList.every(p => p.state === 'faceUp'); 
 
-        // 長押しイベントをタグに付与する関数
-        const pressEvents = (action) => `onmousedown="startPress(event, '${action}')" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}')" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
+        // 🌟 修正：長押しイベントに isReady フラグを渡す 🌟
+        const pressEvents = (action, isReadyFlag) => `onmousedown="startPress(event, '${action}', ${isReadyFlag})" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}', ${isReadyFlag})" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
 
         if (status === 'playing') {
           const isReady = allReady;
           const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
-          const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; // 未完了ならクリックを無効化
+          const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; 
           
           let msgHtml = '';
           if (!isReady) {
-            msgHtml = `<div ${pressEvents('reveal')} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が場に出すのを待っています...</div>`;
+            msgHtml = `<div ${pressEvents('reveal', isReady)} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が場に出すのを待っています...</div>`;
           }
           
           buttonsHtml = `
             ${msgHtml}
-            <button onclick="${clickAction}" ${pressEvents('reveal')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
+            <button onclick="${clickAction}" ${pressEvents('reveal', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
               <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
               <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 animate-pulse-ring flex items-center justify-center gap-2">
                 答え合わせへ
@@ -1715,19 +1732,19 @@ window.executeVote = async () => {
 
           let msgHtml = '';
           if (!isReady) {
-            msgHtml = `<div ${pressEvents(state.roomData.isWolfMode ? 'discuss' : 'next')} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が表にするのを待っています...</div>`;
+            msgHtml = `<div ${pressEvents(state.roomData.isWolfMode ? 'discuss' : 'next', isReady)} class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none cursor-pointer">全員が表にするのを待っています...</div>`;
           }
 
           if (state.roomData.isWolfMode) {
             buttonsHtml = `
               ${msgHtml}
-              <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin')} class="w-full group relative mb-3 animate-pop-in ${opacityClass} transition-all duration-300">
+              <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin', isReady)} class="w-full group relative mb-3 animate-pop-in ${opacityClass} transition-all duration-300">
                 <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   橋が完成した！（村人の勝ち）
                 </div>
               </button>
-              <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300" style="animation-delay: 0.1s;">
+              <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300" style="animation-delay: 0.1s;">
                 <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   話し合いをする（追放へ）
@@ -1737,7 +1754,7 @@ window.executeVote = async () => {
           } else {
             buttonsHtml = `
               ${msgHtml}
-              <button onclick="${isReady ? 'nextGame()' : 'void(0)'}" ${pressEvents('next')} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
+              <button onclick="${isReady ? 'nextGame()' : 'void(0)'}" ${pressEvents('next', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
                 <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
                 <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
                   次のお題を決める
@@ -1914,13 +1931,13 @@ window.executeVote = async () => {
             const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
             const allRevealed = playersList.every(p => p.state === 'faceUp');
 
-            // JSから長押しイベントを登録する関数
-            const setPressEvents = (el, action) => {
+            // 🌟 修正：JSから長押しイベントを登録する関数に isReady を渡す 🌟
+            const setPressEvents = (el, action, isReadyFlag) => {
               if(!el) return;
-              el.onmousedown = (e) => startPress(e, action);
+              el.onmousedown = (e) => startPress(e, action, isReadyFlag);
               el.onmouseup = cancelPress;
               el.onmouseleave = cancelPress;
-              el.ontouchstart = (e) => startPress(e, action);
+              el.ontouchstart = (e) => startPress(e, action, isReadyFlag);
               el.ontouchend = cancelPress;
               el.ontouchcancel = cancelPress;
             };
@@ -1936,7 +1953,7 @@ window.executeVote = async () => {
                 btn.classList.add('opacity-50', 'grayscale', 'cursor-not-allowed');
                 btn.setAttribute('onclick', 'void(0)');
               }
-              setPressEvents(btn, actionName);
+              setPressEvents(btn, actionName, isReady);
             };
 
             if (status === 'playing') {
