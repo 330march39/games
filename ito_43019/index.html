@@ -309,7 +309,7 @@
 
         <div id="unified-card-grid" class="w-full flex flex-wrap justify-center gap-4 md:gap-8 mb-10 z-10"></div>
 
-        <div id="unified-action-area" class="w-full max-w-md mx-auto fixed bottom-6 left-1/2 transform -translate-x-1/2 flex flex-col items-center gap-3 z-50 px-4"></div>
+        <div id="unified-action-area" class="w-full max-w-md fixed bottom-6 left-0 right-0 mx-auto flex flex-col items-center gap-3 z-[100] px-4 pb-[env(safe-area-inset-bottom)]"></div>
 
       </div>
       <div class="w-full h-32 shrink-0 lg:hidden"></div>
@@ -728,12 +728,15 @@
       // プレイヤーが退出する場合、データベースから自分の情報を削除する
       if (state.roomId && currentUser && !state.isHost) {
         try {
-          const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
-          await updateDoc(roomRef, {
-            [`players.${currentUser.uid}`]: deleteField()
-          });
+          // ★ 追加：ルームがすでに解散（deleted）されていないか確認
+          if (state.roomData && state.roomData.status !== 'deleted') {
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
+            await updateDoc(roomRef, {
+              [`players.${currentUser.uid}`]: deleteField()
+            });
+          }
         } catch (e) {
-          console.error(e);
+          console.warn("退出処理スキップ:", e.message); // エラー表示を控えめに
         }
       }
 
@@ -1741,7 +1744,6 @@ window.executeVote = async () => {
           }
 
           if (state.roomData.isWolfMode) {
-                if(btnNext) btnNext.classList.add('hidden');
                 buttonsHtml = `
                   ${msgHtml}
                   <div class="flex flex-col md:flex-row w-full gap-3">
