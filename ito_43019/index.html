@@ -97,6 +97,14 @@
       -webkit-transform: rotateY(180deg) translateZ(1px);
       transform: rotateY(180deg) translateZ(1px);
     }
+    /* ボタン有効化時の波紋アニメーション */
+    .btn-wave-front {
+      clip-path: circle(0% at 50% 50%);
+      transition: clip-path 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn-is-ready .btn-wave-front {
+      clip-path: circle(150% at 50% 50%);
+    }
   </style>
 </head>
 <body class="text-gray-800 overflow-hidden flex flex-col h-[100dvh] w-full relative">
@@ -309,7 +317,7 @@
 
         <div id="unified-card-grid" class="w-full flex flex-wrap justify-center gap-4 md:gap-8 mb-10 z-10"></div>
 
-        <div id="unified-action-area" class="w-full max-w-md fixed bottom-6 left-0 right-0 mx-auto flex flex-col items-center gap-3 z-[100] px-4 pb-[env(safe-area-inset-bottom)]"></div>
+        <div id="unified-action-area" class="fixed bottom-0 left-0 right-0 w-full max-w-md mx-auto px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] flex flex-col items-center gap-3 z-[100] pointer-events-none"></div>
 
       </div>
       <div class="w-full h-32 shrink-0 lg:hidden"></div>
@@ -1706,96 +1714,127 @@ window.executeVote = async () => {
         }
 
         // --- 3. アクションエリアの描画 ---
-        let buttonsHtml = '';
         const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
         const allRevealed = playersList.every(p => p.state === 'faceUp'); 
 
-        const pressEvents = (action, isReadyFlag) => `onmousedown="startPress(event, '${action}', ${isReadyFlag})" onmouseup="cancelPress()" onmouseleave="cancelPress()" ontouchstart="startPress(event, '${action}', ${isReadyFlag})" ontouchend="cancelPress()" ontouchcancel="cancelPress()"`;
+        // 現在描画されているフェーズを記憶し、不必要な再描画を防ぐ
+        const currentActionPhase = actionEl.dataset.phase;
 
-        if (status === 'playing') {
-          const isReady = allReady;
-          const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
-          const clickAction = isReady ? 'enableRevealMode()' : 'void(0)'; 
-          const pulseClass = isReady ? 'animate-pulse-ring' : ''; // 🌟 光るアニメーションは準備完了時のみ
-          
-          let msgHtml = '';
-          if (!isReady) {
-            // 🌟 メッセージからは長押しイベントと cursor-pointer を削除
-            msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が場に出すのを待っています...</div>`;
-          }
-          
-          buttonsHtml = `
-            ${msgHtml}
-            <button onclick="${clickAction}" ${pressEvents('reveal', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
-              <div class="absolute inset-0 bg-pink-600 rounded-[2rem] transform translate-y-2"></div>
-              <div class="relative w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 ${pulseClass} flex items-center justify-center gap-2">
-                答え合わせへ
-              </div>
-            </button>
-          `;
-        } else if (isRevealing) {
-          const isReady = allRevealed;
-          const opacityClass = isReady ? '' : 'opacity-50 grayscale cursor-not-allowed';
+        if (currentActionPhase !== status) {
+          // ▼ フェーズが切り替わった時のみ、新しくボタン（HTML）を作る ▼
+          let buttonsHtml = '';
 
-          let msgHtml = '';
-          if (!isReady) {
-            // 🌟 メッセージからは長押しイベントと cursor-pointer を削除
-            msgHtml = `<div class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg animate-pulse border-2 border-gray-600 mb-3 select-none">全員が表にするのを待っています...</div>`;
-          }
-
-          if (state.roomData.isWolfMode) {
-                buttonsHtml = `
-                  ${msgHtml}
-                  <div class="flex flex-col md:flex-row w-full gap-3">
-                    <button onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" ${pressEvents('wolfWin', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
-                      <div class="absolute inset-0 bg-green-600 rounded-[2rem] transform translate-y-2"></div>
-                      <div class="relative w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl md:text-lg border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-                        橋が完成した！
-                      </div>
-                    </button>
-                    <button onclick="${isReady ? 'startVoting()' : 'void(0)'}" ${pressEvents('discuss', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300" style="animation-delay: 0.1s;">
-                      <div class="absolute inset-0 bg-purple-700 rounded-[2rem] transform translate-y-2"></div>
-                      <div class="relative w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl md:text-lg border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-                        話し合いをする
-                      </div>
-                    </button>
-                  </div>
-                `;
-          } else {
+          if (status === 'playing') {
+            const isReady = allReady;
             buttonsHtml = `
-              ${msgHtml}
-              <button onclick="${isReady ? 'nextGame()' : 'void(0)'}" ${pressEvents('next', isReady)} class="w-full group relative animate-pop-in ${opacityClass} transition-all duration-300">
+              <div id="host-msg-wait" class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg border-2 border-gray-600 mb-3 select-none transition-opacity duration-500 pointer-events-auto ${isReady ? 'hidden' : 'animate-pulse'}">全員が場に出すのを待っています...</div>
+
+              <button id="btn-host-reveal" onclick="${isReady ? 'enableRevealMode()' : 'void(0)'}" class="w-full group relative animate-pop-in pointer-events-auto ${isReady ? 'btn-is-ready' : ''}">
+                <div class="absolute inset-0 bg-pink-700 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-5 bg-gray-300 text-gray-500 rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center transform transition-transform group-active:translate-y-2">
+                  答え合わせへ
+                </div>
+                <div class="btn-wave-front absolute top-0 left-0 w-full py-5 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl flex items-center justify-center transform transition-transform group-active:translate-y-2 pointer-events-none">
+                  答え合わせへ
+                </div>
+              </button>
+            `;
+          } else if (isRevealing) {
+            const isReady = allRevealed;
+            const msgHtml = `<div id="host-msg-wait" class="w-full py-3 px-6 bg-gray-800/80 backdrop-blur-md text-white rounded-[2rem] font-bold text-sm text-center shadow-lg border-2 border-gray-600 mb-3 select-none transition-opacity duration-500 pointer-events-auto ${isReady ? 'hidden' : 'animate-pulse'}">全員が表にするのを待っています...</div>`;
+
+            if (state.roomData.isWolfMode) {
+              // ★話し合いと橋の完成の順番を入れ替え（左右・上下反転）
+              buttonsHtml = `
+                ${msgHtml}
+                <div class="flex flex-col md:flex-row w-full gap-3 pointer-events-auto">
+                  <button id="btn-host-discuss" onclick="${isReady ? 'startVoting()' : 'void(0)'}" class="w-full group relative animate-pop-in ${isReady ? 'btn-is-ready' : ''}">
+                    <div class="absolute inset-0 bg-purple-800 rounded-[2rem] transform translate-y-2"></div>
+                    <div class="relative w-full py-4 bg-gray-300 text-gray-500 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">話し合いをする</div>
+                    <div class="btn-wave-front absolute top-0 left-0 w-full py-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 pointer-events-none flex items-center justify-center">話し合いをする</div>
+                  </button>
+
+                  <button id="btn-host-wolfwin" onclick="${isReady ? 'bridgeCompleted()' : 'void(0)'}" class="w-full group relative animate-pop-in ${isReady ? 'btn-is-ready' : ''}" style="animation-delay: 0.1s;">
+                    <div class="absolute inset-0 bg-green-700 rounded-[2rem] transform translate-y-2"></div>
+                    <div class="relative w-full py-4 bg-gray-300 text-gray-500 rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">橋が完成した！</div>
+                    <div class="btn-wave-front absolute top-0 left-0 w-full py-4 bg-gradient-to-r from-green-400 to-emerald-500 text-white rounded-[2rem] font-black text-xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 pointer-events-none flex items-center justify-center">橋が完成した！</div>
+                  </button>
+                </div>
+              `;
+            } else {
+              buttonsHtml = `
+                ${msgHtml}
+                <button id="btn-host-next" onclick="${isReady ? 'nextGame()' : 'void(0)'}" class="w-full group relative animate-pop-in pointer-events-auto ${isReady ? 'btn-is-ready' : ''}">
+                  <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
+                  <div class="relative w-full py-5 bg-gray-300 text-gray-500 rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">次のお題を決める</div>
+                  <div class="btn-wave-front absolute top-0 left-0 w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 pointer-events-none flex items-center justify-center">次のお題を決める</div>
+                </button>
+              `;
+            }
+          } else if (isVoting) {
+            buttonsHtml = `
+              <button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300 pointer-events-auto">
+                <div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div>
+                <div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">
+                  この人を追放する
+                </div>
+              </button>
+            `;
+            setTimeout(() => { 
+              const voteBtn = document.getElementById('btn-execute-vote');
+              if(voteBtn) voteBtn.disabled = !selectedExileId; 
+            }, 0);
+          } else if (isResult) {
+            buttonsHtml = `
+              <button onclick="nextGame()" class="w-full group relative animate-pop-in pointer-events-auto" style="animation-delay: 2s;">
                 <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
-                <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2">
+                <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
                   次のお題を決める
                 </div>
               </button>
             `;
           }
-        } else if (isVoting) {
-          buttonsHtml = `
-            <button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300">
-              <div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div>
-              <div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">
-                この人を追放する
-              </div>
-            </button>
-          `;
-          setTimeout(() => { 
+          actionEl.innerHTML = buttonsHtml;
+          actionEl.dataset.phase = status;
+
+        } else {
+          // ▼ フェーズが同じ場合（裏返した時など）は、ボタンのクラス（色）だけを静かに更新する ▼
+          const updateBtnWave = (btnId, isReady, onclickAction) => {
+            const btn = document.getElementById(btnId);
+            if (!btn) return;
+            if (isReady) {
+              btn.classList.add('btn-is-ready');
+              btn.setAttribute('onclick', onclickAction);
+            } else {
+              btn.classList.remove('btn-is-ready');
+              btn.setAttribute('onclick', 'void(0)');
+            }
+          };
+
+          const msgWait = document.getElementById('host-msg-wait');
+
+          if (status === 'playing') {
+            updateBtnWave('btn-host-reveal', allReady, 'enableRevealMode()');
+            if(msgWait) {
+              if(allReady) { msgWait.classList.add('hidden'); msgWait.classList.remove('animate-pulse'); }
+              else { msgWait.classList.remove('hidden'); msgWait.classList.add('animate-pulse'); }
+            }
+          } else if (status === 'revealing') {
+            if (state.roomData.isWolfMode) {
+              updateBtnWave('btn-host-discuss', allRevealed, 'startVoting()');
+              updateBtnWave('btn-host-wolfwin', allRevealed, 'bridgeCompleted()');
+            } else {
+              updateBtnWave('btn-host-next', allRevealed, 'nextGame()');
+            }
+            if(msgWait) {
+              if(allRevealed) { msgWait.classList.add('hidden'); msgWait.classList.remove('animate-pulse'); }
+              else { msgWait.classList.remove('hidden'); msgWait.classList.add('animate-pulse'); }
+            }
+          } else if (status === 'voting') {
             const voteBtn = document.getElementById('btn-execute-vote');
-            if(voteBtn) voteBtn.disabled = !selectedExileId; 
-          }, 0);
-        } else if (isResult) {
-          buttonsHtml = `
-            <button onclick="nextGame()" class="w-full group relative animate-pop-in" style="animation-delay: 2s;">
-              <div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div>
-              <div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">
-                次のお題を決める
-              </div>
-            </button>
-          `;
+            if (voteBtn) voteBtn.disabled = !selectedExileId;
+          }
         }
-        actionEl.innerHTML = buttonsHtml;
       }
     };
 
