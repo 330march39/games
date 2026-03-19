@@ -31,11 +31,10 @@
       /* ダブルタップによるズームを無効化（スクロールは許可） */
       touch-action: manipulation;
     }
-    input {
+    input, textarea {
       -webkit-user-select: auto;
       user-select: auto;
     }
-
     /* 3D Card Flip Utilities */
     .perspective-1000 { 
       -webkit-perspective: 1000px;
@@ -345,16 +344,6 @@
       </div>
     </div>
 
-    <div id="player-rule-hint" class="w-full max-w-sm mx-auto mt-3 shrink-0 bg-white/80 backdrop-blur text-gray-700 text-xs md:text-sm font-bold p-3 rounded-2xl shadow-sm border-2 border-white flex gap-2 items-start relative transition-opacity duration-300 z-20">
-      <div class="bg-yellow-400 text-white rounded-full p-1.5 shrink-0 mt-0.5">
-         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      </div>
-      <p class="leading-snug pr-6">数字の大きさを「言葉」で表現しよう！直接数字を言うのはNG！</p>
-      <button onclick="hideRuleHint()" class="absolute top-1 right-1 text-gray-400 hover:text-gray-600 p-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-      </button>
-    </div>
-
     <div class="absolute inset-0 flex items-center justify-center w-full min-h-0 z-10 perspective-1000 pointer-events-none">
       <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem] pointer-events-auto" onclick="handleSharedCardTap()">
         
@@ -385,6 +374,20 @@
 
       </div>
     </div>
+    
+    <div class="flex-1 flex items-center justify-center w-full max-w-sm mx-auto py-4 min-h-0 z-10 relative perspective-1000">
+        </div>
+
+    <div id="player-rule-hint" class="w-full max-w-sm mx-auto mb-6 shrink-0 bg-white/80 backdrop-blur text-gray-700 text-xs md:text-sm font-bold p-3 rounded-2xl shadow-sm border-2 border-white flex gap-2 items-start relative transition-opacity duration-300 z-20">
+      <div class="bg-yellow-400 text-white rounded-full p-1.5 shrink-0 mt-0.5">
+         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <p class="leading-snug pr-6">数字の大きさを「言葉」で表現しよう！<br/>直接数字を言うのはNG！</p>
+      <button onclick="hideRuleHint()" class="absolute top-1 right-1 text-gray-400 hover:text-gray-600 p-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    
     <div id="player-host-actions" class="hidden absolute bottom-6 w-full max-w-sm left-1/2 transform -translate-x-1/2 px-4 z-50 flex-col items-center gap-3 transition-opacity duration-500" onclick="event.stopPropagation()">
       <div id="player-host-waiting-msg" class="w-full py-3 bg-gray-800/80 backdrop-blur text-gray-300 rounded-[2rem] font-bold text-center border-2 border-gray-600 shadow-sm text-sm">
         全員が場に出すのを待っています...
@@ -1059,6 +1062,11 @@ window.executeVote = async () => {
     window.handleThemeTap = (el) => {
       // フリー入力モードでない場合、または他の人が入力中の場合は弾く
       if (!state.roomData || !state.roomData.isFreeTheme) return;
+      
+      // 🌟 追加：手札画面以外（＝プレイヤー名が表示されている時）は編集させない
+      const myData = state.roomData.players[currentUser.uid];
+      if (myData && myData.state !== 'hand') return;
+
       if (state.roomData.themeEditorId && state.roomData.themeEditorId !== currentUser.uid) return;
 
       // 編集権限（ロック）を獲得
@@ -1067,7 +1075,6 @@ window.executeVote = async () => {
       const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'ito_rooms', state.roomId);
       updateDoc(roomRef, { themeEditorId: currentUser.uid });
       
-      // 初期テキストならタップ時に空にする
       if (el.value === "フリー") {
          el.value = "";
          updateDoc(roomRef, { theme: "" });
@@ -1725,8 +1732,17 @@ window.executeVote = async () => {
           // 【手札モード】
           sharedCard.classList.remove('rotate-y-180');
           sharedCard.classList.add('active:scale-95'); 
+          
+          // 🌟 ルールヒントの完全非表示化処理
+          if (ruleHint) {
+            if (!state.hasSeenRule) {
+              ruleHint.style.opacity = '1'; 
+              ruleHint.style.display = 'flex';
+            } else {
+              ruleHint.style.display = 'none'; // リロード後も消えたままにする
+            }
+          }
           if (handHint) { handHint.style.opacity = '1'; handHint.classList.remove('hidden'); }
-          if (ruleHint && !state.hasSeenRule) { ruleHint.style.opacity = '1'; ruleHint.style.display = 'flex'; }
           
           // ボックスを「お題（黄色）」にする
           infoBox.classList.replace('border-blue-200', 'border-yellow-200');
@@ -1734,7 +1750,26 @@ window.executeVote = async () => {
           infoLabel.innerText = 'お題';
           infoInput.classList.replace('text-blue-900', 'text-gray-800');
           
-          // 🌟 文字が違えば更新し、アニメーション伸縮させる
+          // 🌟 iOSキーボード対策 ＆ フリー入力の権限設定を復元 🌟
+          const isFree = state.roomData.isFreeTheme;
+          const currentEditor = state.roomData.themeEditorId;
+          const canEdit = isFree && (!currentEditor || currentEditor === currentUser?.uid);
+          infoInput.readOnly = !canEdit; // 入力可能な時だけ readOnly を外す
+          
+          const playerThemeMsg = document.getElementById('player-theme-edit-msg');
+          if (isFree) {
+            infoInput.classList.add('border-b-2', 'border-dashed', 'border-yellow-400');
+            if (canEdit) infoInput.classList.add('cursor-pointer');
+            else infoInput.classList.remove('cursor-pointer');
+            
+            if (currentEditor && currentEditor !== currentUser?.uid) { if(playerThemeMsg) playerThemeMsg.classList.remove('hidden'); }
+            else { if(playerThemeMsg) playerThemeMsg.classList.add('hidden'); }
+          } else {
+            infoInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
+            if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
+          }
+
+          // 文字が違えば更新し、アニメーション伸縮させる
           if (infoInput.value !== theme) {
             infoInput.value = theme;
             setTimeout(() => window.autoResizeTextarea(infoInput), 10);
@@ -1758,7 +1793,13 @@ window.executeVote = async () => {
           infoLabel.innerText = 'プレイヤー';
           infoInput.classList.replace('text-gray-800', 'text-blue-900');
           
-          // 🌟 名前（1行）に更新し、アニメーションで縮ませる
+          // 🌟 プレイヤー名の時は絶対に入力させない 🌟
+          infoInput.readOnly = true;
+          infoInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
+          const playerThemeMsg = document.getElementById('player-theme-edit-msg');
+          if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
+          
+          // 名前（1行）に更新し、アニメーションで縮ませる
           if (infoInput.value !== myData.name) {
             infoInput.value = myData.name;
             setTimeout(() => window.autoResizeTextarea(infoInput), 10);
