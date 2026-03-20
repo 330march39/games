@@ -381,13 +381,8 @@
           </div>
         </div>
 
-        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 rounded-[2rem] md:rounded-[2.5rem] face-180 border-4 border-white/30 flex items-center justify-center overflow-hidden">
-          <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
-            <div class="border-4 border-white/50 w-3/4 h-5/6 rounded-[2rem] flex items-center justify-center relative z-10 shadow-inner backdrop-blur-sm">
-              <span class="text-white text-6xl md:text-7xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">ito</span>
-            </div>
-            
-            <img src="Card.png" class="w-full h-full object-cover pointer-events-none select-none" />
+        <div class="absolute inset-0 face-180 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-inner">
+          <img src="Card.png" class="w-full h-full object-cover pointer-events-none select-none" />
         </div>
 
       </div>
@@ -1928,18 +1923,19 @@ window.executeVote = async () => {
           }
 
           const roleBadge = document.getElementById('player-role-badge');
-            const roleIcon = document.getElementById('player-role-icon');
-            const roleText = document.getElementById('player-role-text');
-            if (state.roomData.isWolfMode && roleBadge) {
-              roleBadge.classList.remove('hidden');
-              if (myData.role === 'fox') {
-                roleIcon.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
-                roleText.innerText = 'きつね';
-              } else {
-                roleIcon.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
-                roleText.innerText = '村人';
-              }
-            }
+const roleIcon = document.getElementById('player-role-icon');
+const roleText = document.getElementById('player-role-text');
+
+if (state.roomData.isWolfMode && roleBadge && roleIcon && roleText) {
+  roleBadge.classList.remove('hidden');
+  if (myData.role === 'fox') {
+    roleIcon.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
+    roleText.innerText = 'きつね';
+  } else {
+    roleIcon.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
+    roleText.innerText = '村人';
+  }
+}
         }
         // --- ホスト用アクションボタンの表示制御 ---
         const btnHostMenu = document.getElementById('btn-player-host-menu');
