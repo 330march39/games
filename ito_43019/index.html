@@ -382,7 +382,7 @@
         </div>
 
         <div class="absolute inset-0 face-180 rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-inner">
-          <img src="./Card.jpg" alt="カード裏面" class="w-full h-full object-cover pointer-events-none select-none" />
+          <img src="Card.png" alt="カード裏面" class="w-full h-full object-cover pointer-events-none select-none" />
         </div>
 
       </div>
@@ -1656,7 +1656,7 @@ window.executeVote = async () => {
                 frontContent = `
                   <div class="flex flex-col items-center justify-center h-full animate-pop-in w-full px-1 text-center" style="animation-delay: 0.8s;">
                     <div class="w-12 h-12 md:w-16 md:h-16 mb-1 md:mb-2 rounded-full overflow-hidden border-2 border-white shadow-md">
-                      <img src="./fox.jpg" class="w-full h-full object-cover" />
+                      <img src="fox.png" class="w-full h-full object-cover" />
                     </div>
                     <span class="text-white font-black text-[10px] md:text-xl drop-shadow-md tracking-widest bg-black/20 px-2 py-0.5 md:py-1 rounded-full whitespace-nowrap">きつね</span>
                     <span class="text-white/90 font-bold text-[10px] md:text-sm mt-1 md:mt-2">数字: ${p.number}</span>
@@ -1670,7 +1670,7 @@ window.executeVote = async () => {
                   <div class="absolute bottom-2 right-2 text-gray-400 font-black text-sm md:text-xl rotate-180">${p.number}</div>
                   <span class="text-4xl md:text-6xl font-black text-gray-500">${p.number}</span>
                   <div class="absolute bottom-2 md:bottom-3 flex items-center gap-1 bg-white/50 px-2 py-0.5 rounded-full border border-gray-400 shadow-sm">
-                    <img src="./pepole.jpg" class="w-3 h-3 md:w-4 md:h-4 object-cover rounded-full" />
+                    <img src="pepole.png" class="w-3 h-3 md:w-4 md:h-4 object-cover rounded-full" />
                     <span class="text-[10px] md:text-sm font-bold text-gray-500">村人</span>
                   </div>
                 `;
@@ -1686,7 +1686,7 @@ window.executeVote = async () => {
                 <div class="w-full aspect-[2/3] perspective-1000 mb-2 md:mb-3 relative">
                   <div id="vote-card-${p.id}" class="vote-card-inner w-full h-full relative transform-style-3d transition-all duration-[1000ms] ease-[cubic-bezier(0.34,1.56,0.64,1)] ${isFlipped ? 'rotate-y-180' : ''} ${voteRing} rounded-xl md:rounded-2xl shadow-lg">
                       <div id="card-back-${p.id}" class="absolute inset-0 face-0 rounded-xl md:rounded-2xl overflow-hidden shadow-inner transition-all duration-500 ${thinkingFilter}">
-                        <img src="./Card.jpg" class="w-full h-full object-cover pointer-events-none select-none" />
+                        <img src="Card.png" class="w-full h-full object-cover pointer-events-none select-none" />
                       </div>
                       <div class="absolute inset-0 bg-stripes opacity-30 mix-blend-overlay"></div>
                       <span class="text-white text-lg md:text-2xl font-black tracking-widest -rotate-12 drop-shadow-lg select-none">hashi</span>
@@ -1845,10 +1845,10 @@ window.executeVote = async () => {
       const roleTextEl = document.getElementById('player-role-text');
       if (roleIconContainer && roleTextEl) {
         if (myData.role === 'fox') {
-          roleIconContainer.innerHTML = `<img src="./fox.jpg" class="w-full h-full object-cover rounded-full" />`;
+          roleIconContainer.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
           roleTextEl.innerText = 'きつね';
         } else {
-          roleIconContainer.innerHTML = `<img src="./pepole.jpg" class="w-full h-full object-cover rounded-full" />`;
+          roleIconContainer.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
           roleTextEl.innerText = '村人';
         }
       }
