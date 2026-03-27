@@ -100,6 +100,7 @@
       backface-visibility: hidden; 
       -webkit-transform: rotateY(180deg) translateZ(1px);
       transform: rotateY(180deg) translateZ(1px);
+      background-color: #FC5E75;
     }
     /* 波紋のように広がる色変更アニメーション */
     .wave-color-layer {
@@ -366,13 +367,12 @@
 
     <div class="absolute inset-0 flex items-center justify-center w-full min-h-0 z-10 perspective-1000 pointer-events-none">
       <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem] pointer-events-auto" onclick="handleSharedCardTap()">
-        
-        <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] face-0 flex flex-col items-center justify-center overflow-hidden">
-          <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden">
-            <div id="player-role-icon" class="w-10 h-10 rounded-full flex items-center justify-center text-2xl bg-white border-2 shadow-sm">🧑‍🌾</div>
-            <span id="player-role-text" class="text-xs font-black text-gray-800 bg-white/80 px-2 rounded-full mt-1">村人</span>
-          </div>
-          <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50 pointer-events-none"></div>
+        
+        <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] face-0 flex flex-col items-center justify-center overflow-hidden">
+                    <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden cursor-pointer">
+            <div id="player-role-icon" class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-5xl bg-white border-4 border-white shadow-md">🧑‍🌾</div>
+                      </div>
+                    <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50 pointer-events-none"></div>
           <div class="absolute top-3 left-3 md:top-4 md:left-4 text-gray-300 font-black text-xl md:text-2xl z-10 tl-num">--</div>
           <div class="absolute bottom-3 right-3 md:bottom-4 md:right-4 text-gray-300 font-black text-xl md:text-2xl rotate-180 z-10 br-num">--</div>
           
@@ -447,6 +447,29 @@
     </div>
 
   <!-- ================= Modals ================= -->
+
+  <div id="modal-role-rule" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
+    <div class="bg-white rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300 relative overflow-hidden" id="modal-role-rule-content">
+      <div class="absolute -top-10 -right-10 w-32 h-32 bg-yellow-200 rounded-full mix-blend-multiply opacity-50"></div>
+      <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-pink-200 rounded-full mix-blend-multiply opacity-50"></div>
+
+      <button onclick="closeRoleRuleModal()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2 z-10">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+
+      <div id="role-rule-icon-area" class="w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6 bg-white border-8 border-yellow-200 shadow-inner relative z-10 text-6xl">
+        🧑‍🌾
+      </div>
+      <p id="role-rule-title" class="text-gray-800 text-3xl font-black mb-4 relative z-10"></p>
+      <div class="overflow-y-auto max-h-[30vh] mb-8 relative z-10 px-2">
+        <p id="role-rule-text" class="text-gray-600 font-bold text-lg leading-relaxed"></p>
+      </div>
+      
+      <button onclick="closeRoleRuleModal()" class="w-full py-4 bg-gray-200 text-gray-700 rounded-2xl font-black text-lg active:bg-gray-300 transition-colors relative z-10">
+        閉じる
+      </button>
+    </div>
+  </div>
 
   <div id="modal-force-continue" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4 opacity-0 transition-opacity duration-300">
     <div class="bg-white rounded-[2rem] shadow-2xl p-8 w-full max-w-sm text-center transform scale-90 transition-transform duration-300" id="modal-force-continue-content">
@@ -615,6 +638,19 @@
       "最強の能力（超能力など）", "給食で好きだったメニュー", "旅行先に求めるもの",
       "大人になったと感じる瞬間", "ストレス発散方法"
     ];
+
+    const ROLE_RULES = {
+      villager: {
+        title: "村人",
+        img: "pepole.png",
+        text: "配られた数字の大きさを言葉で表現し、全員で協力して小さい順に場に出すのが目的です。きつねを特定して追放するのも重要です。"
+      },
+      fox: {
+        title: "きつね",
+        img: "fox.png",
+        text: "村人のフリをして、議論を混乱させましょう。嘘をついてもOK！全員に数字を出させて橋が完成するのを防ぐか、村人を惑わせて間違った人を追放させれば勝利です。"
+      }
+    };
 
     // --- DOM Elements ---
     const screens = {
@@ -1786,12 +1822,13 @@ window.executeVote = async () => {
               `;
             }
           } else if (isVoting) {
-            // (省略: 投票・結果画面のボタンはそのまま)
-            buttonsHtml = `<button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300"><div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div><div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">この人を追放する</div></button>`;
-            setTimeout(() => { const voteBtn = document.getElementById('btn-execute-vote'); if(voteBtn) voteBtn.disabled = !selectedExileId; }, 0);
-          } else if (isResult) {
-            buttonsHtml = `<button onclick="nextGame()" class="w-full group relative animate-pop-in" style="animation-delay: 2s;"><div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div><div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">次のお題を決める</div></button>`;
-          }
+            // (省略: 投票画面のボタンはそのまま)
+            buttonsHtml = `<button id="btn-execute-vote" onclick="executeVote()" disabled class="w-full group relative disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-300"><div class="absolute inset-0 bg-red-700 rounded-[2rem] transform translate-y-2"></div><div class="relative w-full py-5 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center gap-2">この人を追放する</div></button>`;
+            setTimeout(() => { const voteBtn = document.getElementById('btn-execute-vote'); if(voteBtn) voteBtn.disabled = !selectedExileId; }, 0);
+          } else if (isResult) {
+            // ★★★ 以下の行の animate-pop-in と style 属性を削除 ★★★
+            buttonsHtml = `<button onclick="nextGame()" class="w-full group relative"><div class="absolute inset-0 bg-cyan-700 rounded-[2rem] transform translate-y-2"></div><div class="relative w-full py-5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-[2rem] font-black text-2xl border-4 border-white shadow-xl transform transition-transform group-active:translate-y-2 flex items-center justify-center">次のお題を決める</div></button>`;
+          }
           actionEl.innerHTML = buttonsHtml;
           actionEl.dataset.state = currentActionState;
         }
@@ -1916,122 +1953,128 @@ window.executeVote = async () => {
           infoInput.classList.replace('text-gray-800', 'text-blue-900');
           
           // 🌟 プレイヤー名の時は絶対に入力させない 🌟
-          infoInput.readOnly = true;
-          infoInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
-          const playerThemeMsg = document.getElementById('player-theme-edit-msg');
-          if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
-          
-          // 名前（1行）に更新し、アニメーションで縮ませる
-          if (infoInput.value !== myData.name) {
-            infoInput.value = myData.name;
-            setTimeout(() => window.autoResizeTextarea(infoInput), 10);
-          }
+          infoInput.readOnly = true;
+          infoInput.classList.remove('border-b-2', 'border-dashed', 'border-yellow-400', 'cursor-pointer');
+          const playerThemeMsg = document.getElementById('player-theme-edit-msg');
+          if(playerThemeMsg) playerThemeMsg.classList.add('hidden');
+          
+          // 名前（1行）に更新し、アニメーションで縮ませる
+          if (infoInput.value !== myData.name) {
+            infoInput.value = myData.name;
+            setTimeout(() => window.autoResizeTextarea(infoInput), 10);
+          }
 
-          const roleBadge = document.getElementById('player-role-badge');
+          // ★★★ 以下の役職アイコン表示処理を修正 ★★★
+          const roleBadge = document.getElementById('player-role-badge');
           const roleIcon = document.getElementById('player-role-icon');
-          const roleText = document.getElementById('player-role-text');
+          // const roleText = document.getElementById('player-role-text'); // 削除
 
-          if (state.roomData.isWolfMode && roleBadge && roleIcon && roleText) {
-            // ★答え合わせ(revealing)の時は隠す、それ以外の時は表示する
-            if (status === 'revealing') {
+          if (state.roomData.isWolfMode && roleBadge && roleIcon) {
+            // 答え合わせ(revealing)や結果(result)の時は隠す、それ以外の時は表示する
+            if (status === 'revealing' || status === 'result') {
               roleBadge.classList.add('hidden');
             } else {
               roleBadge.classList.remove('hidden');
+              // タップ時のアクションを設定
+              roleBadge.setAttribute('onclick', `showRoleRuleModal('${myData.role}')`);
+              
               if (myData.role === 'fox') {
-                roleIcon.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
-                roleText.innerText = 'きつね';
+                roleIcon.innerHTML = `<img src="fox.png" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-white shadow-inner" />`;
+                // roleText.innerText = 'きつね'; // 削除
               } else {
-                roleIcon.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
-                roleText.innerText = '村人';
+                roleIcon.innerHTML = `<img src="pepole.png" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-white shadow-inner" />`;
+                // roleText.innerText = '村人'; // 削除
               }
             }
           }
-        }
-        // --- ホスト用アクションボタンの表示制御 ---
-        const btnHostMenu = document.getElementById('btn-player-host-menu');
-        const hostActions = document.getElementById('player-host-actions');
-        const btnReveal = document.getElementById('btn-player-reveal');
-        const btnNext = document.getElementById('btn-player-next');
-        const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
-        const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
+        }
+        // --- ホスト用アクションボタンの表示制御 ---
+        const btnHostMenu = document.getElementById('btn-player-host-menu');
+        const hostActions = document.getElementById('player-host-actions');
+        const btnReveal = document.getElementById('btn-player-reveal');
+        const btnNext = document.getElementById('btn-player-next');
+        const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
+        const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
 
-        if (state.isHost && state.isPlayingHost) {
-          if(btnHostMenu) btnHostMenu.classList.remove('hidden');
-          if (myData.state === 'faceDown' || myData.state === 'faceUp') {
-            if(hostActions) { hostActions.classList.remove('hidden'); hostActions.classList.add('flex'); setTimeout(() => hostActions.style.opacity = '1', 10); }
-            const playersList = Object.values(players);
-            
-            const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
-            const allRevealed = playersList.every(p => p.state === 'faceUp');
+        if (state.isHost && state.isPlayingHost) {
+          if(btnHostMenu) btnHostMenu.classList.remove('hidden');
+          // ★★★ 以下の条件を result ステータスも含むように修正 ★★★
+          if (myData.state === 'faceDown' || myData.state === 'faceUp' || status === 'result') {
+            if(hostActions) { hostActions.classList.remove('hidden'); hostActions.classList.add('flex'); setTimeout(() => hostActions.style.opacity = '1', 10); }
+            const playersList = Object.values(players);
+            
+            const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+            const allRevealed = playersList.every(p => p.state === 'faceUp');
 
-            const setPressEvents = (el, action, isReadyFlag) => {
-              if(!el) return;
-              el.onmousedown = (e) => startPress(e, action, isReadyFlag);
-              el.onmouseup = cancelPress;
-              el.onmouseleave = cancelPress;
-              el.ontouchstart = (e) => startPress(e, action, isReadyFlag);
-              el.ontouchend = cancelPress;
-              el.ontouchcancel = cancelPress;
-            };
+            const setPressEvents = (el, action, isReadyFlag) => {
+              // (省略: イベント設定はそのまま)
+              el.ontouchcancel = cancelPress;
+            };
 
-            // 🌟 アニメーション制御用の関数
-            const setButtonState = (btn, isReady, actionName, clickFnStr) => {
-              if(!btn) return;
-              btn.classList.remove('hidden');
-              
-              const shadowLayer = btn.querySelector('.shadow-layer');
-              const pulseLayer = btn.querySelector('.pulse-layer');
-              const textLayer = btn.querySelector('.text-layer');
-              
-              if (isReady) {
-                // すでに準備完了状態ならクラスを再追加しない（波紋の暴発リセットを防ぐ）
-                if (!btn.classList.contains('is-ready')) {
-                   btn.classList.add('is-ready');
-                }
-                btn.classList.remove('cursor-not-allowed');
-                btn.setAttribute('onclick', clickFnStr);
-                
-                if(textLayer) { textLayer.classList.add('text-white'); textLayer.classList.remove('text-gray-500'); }
-                if(shadowLayer) {
-                  shadowLayer.classList.remove('bg-gray-400');
-                  if(actionName === 'reveal') shadowLayer.classList.add('bg-pink-600');
-                  else if(actionName === 'wolfWin') shadowLayer.classList.add('bg-green-600');
-                  else if(actionName === 'discuss') shadowLayer.classList.add('bg-purple-700');
-                  else if(actionName === 'next') shadowLayer.classList.add('bg-cyan-700');
-                }
-                // 答え合わせボタンだけ光らせる
-                if(pulseLayer && actionName === 'reveal') pulseLayer.classList.add('animate-pulse-ring');
-              } else {
-                btn.classList.remove('is-ready');
-                btn.classList.add('cursor-not-allowed');
-                btn.setAttribute('onclick', 'void(0)');
-                if(textLayer) { textLayer.classList.remove('text-white'); textLayer.classList.add('text-gray-500'); }
-                if(shadowLayer) shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
-                if(pulseLayer) pulseLayer.classList.remove('animate-pulse-ring');
-              }
-              setPressEvents(btn, actionName, isReady);
-            };
+            // 🌟 アニメーション制御用の関数
+            const setButtonState = (btn, isReady, actionName, clickFnStr) => {
+              // (省略: ボタン状態設定はそのまま)
+              setPressEvents(btn, actionName, isReady);
+            };
 
-            if (status === 'playing') {
-              if(btnNext) btnNext.classList.add('hidden');
-              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
-              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
-              setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
-            } else if (status === 'revealing') {
+            if (status === 'playing') {
+              if(btnNext) btnNext.classList.add('hidden');
+              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
+              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
+              setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
+            } else if (status === 'revealing') {
+              if(btnReveal) btnReveal.classList.add('hidden');
+              if (state.roomData.isWolfMode) {
+                if(btnNext) btnNext.classList.add('hidden');
+                setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
+                setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
+              } else {
+                setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
+                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
+                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
+              }
+            // ★★★ 以下の result ステータスの処理を追加 ★★★
+            } else if (status === 'result') {
               if(btnReveal) btnReveal.classList.add('hidden');
-              if (state.roomData.isWolfMode) {
-                if(btnNext) btnNext.classList.add('hidden');
-                setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
-                setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
-              } else {
-                setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
-                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
-                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
-              }
+              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
+              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
+              // 準備完了に関わらずボタンを表示する
+              setButtonState(btnNext, true, 'next', 'nextGame()');
             }
-          } else { if(hostActions) { hostActions.style.opacity = '0'; setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); } }
-        } else { if(btnHostMenu) btnHostMenu.classList.add('hidden'); if(hostActions) { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); } }
+          } else { if(hostActions) { hostActions.style.opacity = '0'; setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); } }
       }
+    };
+      // ★★★ 以下の2つの関数を追加 ★★★
+    window.showRoleRuleModal = (role) => {
+      const rule = ROLE_RULES[role];
+      if (!rule) return;
+
+      document.getElementById('role-rule-title').innerText = rule.title;
+      const iconArea = document.getElementById('role-rule-icon-area');
+      iconArea.innerHTML = `<img src="${rule.img}" class="w-full h-full object-cover rounded-full border-4 border-white shadow-inner" />`;
+      document.getElementById('role-rule-text').innerText = rule.text;
+      
+      const modal = document.getElementById('modal-role-rule');
+      const content = document.getElementById('modal-role-rule-content');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      // フェードイン＆ズームアニメーション
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('scale-90', 'opacity-0');
+      }, 10);
+    };
+
+    window.closeRoleRuleModal = () => {
+      const modal = document.getElementById('modal-role-rule');
+      const content = document.getElementById('modal-role-rule-content');
+      modal.classList.add('opacity-0');
+      content.classList.add('scale-90');
+      // フェードアウト＆ズームアウト後に非表示
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }, 300);
     };
     // Start
     window.onload = init;
