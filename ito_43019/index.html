@@ -369,14 +369,16 @@
       <div id="shared-player-card" class="w-full max-w-[40vh] aspect-[2/3] relative transition-transform duration-700 ease-[cubic-bezier(0.34,1.56,0.64,1)] transform-style-3d z-30 cursor-pointer shadow-2xl rounded-[2rem] md:rounded-[2.5rem] pointer-events-auto" onclick="handleSharedCardTap()">
         
         <div class="absolute inset-0 bg-white border-8 border-gray-100 rounded-[2rem] md:rounded-[2.5rem] face-0 flex flex-col items-center justify-center overflow-hidden">
-                    <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden cursor-pointer">
-            <div id="player-role-icon" class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-5xl bg-white border-4 border-white shadow-md">🧑‍🌾</div>
-                      </div>
-                    <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50 pointer-events-none"></div>
+          
+          <div id="player-role-badge" class="absolute top-3 right-3 md:top-4 md:right-4 z-20 flex flex-col items-center hidden cursor-pointer transition-opacity duration-300">
+            <div id="player-role-icon" class="w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center text-5xl bg-white border-4 border-white shadow-md">🧑‍🌾</div>
+          </div>
+          
+          <div class="absolute top-0 left-0 w-full h-full bg-polka opacity-50 pointer-events-none"></div>
           <div class="absolute top-3 left-3 md:top-4 md:left-4 text-gray-300 font-black text-xl md:text-2xl z-10 tl-num">--</div>
           <div class="absolute bottom-3 right-3 md:bottom-4 md:right-4 text-gray-300 font-black text-xl md:text-2xl rotate-180 z-10 br-num">--</div>
           
-          <span class="text-[6rem] md:text-[8rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-black drop-shadow-md z-10 center-num">--</span>
+          <span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[6rem] md:text-[8rem] font-black text-transparent bg-clip-text bg-gradient-to-b from-gray-700 to-black drop-shadow-md z-10 center-num leading-none m-0 p-0">--</span>
           
           <div id="shared-card-hand-hint" class="absolute bottom-6 w-full text-center z-10 pointer-events-none transition-opacity duration-300">
             <span class="inline-block text-xs md:text-sm font-black text-white bg-blue-500 px-4 py-2 rounded-full shadow-md animate-bounce">
@@ -1309,7 +1311,9 @@ window.executeVote = async () => {
         if (!sharedCard.classList.contains('rotate-y-180')) {
           if (hint) hint.style.opacity = '0'; // ヒントをフワッと消す
           sharedCard.classList.add('rotate-y-180');
-          
+          // ★追加：裏返す直前に役職アイコンもフワッと消す
+          const badge = document.getElementById('player-role-badge');
+          if (badge) badge.style.opacity = '0';
           // 0.6秒後にサーバーへ送信
           setTimeout(() => {
             window.updatePlayerState('faceDown');
@@ -1356,6 +1360,9 @@ window.executeVote = async () => {
       if (sharedCard) {
         sharedCard.classList.remove('rotate-y-180'); // 表面に戻す
       }
+      // ★追加：表面に戻る時に役職アイコンをフワッと再表示する
+      const badge = document.getElementById('player-role-badge');
+      if (badge) badge.style.opacity = '1';
       setTimeout(() => {
         window.updatePlayerState('hand');
       }, 600);
@@ -1970,13 +1977,14 @@ window.executeVote = async () => {
           // const roleText = document.getElementById('player-role-text'); // 削除
 
           if (state.roomData.isWolfMode && roleBadge && roleIcon) {
-            // 答え合わせ(revealing)や結果(result)の時は隠す、それ以外の時は表示する
             if (status === 'revealing' || status === 'result') {
               roleBadge.classList.add('hidden');
             } else {
               roleBadge.classList.remove('hidden');
-              // タップ時のアクションを設定
-              roleBadge.setAttribute('onclick', `showRoleRuleModal('${myData.role}')`);
+              roleBadge.style.opacity = '1'; // ★追加: 手札の時は必ず透明度を戻す
+              
+              // ★追加: event.stopPropagation(); を入れてカードが裏返るのを防ぐ
+              roleBadge.setAttribute('onclick', `event.stopPropagation(); showRoleRuleModal('${myData.role}')`);
               
               if (myData.role === 'fox') {
                 roleIcon.innerHTML = `<img src="fox.png" class="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-white shadow-inner" />`;
@@ -1989,70 +1997,111 @@ window.executeVote = async () => {
           }
         }
         // --- ホスト用アクションボタンの表示制御 ---
-        const btnHostMenu = document.getElementById('btn-player-host-menu');
-        const hostActions = document.getElementById('player-host-actions');
-        const btnReveal = document.getElementById('btn-player-reveal');
-        const btnNext = document.getElementById('btn-player-next');
-        const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
-        const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
+        const btnHostMenu = document.getElementById('btn-player-host-menu');
+        const hostActions = document.getElementById('player-host-actions');
+        const btnReveal = document.getElementById('btn-player-reveal');
+        const btnNext = document.getElementById('btn-player-next');
+        const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
+        const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
 
-        if (state.isHost && state.isPlayingHost) {
-          if(btnHostMenu) btnHostMenu.classList.remove('hidden');
-          // ★★★ 以下の条件を result ステータスも含むように修正 ★★★
-          if (myData.state === 'faceDown' || myData.state === 'faceUp' || status === 'result') {
-            if(hostActions) { hostActions.classList.remove('hidden'); hostActions.classList.add('flex'); setTimeout(() => hostActions.style.opacity = '1', 10); }
-            const playersList = Object.values(players);
-            
-            const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
-            const allRevealed = playersList.every(p => p.state === 'faceUp');
+        if (state.isHost && state.isPlayingHost) {
+          if(btnHostMenu) btnHostMenu.classList.remove('hidden');
+          
+          // ホストがカードを場に出している（またはゲーム終了時）のみボタン群を表示
+          if (myData.state === 'faceDown' || myData.state === 'faceUp' || status === 'result') {
+            if(hostActions) { 
+              hostActions.classList.remove('hidden'); 
+              hostActions.classList.add('flex'); 
+              setTimeout(() => hostActions.style.opacity = '1', 10); 
+            }
+            
+            const playersList = Object.values(players);
+            const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
+            const allRevealed = playersList.every(p => p.state === 'faceUp');
 
-            const setPressEvents = (el, action, isReadyFlag) => {
-              // (省略: イベント設定はそのまま)
-              el.ontouchcancel = cancelPress;
-            };
+            const setPressEvents = (el, action, isReadyFlag) => {
+              if(!el) return;
+              el.onmousedown = (e) => startPress(e, action, isReadyFlag);
+              el.onmouseup = cancelPress;
+              el.onmouseleave = cancelPress;
+              el.ontouchstart = (e) => startPress(e, action, isReadyFlag);
+              el.ontouchend = cancelPress;
+              el.ontouchcancel = cancelPress;
+            };
 
-            // 🌟 アニメーション制御用の関数
-            const setButtonState = (btn, isReady, actionName, clickFnStr) => {
-              // (省略: ボタン状態設定はそのまま)
-              setPressEvents(btn, actionName, isReady);
-            };
+            const setButtonState = (btn, isReady, actionName, clickFnStr) => {
+              if(!btn) return;
+              btn.classList.remove('hidden'); // ボタンを確実に表示
+              
+              const shadowLayer = btn.querySelector('.shadow-layer');
+              const pulseLayer = btn.querySelector('.pulse-layer');
+              const textLayer = btn.querySelector('.text-layer');
+              
+              if (isReady) {
+                if (!btn.classList.contains('is-ready')) btn.classList.add('is-ready');
+                btn.classList.remove('cursor-not-allowed');
+                btn.setAttribute('onclick', clickFnStr);
+                
+                if(textLayer) { textLayer.classList.add('text-white'); textLayer.classList.remove('text-gray-500'); }
+                if(shadowLayer) {
+                  shadowLayer.classList.remove('bg-gray-400');
+                  if(actionName === 'reveal') shadowLayer.classList.add('bg-pink-600');
+                  else if(actionName === 'wolfWin') shadowLayer.classList.add('bg-green-600');
+                  else if(actionName === 'discuss') shadowLayer.classList.add('bg-purple-700');
+                  else if(actionName === 'next') shadowLayer.classList.add('bg-cyan-700');
+                }
+                if(pulseLayer && actionName === 'reveal') pulseLayer.classList.add('animate-pulse-ring');
+              } else {
+                btn.classList.remove('is-ready');
+                btn.classList.add('cursor-not-allowed');
+                btn.setAttribute('onclick', 'void(0)');
+                if(textLayer) { textLayer.classList.remove('text-white'); textLayer.classList.add('text-gray-500'); }
+                if(shadowLayer) shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
+                if(pulseLayer) pulseLayer.classList.remove('animate-pulse-ring');
+              }
+              setPressEvents(btn, actionName, isReady);
+            };
 
-            if (status === 'playing') {
-              if(btnNext) btnNext.classList.add('hidden');
-              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
-              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
-              setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
-            } else if (status === 'revealing') {
-              if(btnReveal) btnReveal.classList.add('hidden');
-              if (state.roomData.isWolfMode) {
-                if(btnNext) btnNext.classList.add('hidden');
-                setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
-                setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
-              } else {
-                setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
-                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
-                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
-              }
-            // ★★★ 以下の result ステータスの処理を追加 ★★★
-            } else if (status === 'result') {
+            // フェーズごとのボタン切り替え
+            if (status === 'playing') {
+              if(btnNext) btnNext.classList.add('hidden');
+              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
+              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
+              // ここで答え合わせボタンを表示！
+              setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
+              
+            } else if (status === 'revealing') {
+              if(btnReveal) btnReveal.classList.add('hidden');
+              if (state.roomData.isWolfMode) {
+                if(btnNext) btnNext.classList.add('hidden');
+                setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
+                setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
+              } else {
+                setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
+                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
+                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
+              }
+              
+            } else if (status === 'result') {
               if(btnReveal) btnReveal.classList.add('hidden');
               if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
               if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
-              // 準備完了に関わらずボタンを表示する
               setButtonState(btnNext, true, 'next', 'nextGame()');
             }
           } else { 
+            // ホストがまだ手札を場に出していない時はボタンメニューを隠す
             if(hostActions) { 
               hostActions.style.opacity = '0'; 
               setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); 
             } 
           }
         } else { 
+          // ホストではないプレイヤーはボタンメニューを隠す
           if(btnHostMenu) btnHostMenu.classList.add('hidden'); 
           if(hostActions) { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); } 
         }
       }
-    }; // ← ここで renderPlayerView の処理が正しく終了します
+    };
 
     // 🌟 新規追加した役職ルールのモーダル制御関数
     window.showRoleRuleModal = (role) => {
