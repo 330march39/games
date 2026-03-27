@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>hashi</title>
 
-  <link rel="preload" href="Card.png" as="image">
-  <link rel="preload" href="fox.png" as="image">
-  <link rel="preload" href="pepole.png" as="image">
+  <link rel="prefetch" href="Card.png" as="image">
+  <link rel="prefetch" href="fox.png" as="image">
+  <link rel="prefetch" href="pepole.png" as="image">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -2041,10 +2041,20 @@ window.executeVote = async () => {
               // 準備完了に関わらずボタンを表示する
               setButtonState(btnNext, true, 'next', 'nextGame()');
             }
-          } else { if(hostActions) { hostActions.style.opacity = '0'; setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); } }
+          } else { 
+            if(hostActions) { 
+              hostActions.style.opacity = '0'; 
+              setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); 
+            } 
+          }
+        } else { 
+          if(btnHostMenu) btnHostMenu.classList.add('hidden'); 
+          if(hostActions) { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); } 
+        }
       }
-    };
-      // ★★★ 以下の2つの関数を追加 ★★★
+    }; // ← ここで renderPlayerView の処理が正しく終了します
+
+    // 🌟 新規追加した役職ルールのモーダル制御関数
     window.showRoleRuleModal = (role) => {
       const rule = ROLE_RULES[role];
       if (!rule) return;
@@ -2076,6 +2086,7 @@ window.executeVote = async () => {
         modal.classList.remove('flex');
       }, 300);
     };
+
     // Start
     window.onload = init;
 
