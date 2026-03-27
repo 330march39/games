@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>hashi</title>
+
+  <link rel="preload" href="Card.png" as="image">
+  <link rel="preload" href="fox.png" as="image">
+  <link rel="preload" href="pepole.png" as="image">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -438,6 +442,7 @@
             <span class="text-layer relative z-10 transition-colors duration-500 text-gray-500">橋が完成した！</span>
           </div>
         </button>
+        </div>
       </div>
     </div>
 
@@ -1923,19 +1928,24 @@ window.executeVote = async () => {
           }
 
           const roleBadge = document.getElementById('player-role-badge');
-const roleIcon = document.getElementById('player-role-icon');
-const roleText = document.getElementById('player-role-text');
+          const roleIcon = document.getElementById('player-role-icon');
+          const roleText = document.getElementById('player-role-text');
 
-if (state.roomData.isWolfMode && roleBadge && roleIcon && roleText) {
-  roleBadge.classList.remove('hidden');
-  if (myData.role === 'fox') {
-    roleIcon.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
-    roleText.innerText = 'きつね';
-  } else {
-    roleIcon.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
-    roleText.innerText = '村人';
-  }
-}
+          if (state.roomData.isWolfMode && roleBadge && roleIcon && roleText) {
+            // ★答え合わせ(revealing)の時は隠す、それ以外の時は表示する
+            if (status === 'revealing') {
+              roleBadge.classList.add('hidden');
+            } else {
+              roleBadge.classList.remove('hidden');
+              if (myData.role === 'fox') {
+                roleIcon.innerHTML = `<img src="fox.png" class="w-full h-full object-cover rounded-full" />`;
+                roleText.innerText = 'きつね';
+              } else {
+                roleIcon.innerHTML = `<img src="pepole.png" class="w-full h-full object-cover rounded-full" />`;
+                roleText.innerText = '村人';
+              }
+            }
+          }
         }
         // --- ホスト用アクションボタンの表示制御 ---
         const btnHostMenu = document.getElementById('btn-player-host-menu');
