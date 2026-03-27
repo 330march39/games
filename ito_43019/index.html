@@ -426,7 +426,7 @@
         </div>
       </button>
 
-      <div class="flex flex-col md:flex-row w-full gap-3 items-end">
+      <div id="wolf-buttons-container" class="hidden flex-col md:flex-row w-full gap-3 items-end">
         <button id="btn-player-wolf-discuss" onclick="startVoting()" class="hidden w-full group relative transition-all duration-300">
           <div class="shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400"></div>
           <div class="pulse-layer absolute inset-0 rounded-[2rem]"></div>
@@ -1999,17 +1999,27 @@ window.executeVote = async () => {
         // --- ホスト用アクションボタンの表示制御 ---
         const btnHostMenu = document.getElementById('btn-player-host-menu');
         const hostActions = document.getElementById('player-host-actions');
+        
+        // 各ボタン要素の取得
         const btnReveal = document.getElementById('btn-player-reveal');
         const btnNext = document.getElementById('btn-player-next');
         const btnPlayerWolfWin = document.getElementById('btn-player-wolf-win'); 
         const btnPlayerWolfDiscuss = document.getElementById('btn-player-wolf-discuss'); 
+        const wolfContainer = document.getElementById('wolf-buttons-container');
 
         if (state.isHost && state.isPlayingHost) {
-          if(btnHostMenu) btnHostMenu.classList.remove('hidden');
+          if (btnHostMenu) btnHostMenu.classList.remove('hidden');
           
-          // ホストがカードを場に出している（またはゲーム終了時）のみボタン群を表示
-          if (myData.state === 'faceDown' || myData.state === 'faceUp' || status === 'result') {
-            if(hostActions) { 
+          // 手札を出していない（hand）時は、アクションメニュー全体を隠す
+          if (myData.state === 'hand') {
+            if (hostActions) { 
+              hostActions.style.opacity = '0'; 
+              setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); 
+            }
+          } 
+          // ホストがカードを場に出している時（faceDown または faceUp）のみボタン群を表示
+          else if (myData.state === 'faceDown' || myData.state === 'faceUp') {
+            if (hostActions) { 
               hostActions.classList.remove('hidden'); 
               hostActions.classList.add('flex'); 
               setTimeout(() => hostActions.style.opacity = '1', 10); 
@@ -2018,6 +2028,13 @@ window.executeVote = async () => {
             const playersList = Object.values(players);
             const allReady = playersList.every(p => p.state === 'faceDown' || p.state === 'faceUp');
             const allRevealed = playersList.every(p => p.state === 'faceUp');
+
+            // ★重要：一度すべてのボタンを確実に隠す（リセット）
+            if (btnReveal) btnReveal.classList.add('hidden');
+            if (btnNext) btnNext.classList.add('hidden');
+            if (btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
+            if (btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
+            if (wolfContainer) wolfContainer.classList.add('hidden');
 
             const setPressEvents = (el, action, isReadyFlag) => {
               if(!el) return;
@@ -2031,7 +2048,15 @@ window.executeVote = async () => {
 
             const setButtonState = (btn, isReady, actionName, clickFnStr) => {
               if(!btn) return;
-              btn.classList.remove('hidden'); // ボタンを確実に表示
+              
+              // ボタン本体を表示する
+              btn.classList.remove('hidden'); 
+              
+              // もし人狼用のコンテナの中にあるボタンなら、親コンテナも表示する
+              if (wolfContainer && wolfContainer.contains(btn)) {
+                 wolfContainer.classList.remove('hidden');
+                 wolfContainer.classList.add('flex');
+              }
               
               const shadowLayer = btn.querySelector('.shadow-layer');
               const pulseLayer = btn.querySelector('.pulse-layer');
@@ -2042,67 +2067,51 @@ window.executeVote = async () => {
                 btn.classList.remove('cursor-not-allowed');
                 btn.setAttribute('onclick', clickFnStr);
                 
-                if(textLayer) { textLayer.classList.add('text-white'); textLayer.classList.remove('text-gray-500'); }
-                if(shadowLayer) {
+                if (textLayer) { textLayer.classList.add('text-white'); textLayer.classList.remove('text-gray-500'); }
+                if (shadowLayer) {
                   shadowLayer.classList.remove('bg-gray-400');
-                  if(actionName === 'reveal') shadowLayer.classList.add('bg-pink-600');
-                  else if(actionName === 'wolfWin') shadowLayer.classList.add('bg-green-600');
-                  else if(actionName === 'discuss') shadowLayer.classList.add('bg-purple-700');
-                  else if(actionName === 'next') shadowLayer.classList.add('bg-cyan-700');
+                  if (actionName === 'reveal') shadowLayer.classList.add('bg-pink-600');
+                  else if (actionName === 'wolfWin') shadowLayer.classList.add('bg-green-600');
+                  else if (actionName === 'discuss') shadowLayer.classList.add('bg-purple-700');
+                  else if (actionName === 'next') shadowLayer.classList.add('bg-cyan-700');
                 }
-                if(pulseLayer && actionName === 'reveal') pulseLayer.classList.add('animate-pulse-ring');
+                if (pulseLayer && actionName === 'reveal') pulseLayer.classList.add('animate-pulse-ring');
               } else {
                 btn.classList.remove('is-ready');
                 btn.classList.add('cursor-not-allowed');
                 btn.setAttribute('onclick', 'void(0)');
-                if(textLayer) { textLayer.classList.remove('text-white'); textLayer.classList.add('text-gray-500'); }
-                if(shadowLayer) shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
-                if(pulseLayer) pulseLayer.classList.remove('animate-pulse-ring');
+                if (textLayer) { textLayer.classList.remove('text-white'); textLayer.classList.add('text-gray-500'); }
+                if (shadowLayer) shadowLayer.className = 'shadow-layer absolute inset-0 rounded-[2rem] transform translate-y-2 transition-colors duration-500 bg-gray-400';
+                if (pulseLayer) pulseLayer.classList.remove('animate-pulse-ring');
               }
               setPressEvents(btn, actionName, isReady);
             };
 
-            // フェーズごとのボタン切り替え
+            // ★フェーズごとに必要なボタンだけを指定する
             if (status === 'playing') {
-              if(btnNext) btnNext.classList.add('hidden');
-              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden'); 
-              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden'); 
-              // ここで答え合わせボタンを表示！
+              // プレイ中：ホストが裏返した時点でボタンは出るが、全員準備OKになるまで押せない
               setButtonState(btnReveal, allReady, 'reveal', 'enableRevealMode()');
               
             } else if (status === 'revealing') {
-              if(btnReveal) btnReveal.classList.add('hidden');
+              // 答え合わせ中：全員が表にしたら次のアクションが押せる
               if (state.roomData.isWolfMode) {
-                if(btnNext) btnNext.classList.add('hidden');
                 setButtonState(btnPlayerWolfWin, allRevealed, 'wolfWin', 'bridgeCompleted()');
                 setButtonState(btnPlayerWolfDiscuss, allRevealed, 'discuss', 'startVoting()');
               } else {
                 setButtonState(btnNext, allRevealed, 'next', 'nextGame()');
-                if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
-                if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
               }
-              
-            } else if (status === 'result') {
-              if(btnReveal) btnReveal.classList.add('hidden');
-              if(btnPlayerWolfWin) btnPlayerWolfWin.classList.add('hidden');
-              if(btnPlayerWolfDiscuss) btnPlayerWolfDiscuss.classList.add('hidden');
-              setButtonState(btnNext, true, 'next', 'nextGame()');
             }
-          } else { 
-            // ホストがまだ手札を場に出していない時はボタンメニューを隠す
-            if(hostActions) { 
-              hostActions.style.opacity = '0'; 
-              setTimeout(() => { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); }, 500); 
-            } 
           }
         } else { 
-          // ホストではないプレイヤーはボタンメニューを隠す
-          if(btnHostMenu) btnHostMenu.classList.add('hidden'); 
-          if(hostActions) { hostActions.classList.add('hidden'); hostActions.classList.remove('flex'); } 
+          // ホスト以外の通常プレイヤーの場合は常にアクションメニューを隠す
+          if (btnHostMenu) btnHostMenu.classList.add('hidden'); 
+          if (hostActions) { 
+            hostActions.classList.add('hidden'); 
+            hostActions.classList.remove('flex'); 
+          } 
         }
       }
-    };
-
+    }; // ← renderPlayerView の終わり
     // 🌟 新規追加した役職ルールのモーダル制御関数
     window.showRoleRuleModal = (role) => {
       const rule = ROLE_RULES[role];
