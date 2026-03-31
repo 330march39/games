@@ -3,206 +3,247 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D メタシティ - リアル電力・都市拡張アップデート版</title>
+    <title>3D メタシティ - リアル都市拡張アップデート</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { margin: 0; overflow: hidden; background-color: #1a202c; font-family: 'Rounded Mplus 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
-        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
-        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
-        .pointer-events-auto { pointer-events: auto; }
-        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .tool-btn { transition: all 0.2s; border: 2px solid transparent; flex: 0 0 auto; width: 68px; }
-        .tool-btn.active { border-color: #38BDF8; background: rgba(56, 189, 248, 0.25); transform: translateY(-4px); box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4); }
-        .tool-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.15); }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&family=Nunito:wght@400;700;900&display=swap');
         
-        /* 電力バーのアニメーション */
-        .power-bar-fill { transition: width 0.5s ease, background-color 0.5s ease; }
-        @keyframes flashRed { 0% { background-color: rgba(239, 68, 68, 0.2); } 50% { background-color: rgba(239, 68, 68, 0.8); } 100% { background-color: rgba(239, 68, 68, 0.2); } }
-        .blackout-alert { animation: flashRed 1s infinite; border-color: #EF4444; }
+        body { margin: 0; overflow: hidden; background-color: #0f172a; font-family: 'M PLUS Rounded 1c', 'Nunito', sans-serif; touch-action: none; user-select: none; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; }
+        
+        .pointer-events-auto { pointer-events: auto; }
+        
+        /* Glass UI */
+        .glass-panel { 
+            background: rgba(15, 23, 42, 0.6); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3); 
+        }
+        
+        /* Modern Dock */
+        .dock-container {
+            display: flex; gap: 0.5rem; overflow-x: auto; padding: 0.5rem; scroll-behavior: smooth;
+            -ms-overflow-style: none; scrollbar-width: none;
+            mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+            -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        }
+        .dock-container::-webkit-scrollbar { display: none; }
+        
+        .tool-btn {
+            flex: 0 0 auto; width: 70px; height: 80px; 
+            display: flex; flex-direction: column; justify-content: center; items-center;
+            border-radius: 1rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255,255,255,0.05);
+            position: relative; overflow: hidden;
+        }
+        .tool-btn::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 100%;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.1) 0%, transparent 100%);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .tool-btn:hover { transform: translateY(-5px) scale(1.05); background: rgba(255, 255, 255, 0.1); z-index: 10; }
+        .tool-btn.active {
+            transform: translateY(-8px) scale(1.1); background: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.5); box-shadow: 0 10px 20px rgba(56, 189, 248, 0.3); z-index: 20;
+        }
+        .tool-btn.active::before { opacity: 1; }
+        .tool-btn i { font-size: 1.5rem; margin-bottom: 4px; transition: transform 0.3s; }
+        .tool-btn:hover i { transform: scale(1.2); }
+        .tool-btn.active i { transform: scale(1.2); color: #fff !important; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+        
+        /* Power Bar */
+        .power-bar-fill { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease; }
+        @keyframes pulseAlert { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } }
+        .blackout-alert { animation: pulseAlert 2s infinite; border-color: #EF4444; background: rgba(69, 10, 10, 0.8); }
     </style>
 </head>
-<body class="text-white select-none">
+<body class="text-white">
 
     <div id="canvas-container"></div>
 
     <!-- UI Layer -->
-    <div id="ui-layer" class="flex flex-col justify-between p-3 md:p-5 pb-5">
+    <div id="ui-layer" class="p-4 md:p-6">
         
-        <!-- Header -->
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pointer-events-auto">
+        <!-- Header (Stats & Info) -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pointer-events-auto">
             
             <!-- Left: Weather & Location -->
-            <div class="glass-panel p-3 rounded-2xl flex items-center space-x-3 w-full md:w-auto">
-                <div id="weather-icon" class="text-3xl text-yellow-300 w-8 text-center"><i class="fas fa-sun"></i></div>
+            <div class="glass-panel p-3 md:px-5 rounded-2xl flex items-center space-x-4 w-full md:w-auto">
+                <div id="weather-icon" class="text-4xl text-yellow-300 drop-shadow-lg"><i class="fas fa-sun"></i></div>
                 <div>
-                    <h1 class="font-bold text-sm md:text-base leading-tight text-blue-100" id="location-name">現在地を取得中...</h1>
-                    <p class="text-xs md:text-sm text-blue-200/80" id="time-weather-info">--:-- | --</p>
+                    <h1 class="font-bold text-lg leading-tight text-white tracking-wide" id="location-name">メタ・シティ</h1>
+                    <p class="text-sm text-blue-200 font-medium" id="time-weather-info">--:-- | --</p>
                 </div>
             </div>
 
             <!-- Center: Power Management -->
-            <div id="power-panel" class="glass-panel p-3 rounded-2xl w-full md:w-1/3 min-w-[250px] relative overflow-hidden transition-all">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="text-xs md:text-sm font-bold flex items-center gap-1"><i class="fas fa-bolt text-yellow-400"></i> 電力状況</span>
-                    <span id="power-text" class="text-xs md:text-sm font-mono font-bold">0 / 0 kW</span>
+            <div id="power-panel" class="glass-panel p-4 rounded-2xl w-full md:w-[350px] relative overflow-hidden transition-all duration-300">
+                <div class="flex justify-between items-end mb-2">
+                    <span class="text-sm font-bold text-gray-300 flex items-center gap-2"><i class="fas fa-bolt text-yellow-400"></i>電力網</span>
+                    <span id="power-text" class="text-sm font-mono font-bold text-white">0 <span class="text-xs text-gray-400">/ 0 kW</span></span>
                 </div>
-                <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
-                    <div id="power-bar" class="power-bar-fill h-full bg-yellow-400" style="width: 0%;"></div>
+                <div class="w-full h-2.5 bg-gray-800 rounded-full overflow-hidden shadow-inner">
+                    <div id="power-bar" class="power-bar-fill h-full bg-blue-400 relative" style="width: 0%;">
+                        <div class="absolute inset-0 bg-white/30 w-full h-full" style="mask-image: linear-gradient(45deg, transparent 25%, rgba(0,0,0,1) 25%, rgba(0,0,0,1) 50%, transparent 50%, transparent 75%, rgba(0,0,0,1) 75%, rgba(0,0,0,1)); background-size: 20px 20px; animation: moveStripes 1s linear infinite;"></div>
+                    </div>
                 </div>
-                <div id="blackout-warning" class="absolute inset-0 flex items-center justify-center bg-red-600/80 text-white font-bold text-sm opacity-0 transition-opacity">
-                    <i class="fas fa-triangle-exclamation mr-2"></i>ブラックアウト発生中！経済停止！
+                <div id="blackout-warning" class="absolute inset-0 flex items-center justify-center bg-red-600/90 text-white font-bold text-sm opacity-0 transition-opacity backdrop-blur-sm">
+                    <i class="fas fa-triangle-exclamation mr-2 text-yellow-300 text-lg"></i>大停電発生中！都市機能停止
                 </div>
             </div>
 
             <!-- Right: City Stats -->
-            <div class="glass-panel p-3 rounded-2xl flex flex-col space-y-1.5 w-full md:w-auto min-w-[160px]">
-                <div class="flex justify-between items-center text-sm font-bold">
-                    <span><i class="fas fa-coins text-yellow-400 w-5"></i>資金</span>
-                    <span id="stat-funds" class="text-yellow-300 font-mono">$5000</span>
+            <div class="glass-panel p-4 rounded-2xl flex gap-6 w-full md:w-auto">
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-400 font-bold mb-1"><i class="fas fa-coins text-yellow-400 mr-1"></i>資金</span>
+                    <span id="stat-funds" class="text-xl text-yellow-300 font-mono font-bold tracking-tight">$5000</span>
                 </div>
-                <div class="flex justify-between items-center text-sm font-bold">
-                    <span><i class="fas fa-users text-blue-400 w-5"></i>人口</span>
-                    <span id="stat-pop" class="text-white font-mono">0 人</span>
+                <div class="w-px bg-white/10"></div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-400 font-bold mb-1"><i class="fas fa-users text-blue-400 mr-1"></i>人口</span>
+                    <span id="stat-pop" class="text-xl text-white font-mono font-bold tracking-tight">0</span>
                 </div>
-                <div class="w-full h-px bg-white/20 my-0.5"></div>
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-gray-300">日次収益</span>
-                    <span id="stat-income" class="text-green-400 font-mono font-bold">+$0</span>
+                <div class="w-px bg-white/10"></div>
+                <div class="flex flex-col">
+                    <span class="text-xs text-gray-400 font-bold mb-1">日次収益</span>
+                    <span id="stat-income" class="text-lg text-green-400 font-mono font-bold tracking-tight">+$0</span>
                 </div>
             </div>
         </div>
 
-        <!-- Footer: Build Tools -->
-        <div class="flex flex-col items-center pointer-events-auto w-full max-w-5xl mx-auto mt-auto">
-            <div class="text-xs mb-2 px-4 py-1.5 glass-panel rounded-full text-center text-blue-100 shadow-md">
-                右クリック(2本指)で視点移動。電力が不足すると街が機能停止します。
-            </div>
+        <!-- Footer: Tools -->
+        <div class="pointer-events-auto w-full max-w-5xl mx-auto mb-2 relative">
             
-            <div class="w-full glass-panel p-2 rounded-2xl shadow-2xl">
-                <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 pt-1 px-1 items-center">
+            <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-md px-4 py-1.5 rounded-full text-xs text-gray-300 font-medium whitespace-nowrap border border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                右ドラッグで視点移動 / スクロールでズーム
+            </div>
+
+            <div class="glass-panel rounded-3xl p-2 md:p-3 shadow-2xl mx-auto w-fit max-w-full">
+                <div class="dock-container items-center">
                     
-                    <!-- インフラ -->
-                    <button onclick="game.selectTool('road')" id="tool-road" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-road text-xl mb-1 text-gray-400"></i><span class="text-[10px] font-bold">道路</span><span class="text-[9px] text-yellow-400">$10</span>
-                    </button>
-                    <button onclick="game.selectTool('track')" id="tool-track" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-train-tram text-xl mb-1 text-orange-300"></i><span class="text-[10px] font-bold">線路</span><span class="text-[9px] text-yellow-400">$20</span>
-                    </button>
+                    <button onclick="game.selectTool('road')" id="tool-road" class="tool-btn"><i class="fas fa-road text-gray-400"></i><span class="text-[10px] font-bold">道路</span><span class="text-[9px] text-yellow-400/80 font-mono">$10</span></button>
+                    <button onclick="game.selectTool('track')" id="tool-track" class="tool-btn"><i class="fas fa-train-tram text-orange-300"></i><span class="text-[10px] font-bold">線路</span><span class="text-[9px] text-yellow-400/80 font-mono">$20</span></button>
                     
-                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+                    <div class="w-px h-12 bg-white/10 mx-1 rounded-full"></div>
 
-                    <!-- 発電 -->
-                    <button onclick="game.selectTool('solar')" id="tool-solar" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
-                        <i class="fas fa-solar-panel text-xl mb-1 text-blue-300"></i><span class="text-[10px] font-bold">太陽光</span><span class="text-[9px] text-yellow-400">$300</span>
-                    </button>
-                    <button onclick="game.selectTool('coal')" id="tool-coal" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
-                        <i class="fas fa-industry text-xl mb-1 text-gray-500"></i><span class="text-[10px] font-bold">火力発電</span><span class="text-[9px] text-yellow-400">$500</span>
-                    </button>
-                    <button onclick="game.selectTool('nuclear')" id="tool-nuclear" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
-                        <i class="fas fa-radiation text-xl mb-1 text-green-400"></i><span class="text-[10px] font-bold">原発</span><span class="text-[9px] text-yellow-400">$3000</span>
-                    </button>
+                    <button onclick="game.selectTool('solar')" id="tool-solar" class="tool-btn bg-blue-500/10"><i class="fas fa-solar-panel text-blue-300"></i><span class="text-[10px] font-bold">太陽光</span><span class="text-[9px] text-yellow-400/80 font-mono">$300</span></button>
+                    <button onclick="game.selectTool('coal')" id="tool-coal" class="tool-btn bg-blue-500/10"><i class="fas fa-industry text-gray-400"></i><span class="text-[10px] font-bold">火力</span><span class="text-[9px] text-yellow-400/80 font-mono">$500</span></button>
+                    <button onclick="game.selectTool('nuclear')" id="tool-nuclear" class="tool-btn bg-blue-500/10"><i class="fas fa-radiation text-green-400"></i><span class="text-[10px] font-bold">原発</span><span class="text-[9px] text-yellow-400/80 font-mono">$3k</span></button>
 
-                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+                    <div class="w-px h-12 bg-white/10 mx-1 rounded-full"></div>
 
-                    <!-- 居住・商業 -->
-                    <button onclick="game.selectTool('house')" id="tool-house" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-home text-xl mb-1 text-blue-300"></i><span class="text-[10px] font-bold">住宅</span><span class="text-[9px] text-yellow-400">$100</span>
-                    </button>
-                    <button onclick="game.selectTool('apartment')" id="tool-apartment" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-building text-xl mb-1 text-blue-400"></i><span class="text-[10px] font-bold">ﾏﾝｼｮﾝ</span><span class="text-[9px] text-yellow-400">$400</span>
-                    </button>
-                    <button onclick="game.selectTool('shop')" id="tool-shop" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-store text-xl mb-1 text-pink-300"></i><span class="text-[10px] font-bold">商店</span><span class="text-[9px] text-yellow-400">$300</span>
-                    </button>
-                    <button onclick="game.selectTool('office')" id="tool-office" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-briefcase text-xl mb-1 text-indigo-300"></i><span class="text-[10px] font-bold">ｵﾌｨｽ</span><span class="text-[9px] text-yellow-400">$800</span>
-                    </button>
-                    <button onclick="game.selectTool('skyscraper')" id="tool-skyscraper" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-city text-xl mb-1 text-purple-400"></i><span class="text-[10px] font-bold">高層ﾋﾞﾙ</span><span class="text-[9px] text-yellow-400">$2000</span>
-                    </button>
+                    <button onclick="game.selectTool('house')" id="tool-house" class="tool-btn"><i class="fas fa-home text-blue-300"></i><span class="text-[10px] font-bold">住宅</span><span class="text-[9px] text-yellow-400/80 font-mono">$100</span></button>
+                    <button onclick="game.selectTool('apartment')" id="tool-apartment" class="tool-btn"><i class="fas fa-building text-blue-400"></i><span class="text-[10px] font-bold">ﾏﾝｼｮﾝ</span><span class="text-[9px] text-yellow-400/80 font-mono">$400</span></button>
+                    <button onclick="game.selectTool('shop')" id="tool-shop" class="tool-btn"><i class="fas fa-store text-pink-300"></i><span class="text-[10px] font-bold">商店</span><span class="text-[9px] text-yellow-400/80 font-mono">$300</span></button>
+                    <button onclick="game.selectTool('office')" id="tool-office" class="tool-btn"><i class="fas fa-briefcase text-indigo-300"></i><span class="text-[10px] font-bold">ｵﾌｨｽ</span><span class="text-[9px] text-yellow-400/80 font-mono">$800</span></button>
+                    <button onclick="game.selectTool('skyscraper')" id="tool-skyscraper" class="tool-btn"><i class="fas fa-city text-purple-400"></i><span class="text-[10px] font-bold">高層ﾋﾞﾙ</span><span class="text-[9px] text-yellow-400/80 font-mono">$2k</span></button>
 
-                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+                    <div class="w-px h-12 bg-white/10 mx-1 rounded-full"></div>
 
-                    <!-- 公共・その他 -->
-                    <button onclick="game.selectTool('hospital')" id="tool-hospital" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-hospital text-xl mb-1 text-red-400"></i><span class="text-[10px] font-bold">病院</span><span class="text-[9px] text-yellow-400">$1000</span>
-                    </button>
-                    <button onclick="game.selectTool('school')" id="tool-school" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-school text-xl mb-1 text-yellow-200"></i><span class="text-[10px] font-bold">学校</span><span class="text-[9px] text-yellow-400">$600</span>
-                    </button>
-                    <button onclick="game.selectTool('station')" id="tool-station" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-train text-xl mb-1 text-red-300"></i><span class="text-[10px] font-bold">駅</span><span class="text-[9px] text-yellow-400">$500</span>
-                    </button>
-                    <button onclick="game.selectTool('park')" id="tool-park" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
-                        <i class="fas fa-tree text-xl mb-1 text-green-300"></i><span class="text-[10px] font-bold">公園</span><span class="text-[9px] text-yellow-400">$150</span>
-                    </button>
+                    <button onclick="game.selectTool('hospital')" id="tool-hospital" class="tool-btn"><i class="fas fa-hospital text-red-400"></i><span class="text-[10px] font-bold">病院</span><span class="text-[9px] text-yellow-400/80 font-mono">$1k</span></button>
+                    <button onclick="game.selectTool('station')" id="tool-station" class="tool-btn"><i class="fas fa-train text-red-300"></i><span class="text-[10px] font-bold">駅</span><span class="text-[9px] text-yellow-400/80 font-mono">$500</span></button>
+                    <button onclick="game.selectTool('park')" id="tool-park" class="tool-btn"><i class="fas fa-tree text-green-400"></i><span class="text-[10px] font-bold">公園</span><span class="text-[9px] text-yellow-400/80 font-mono">$150</span></button>
 
-                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+                    <div class="w-px h-12 bg-white/10 mx-1 rounded-full"></div>
 
-                    <button onclick="game.selectTool('bulldoze')" id="tool-bulldoze" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-red-900/30">
-                        <i class="fas fa-bulldozer text-xl mb-1 text-red-400"></i><span class="text-[10px] font-bold">撤去</span><span class="text-[9px] text-yellow-400">$10</span>
-                    </button>
+                    <button onclick="game.selectTool('bulldoze')" id="tool-bulldoze" class="tool-btn bg-red-500/10 hover:bg-red-500/20"><i class="fas fa-bulldozer text-red-400"></i><span class="text-[10px] font-bold">撤去</span><span class="text-[9px] text-yellow-400/80 font-mono">$10</span></button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Notification -->
-    <div id="notification" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-md text-gray-800 px-6 py-2.5 rounded-full font-bold shadow-xl opacity-0 transition-opacity duration-300 z-50 pointer-events-none border border-white/50">
-        メッセージ
+    <div id="notification" class="fixed top-28 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl text-slate-800 px-6 py-3 rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 z-50 pointer-events-none border border-white/50 flex items-center gap-2 translate-y-4">
+        <i class="fas fa-info-circle text-blue-500"></i><span id="notif-text">メッセージ</span>
     </div>
 
+    <style>
+        @keyframes moveStripes { 0% { background-position: 0 0; } 100% { background-position: 20px 0; } }
+        #notification.show { opacity: 1; transform: translate(-50%, 0); }
+    </style>
+
     <script>
-        // --- テクスチャ・マテリアル生成 (ディテールアップ) ---
+        // --- リアルマテリアル生成 (PBR対応) ---
         class MaterialFactory {
             constructor() {
                 this.cache = {};
-                this.emissiveMaterials = []; // 照明制御用リストを先に初期化してエラーを修正
-                this.windowMaterial = this.createWindowMaterial();
-                this.darkWindowMaterial = this.createWindowMaterial(true); // 停電/昼用
+                this.emissiveMaterials = [];
+                this.streetLights = []; // 街灯の光（マテリアル）管理用
+                this.houseWindowMaterial = this.createWindowMaterial('house');
+                this.buildingWindowMaterial = this.createWindowMaterial('building');
+                this.darkWindowMaterial = this.createWindowMaterial('dark'); 
             }
 
-            createWindowMaterial(isDark = false) {
+            createWindowMaterial(type) {
                 const canvas = document.createElement('canvas');
-                canvas.width = 128; canvas.height = 128;
+                canvas.width = 256; canvas.height = 256;
                 const ctx = canvas.getContext('2d');
-                ctx.fillStyle = isDark ? '#111111' : '#2a2a2a'; 
-                ctx.fillRect(0,0,128,128);
                 
-                // 窓の格子パターン
-                ctx.fillStyle = isDark ? '#333333' : '#FFF59D';
-                for(let y=10; y<128; y+=25) {
-                    for(let x=10; x<128; x+=25) {
-                        // ランダムに少し暗くしてリアルに
-                        if(!isDark && Math.random() < 0.2) ctx.fillStyle = '#555';
-                        else if(!isDark) ctx.fillStyle = '#FFF59D';
-                        ctx.fillRect(x, y, 15, 15);
+                if (type === 'dark') {
+                    ctx.fillStyle = '#111'; ctx.fillRect(0,0,256,256);
+                    ctx.fillStyle = '#222';
+                    for(let y=10; y<256; y+=30) for(let x=10; x<256; x+=30) ctx.fillRect(x, y, 20, 20);
+                } else if (type === 'house') {
+                    // 家用の窓（大きめ、数が少ない）
+                    ctx.fillStyle = '#2a2a2a'; ctx.fillRect(0,0,256,256);
+                    for(let y=40; y<256; y+=100) {
+                        for(let x=40; x<256; x+=80) {
+                            if(Math.random() < 0.6) {
+                                ctx.fillStyle = '#FFF9C4'; // 温かみのある光
+                                ctx.fillRect(x, y, 40, 50);
+                                // 窓枠
+                                ctx.fillStyle = '#222';
+                                ctx.fillRect(x+18, y, 4, 50); ctx.fillRect(x, y+23, 40, 4);
+                            } else {
+                                ctx.fillStyle = '#111'; ctx.fillRect(x, y, 40, 50);
+                            }
+                        }
+                    }
+                } else {
+                    // ビル用の窓（細かいグリッド）
+                    ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0,0,256,256);
+                    for(let y=10; y<256; y+=25) {
+                        for(let x=10; x<256; x+=20) {
+                            if(Math.random() < 0.3) ctx.fillStyle = '#444'; // 消灯
+                            else if(Math.random() < 0.1) ctx.fillStyle = '#64B5F6'; // 青白い光
+                            else ctx.fillStyle = '#FFF59D'; // 基本の光
+                            ctx.fillRect(x, y, 12, 16);
+                        }
                     }
                 }
+
                 const tex = new THREE.CanvasTexture(canvas);
                 tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
                 
+                const isEmissive = type !== 'dark';
                 const mat = new THREE.MeshStandardMaterial({ 
-                    map: tex, roughness: 0.2, metalness: 0.5,
-                    emissive: isDark ? 0x000000 : 0xFFF59D,
-                    emissiveIntensity: isDark ? 0 : 0.8,
+                    map: tex, roughness: 0.2, metalness: 0.6,
+                    emissive: isEmissive ? 0xFFF59D : 0x000000,
+                    emissiveIntensity: isEmissive ? 0.8 : 0,
                     emissiveMap: tex
                 });
-                if(!isDark) this.emissiveMaterials.push(mat);
+                if(isEmissive) this.emissiveMaterials.push(mat);
+                return mat;
+            }
+
+            createStreetLightMaterial() {
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0xFFB300, emissive: 0xFFB300, emissiveIntensity: 0.8
+                });
+                this.streetLights.push(mat);
                 return mat;
             }
 
             updateLighting(isNight, isBlackout) {
-                const intensity = (isNight && !isBlackout) ? 0.8 : 0.0;
-                this.emissiveMaterials.forEach(mat => {
-                    mat.emissiveIntensity = intensity;
-                });
+                const intensity = (isNight && !isBlackout) ? 1.0 : 0.0;
+                this.emissiveMaterials.forEach(mat => mat.emissiveIntensity = intensity * 0.8);
+                this.streetLights.forEach(mat => mat.emissiveIntensity = intensity * 1.5);
             }
         }
 
@@ -223,55 +264,58 @@
                 const n = (mask&1)!==0, e = (mask&2)!==0, s = (mask&4)!==0, w = (mask&8)!==0;
                 const c = 128, pi = Math.PI;
 
+                // ベースのアスファルト/地面のノイズを少し追加
+                ctx.fillStyle = type === 'road' ? '#3a3a3a' : '#5D4037';
+                ctx.fillRect(0,0,256,256);
+
                 if (type === 'road') {
                     const rw = 120;
-                    ctx.fillStyle = '#424242'; ctx.strokeStyle = '#424242'; ctx.lineWidth = rw;
+                    ctx.strokeStyle = '#4a4a4a'; ctx.lineWidth = rw;
                     ctx.lineCap = 'square'; ctx.lineJoin = 'round';
+                    
                     ctx.beginPath();
                     if (mask===3) { ctx.arc(256, 0, 128, pi, pi/2, true); ctx.stroke(); }
                     else if (mask===6) { ctx.arc(256, 256, 128, pi*1.5, pi, true); ctx.stroke(); }
                     else if (mask===12) { ctx.arc(0, 256, 128, 0, pi*1.5, true); ctx.stroke(); }
                     else if (mask===9) { ctx.arc(0, 0, 128, pi/2, 0, true); ctx.stroke(); }
                     else {
-                        if (n) { ctx.moveTo(c, c); ctx.lineTo(c, 0); }
-                        if (s) { ctx.moveTo(c, c); ctx.lineTo(c, 256); }
-                        if (e) { ctx.moveTo(c, c); ctx.lineTo(256, c); }
-                        if (w) { ctx.moveTo(c, c); ctx.lineTo(0, c); }
-                        if (mask===0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
+                        if(n){ctx.moveTo(c,c); ctx.lineTo(c,0);} if(s){ctx.moveTo(c,c); ctx.lineTo(c,256);}
+                        if(e){ctx.moveTo(c,c); ctx.lineTo(256,c);} if(w){ctx.moveTo(c,c); ctx.lineTo(0,c);}
+                        if(mask===0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
                         ctx.stroke();
-                        if (mask>0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
+                        if(mask>0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
                     }
-                    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 6; ctx.setLineDash([20, 20]);
+                    // 白線
+                    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4; ctx.setLineDash([20, 20]);
                     ctx.beginPath();
                     if (mask===3) { ctx.arc(256, 0, 128, pi, pi/2, true); ctx.stroke(); }
                     else if (mask===6) { ctx.arc(256, 256, 128, pi*1.5, pi, true); ctx.stroke(); }
                     else if (mask===12) { ctx.arc(0, 256, 128, 0, pi*1.5, true); ctx.stroke(); }
                     else if (mask===9) { ctx.arc(0, 0, 128, pi/2, 0, true); ctx.stroke(); }
                     else {
-                        if (n) { ctx.moveTo(c, c); ctx.lineTo(c, 0); }
-                        if (s) { ctx.moveTo(c, c); ctx.lineTo(c, 256); }
-                        if (e) { ctx.moveTo(c, c); ctx.lineTo(256, c); }
-                        if (w) { ctx.moveTo(c, c); ctx.lineTo(0, c); }
+                        if(n){ctx.moveTo(c,c); ctx.lineTo(c,0);} if(s){ctx.moveTo(c,c); ctx.lineTo(c,256);}
+                        if(e){ctx.moveTo(c,c); ctx.lineTo(256,c);} if(w){ctx.moveTo(c,c); ctx.lineTo(0,c);}
                         ctx.stroke();
                     }
                 } else if (type === 'track') {
+                    ctx.fillStyle='#5D4037'; ctx.fillRect(0,0,256,256);
                     ctx.strokeStyle = '#757575'; ctx.lineWidth = 140; ctx.lineCap = 'square';
                     this.drawPath(ctx, mask, c, pi, n, e, s, w);
-                    ctx.strokeStyle = '#4E342E'; ctx.lineWidth = 100; ctx.setLineDash([12, 18]);
+                    ctx.strokeStyle = '#3E2723'; ctx.lineWidth = 100; ctx.setLineDash([12, 18]);
                     this.drawPath(ctx, mask, c, pi, n, e, s, w);
                     ctx.setLineDash([]); ctx.lineWidth = 8; ctx.strokeStyle = '#B0BEC5';
                     if ([3,6,9,12].includes(mask)) {
                         let cx=0, cy=0, sAngle=0, eAngle=0;
                         if(mask===3){ cx=256; cy=0; sAngle=pi; eAngle=pi/2; }
-                        if(mask===6){ cx=256; cy=256; sAngle=pi*1.5; eAngle=pi; }
-                        if(mask===12){ cx=0; cy=256; sAngle=0; eAngle=pi*1.5; }
-                        if(mask===9){ cx=0; cy=0; sAngle=pi/2; eAngle=0; }
+                        else if(mask===6){ cx=256; cy=256; sAngle=pi*1.5; eAngle=pi; }
+                        else if(mask===12){ cx=0; cy=256; sAngle=0; eAngle=pi*1.5; }
+                        else if(mask===9){ cx=0; cy=0; sAngle=pi/2; eAngle=0; }
                         ctx.beginPath(); ctx.arc(cx, cy, 128 - 25, sAngle, eAngle, true); ctx.stroke();
                         ctx.beginPath(); ctx.arc(cx, cy, 128 + 25, sAngle, eAngle, true); ctx.stroke();
                     } else {
                         ctx.beginPath();
-                        if (n || s) { let sy = n ? 0 : c, ey = s ? 256 : c; ctx.moveTo(c-25, sy); ctx.lineTo(c-25, ey); ctx.moveTo(c+25, sy); ctx.lineTo(c+25, ey); }
-                        if (e || w) { let sx = w ? 0 : c, ex = e ? 256 : c; ctx.moveTo(sx, c-25); ctx.lineTo(ex, c-25); ctx.moveTo(sx, c+25); ctx.lineTo(ex, c+25); }
+                        if(n||s){ let sy=n?0:c, ey=s?256:c; ctx.moveTo(c-25,sy); ctx.lineTo(c-25,ey); ctx.moveTo(c+25,sy); ctx.lineTo(c+25,ey); }
+                        if(e||w){ let sx=w?0:c, ex=e?256:c; ctx.moveTo(sx,c-25); ctx.lineTo(ex,c-25); ctx.moveTo(sx,c+25); ctx.lineTo(ex,c+25); }
                         ctx.stroke();
                     }
                 }
@@ -279,11 +323,11 @@
             }
             drawPath(ctx, mask, c, pi, n, e, s, w) {
                 ctx.beginPath();
-                if(mask===3) ctx.arc(256, 0, 128, pi, pi/2, true); else if(mask===6) ctx.arc(256, 256, 128, pi*1.5, pi, true);
-                else if(mask===12) ctx.arc(0, 256, 128, 0, pi*1.5, true); else if(mask===9) ctx.arc(0, 0, 128, pi/2, 0, true);
+                if(mask===3) ctx.arc(256,0,128,pi,pi/2,true); else if(mask===6) ctx.arc(256,256,128,pi*1.5,pi,true);
+                else if(mask===12) ctx.arc(0,256,128,0,pi*1.5,true); else if(mask===9) ctx.arc(0,0,128,pi/2,0,true);
                 else {
-                    if(n){ ctx.moveTo(c,c); ctx.lineTo(c,0); } if(s){ ctx.moveTo(c,c); ctx.lineTo(c,256); }
-                    if(e){ ctx.moveTo(c,c); ctx.lineTo(256,c); } if(w){ ctx.moveTo(c,c); ctx.lineTo(0,c); }
+                    if(n){ctx.moveTo(c,c); ctx.lineTo(c,0);} if(s){ctx.moveTo(c,c); ctx.lineTo(c,256);}
+                    if(e){ctx.moveTo(c,c); ctx.lineTo(256,c);} if(w){ctx.moveTo(c,c); ctx.lineTo(0,c);}
                     if(mask===0) ctx.fillRect(c-ctx.lineWidth/2, c-ctx.lineWidth/2, ctx.lineWidth, ctx.lineWidth);
                 }
                 ctx.stroke();
@@ -294,33 +338,21 @@
         class MetaCityGame {
             constructor() {
                 this.state = { 
-                    funds: 8000, // 初期資金
-                    population: 0, 
-                    income: 0, 
-                    powerGen: 0, 
-                    powerReq: 0, 
-                    isBlackout: false,
-                    dayLength: 5000 
+                    funds: 8000, population: 0, income: 0, powerGen: 0, powerReq: 0, 
+                    isBlackout: false, dayLength: 5000 
                 };
 
-                // cost:費用, pop:人口変動, inc:収益, pwr:電力(正=発電,負=消費)
                 this.buildConfig = {
                     road:       { cost: 10,   pop: 0,   inc: -1,  pwr: 0,   name: "道路" },
                     track:      { cost: 20,   pop: 0,   inc: -2,  pwr: 0,   name: "線路" },
-                    
-                    // 発電インフラ
-                    solar:      { cost: 300,  pop: 0,   inc: -5,  pwr: 40,  name: "太陽光発電" }, // 夜は発電0になる
+                    solar:      { cost: 300,  pop: 0,   inc: -5,  pwr: 40,  name: "太陽光発電" }, 
                     coal:       { cost: 500,  pop: -10, inc: -20, pwr: 150, name: "火力発電" },
                     nuclear:    { cost: 3000, pop: -20, inc: -100,pwr: 800, name: "原子力発電" },
-                    
-                    // 居住・商業
                     house:      { cost: 100,  pop: 10,  inc: 10,  pwr: -2,  name: "住宅" },
                     apartment:  { cost: 400,  pop: 50,  inc: 40,  pwr: -10, name: "マンション" },
                     shop:       { cost: 300,  pop: 5,   inc: 40,  pwr: -10, name: "商店" },
                     office:     { cost: 800,  pop: 10,  inc: 100, pwr: -25, name: "オフィス" },
                     skyscraper: { cost: 2000, pop: 100, inc: 250, pwr: -60, name: "高層ビル" },
-                    
-                    // 公共・その他
                     hospital:   { cost: 1000, pop: 80,  inc: -30, pwr: -20, name: "病院" },
                     school:     { cost: 600,  pop: 40,  inc: -15, pwr: -10, name: "学校" },
                     station:    { cost: 500,  pop: 20,  inc: 60,  pwr: -10, name: "駅" },
@@ -331,8 +363,7 @@
                 this.currentTool = 'road';
                 this.buildings = new Map(); 
                 this.actors = []; 
-                this.particles = []; // 煙などのエフェクト用
-                
+                this.particles = []; 
                 this.weatherConfig = { isDay: true, type: 'clear' };
                 this.locationInfo = { lat: 35.6895, lon: 139.6917, name: 'メタ・シティ' };
                 this.mapRadius = 40; 
@@ -347,7 +378,7 @@
                 
                 this.selectTool('road');
                 
-                // 初期インフラ（最初から電力を少し与える）
+                // 初期インフラ
                 this.createBuilding('coal', -2, -2);
                 this.createBuilding('road', 0, 1);
                 this.createBuilding('road', 0, 0);
@@ -355,14 +386,14 @@
                 this.updateTileAndNeighbors(0, 0, 'road');
                 this.updateCityStats();
 
-                this.showNotification("電力に気をつけながら街を拡大しよう！");
+                this.showNotification("電力に気をつけながら街を拡大しよう！", "fa-bolt", "text-yellow-400");
                 window.addEventListener('resize', () => this.onWindowResize(), false);
             }
 
             init3D() {
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x87CEEB);
-                this.scene.fog = new THREE.Fog(0x87CEEB, 20, 90); 
+                this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.015); // より自然な遠景の霞み
 
                 this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
                 this.camera.position.set(20, 25, 25);
@@ -371,6 +402,12 @@
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.shadowMap.enabled = true;
                 this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                
+                // よりリアルな色調と光の表現 (PBR)
+                this.renderer.outputEncoding = THREE.sRGBEncoding;
+                this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+                this.renderer.toneMappingExposure = 1.0;
+
                 document.getElementById('canvas-container').appendChild(this.renderer.domElement);
 
                 this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
@@ -397,16 +434,17 @@
             }
 
             setupLighting() {
-                this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                // 環境光に青みを持たせてリアルに
+                this.ambientLight = new THREE.AmbientLight(0xdbeafe, 0.5);
                 this.scene.add(this.ambientLight);
 
-                this.dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
-                this.dirLight.position.set(30, 40, 20);
+                this.dirLight = new THREE.DirectionalLight(0xfff7ed, 1.2);
+                this.dirLight.position.set(40, 50, 30);
                 this.dirLight.castShadow = true;
                 this.dirLight.shadow.mapSize.width = 2048;
                 this.dirLight.shadow.mapSize.height = 2048;
                 this.dirLight.shadow.camera.near = 0.5;
-                this.dirLight.shadow.camera.far = 120;
+                this.dirLight.shadow.camera.far = 150;
                 const d = 50;
                 this.dirLight.shadow.camera.left = -d; this.dirLight.shadow.camera.right = d;
                 this.dirLight.shadow.camera.top = d; this.dirLight.shadow.camera.bottom = -d;
@@ -420,7 +458,7 @@
 
                 const groundGeo = new THREE.PlaneGeometry(300, 300);
                 groundGeo.rotateX(-Math.PI / 2);
-                const groundMat = new THREE.MeshStandardMaterial({ color: 0x558B2F, roughness: 1.0 }); // 少し落ち着いた緑
+                const groundMat = new THREE.MeshStandardMaterial({ color: 0x4CAF50, roughness: 1.0, metalness: 0 }); 
                 this.ground = new THREE.Mesh(groundGeo, groundMat);
                 this.ground.receiveShadow = true;
                 this.scene.add(this.ground);
@@ -434,13 +472,13 @@
 
                 this.gridHelper = new THREE.GridHelper(this.mapRadius * 2, this.mapRadius * 2, 0xffffff, 0xffffff);
                 this.gridHelper.position.y = 0.02;
-                this.gridHelper.material.opacity = 0.1;
+                this.gridHelper.material.opacity = 0.08;
                 this.gridHelper.material.transparent = true;
                 this.scene.add(this.gridHelper);
 
                 this.hoverCursor = new THREE.Mesh(
                     new THREE.PlaneGeometry(1, 1),
-                    new THREE.MeshBasicMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.5, depthWrite: false })
+                    new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.5, depthWrite: false })
                 );
                 this.hoverCursor.rotation.x = -Math.PI / 2;
                 this.hoverCursor.position.y = 0.03;
@@ -514,10 +552,11 @@
                             this.state.funds -= conf.cost;
                             const type = existing.type;
                             this.removeBuilding(key);
+                            this.spawnBuildDust(x, z, true); // 撤去エフェクト
                             this.updateCityStats();
                             if (type === 'road' || type === 'track') this.updateTileAndNeighbors(x, z, type);
                         } else {
-                            this.showNotification("撤去費用が足りません。");
+                            this.showNotification("撤去費用が足りません。", "fa-ban", "text-red-400");
                         }
                     }
                 } else {
@@ -525,12 +564,13 @@
                         if (this.state.funds >= conf.cost) {
                             this.state.funds -= conf.cost;
                             this.createBuilding(this.currentTool, x, z);
+                            this.spawnBuildDust(x, z, false); // 建設エフェクト
                             this.updateCityStats();
                             if (this.currentTool === 'road' || this.currentTool === 'track') {
                                 this.updateTileAndNeighbors(x, z, this.currentTool);
                             }
                         } else {
-                            this.showNotification("資金が足りません！");
+                            this.showNotification("資金が足りません！", "fa-coins", "text-yellow-400");
                         }
                     }
                 }
@@ -544,7 +584,27 @@
                 }
             }
 
-            // --- オートタイリング ---
+            // --- 建設エフェクト ---
+            spawnBuildDust(x, z, isBulldoze) {
+                const color = isBulldoze ? 0x999999 : 0xDDDDDD;
+                for(let i=0; i<10; i++) {
+                    const mat = new THREE.MeshBasicMaterial({color: color, transparent: true, opacity: 0.8});
+                    const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), mat);
+                    mesh.position.set(x + (Math.random()-0.5)*0.8, 0.1, z + (Math.random()-0.5)*0.8);
+                    mesh.rotation.set(Math.random(), Math.random(), Math.random());
+                    this.particleGroup.add(mesh);
+                    
+                    this.particles.push({
+                        mesh: mesh, life: 1.0,
+                        velY: 0.5 + Math.random() * 1.0,
+                        velX: (Math.random() - 0.5) * 1.5,
+                        velZ: (Math.random() - 0.5) * 1.5,
+                        isDust: true
+                    });
+                }
+            }
+
+            // --- オートタイリング & 街灯自動配置 ---
             getTileMask(x, z, type) {
                 let mask = 0;
                 const check = (dx, dz) => { const b = this.buildings.get(`${x+dx},${z+dz}`); return b && b.type === type; };
@@ -569,11 +629,39 @@
 
             applyTileMesh(buildingObj, mask) {
                 while(buildingObj.mesh.children.length > 0) buildingObj.mesh.remove(buildingObj.mesh.children[0]); 
+                
                 const planeGeo = new THREE.PlaneGeometry(1, 1); planeGeo.rotateX(-Math.PI/2);
                 const tex = this.texGen.cache[buildingObj.type][mask];
-                const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, depthWrite: false });
+                const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.8, depthWrite: false });
                 const mesh = new THREE.Mesh(planeGeo, mat); mesh.position.y = 0.025; mesh.receiveShadow = true;
-                buildingObj.mesh.add(mesh); buildingObj.mask = mask;
+                buildingObj.mesh.add(mesh); 
+                buildingObj.mask = mask;
+
+                // 道路の場合、タイルの角に街灯を自動配置する
+                if (buildingObj.type === 'road') {
+                    this.addStreetLightsToRoad(buildingObj.mesh, mask);
+                }
+            }
+
+            addStreetLightsToRoad(group, mask) {
+                const n = (mask&1)!==0, e = (mask&2)!==0, s = (mask&4)!==0, w = (mask&8)!==0;
+                // 街灯を置く候補位置 (四隅)
+                const positions = [];
+                // 直線道路の場合のみ配置してスッキリさせる
+                if (n && s && !e && !w) { positions.push([-0.35, 0], [0.35, 0]); } // 南北
+                else if (e && w && !n && !s) { positions.push([0, -0.35], [0, 0.35]); } // 東西
+                else if (mask === 0) { positions.push([0.35, 0.35], [-0.35, -0.35]); } // 単独
+                
+                positions.forEach(([px, pz]) => {
+                    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.4), new THREE.MeshStandardMaterial({color: 0x555555}));
+                    pole.position.set(px, 0.2, pz); pole.castShadow = true;
+                    
+                    const lightMat = this.matGen.createStreetLightMaterial();
+                    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), lightMat);
+                    bulb.position.set(0, 0.2, 0); 
+                    pole.add(bulb);
+                    group.add(pole);
+                });
             }
 
             // --- 統計と電力計算 ---
@@ -584,32 +672,19 @@
                     const conf = this.buildConfig[b.type];
                     if (conf) {
                         pop += conf.pop;
-                        
-                        // 電力計算
-                        if (conf.pwr < 0) {
-                            req += Math.abs(conf.pwr); // 消費
-                        } else if (conf.pwr > 0) {
-                            // 太陽光は夜間発電しない
-                            if (b.type === 'solar' && !this.weatherConfig.isDay) {
-                                // 発電0
-                            } else {
-                                gen += conf.pwr; // 発電
-                            }
+                        if (conf.pwr < 0) req += Math.abs(conf.pwr);
+                        else if (conf.pwr > 0) {
+                            if (b.type === 'solar' && !this.weatherConfig.isDay) { /* 発電0 */ } 
+                            else gen += conf.pwr;
                         }
                     }
                 });
 
-                this.state.population = pop;
-                this.state.powerReq = req;
-                this.state.powerGen = gen;
-                
-                // ブラックアウト判定
+                this.state.population = pop; this.state.powerReq = req; this.state.powerGen = gen;
                 this.state.isBlackout = (req > gen);
                 
-                // 収益計算 (ブラックアウト時は0)
-                if (this.state.isBlackout) {
-                    inc = 0;
-                } else {
+                if (this.state.isBlackout) inc = 0;
+                else {
                     this.buildings.forEach((b) => {
                         const conf = this.buildConfig[b.type];
                         if (conf) inc += conf.inc;
@@ -617,52 +692,48 @@
                 }
                 this.state.income = inc;
 
-                // 窓の明かりの更新
                 this.matGen.updateLighting(!this.weatherConfig.isDay, this.state.isBlackout);
                 this.updateUI();
             }
 
             updateUI() {
                 document.getElementById('stat-funds').innerText = `$${this.state.funds}`;
-                document.getElementById('stat-pop').innerText = `${this.state.population} 人`;
+                document.getElementById('stat-pop').innerText = `${this.state.population}`;
                 
                 const incElem = document.getElementById('stat-income');
                 if (this.state.isBlackout) {
-                    incElem.innerText = `停止中`;
-                    incElem.className = `font-mono font-bold text-red-500`;
+                    incElem.innerText = `停止中`; incElem.className = `text-lg font-mono font-bold text-red-500 tracking-tight`;
                 } else {
                     incElem.innerText = (this.state.income >= 0 ? '+' : '') + `$${this.state.income}`;
-                    incElem.className = `font-mono font-bold ${this.state.income >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                    incElem.className = `text-lg font-mono font-bold tracking-tight ${this.state.income >= 0 ? 'text-green-400' : 'text-red-400'}`;
                 }
 
-                // 電力UI更新
                 const pwrText = document.getElementById('power-text');
                 const pwrBar = document.getElementById('power-bar');
                 const pwrPanel = document.getElementById('power-panel');
                 const blackoutWarning = document.getElementById('blackout-warning');
 
-                pwrText.innerText = `${this.state.powerReq} / ${this.state.powerGen} kW`;
+                pwrText.innerHTML = `${this.state.powerReq} <span class="text-xs text-gray-400">/ ${this.state.powerGen} kW</span>`;
                 
                 let ratio = this.state.powerGen > 0 ? (this.state.powerReq / this.state.powerGen) * 100 : (this.state.powerReq > 0 ? 100 : 0);
                 pwrBar.style.width = `${Math.min(ratio, 100)}%`;
 
                 if (this.state.isBlackout) {
-                    pwrBar.className = "power-bar-fill h-full bg-red-500";
+                    pwrBar.className = "power-bar-fill h-full bg-red-500 relative";
                     pwrPanel.classList.add('blackout-alert');
                     blackoutWarning.classList.remove('opacity-0');
                 } else {
-                    if(ratio > 80) pwrBar.className = "power-bar-fill h-full bg-orange-400";
-                    else pwrBar.className = "power-bar-fill h-full bg-green-400";
+                    if(ratio > 80) pwrBar.className = "power-bar-fill h-full bg-orange-400 relative";
+                    else pwrBar.className = "power-bar-fill h-full bg-blue-400 relative";
                     pwrPanel.classList.remove('blackout-alert');
                     blackoutWarning.classList.add('opacity-0');
                 }
             }
 
-            // --- 3Dオブジェクト生成 (ディテールアップ版) ---
+            // --- 3Dオブジェクト生成 (さらにリアルに) ---
             createBox(w,h,d, mat, yOffset=h/2) {
                 const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
-                mesh.position.y = yOffset;
-                mesh.castShadow = true; mesh.receiveShadow = true;
+                mesh.position.y = yOffset; mesh.castShadow = true; mesh.receiveShadow = true;
                 return mesh;
             }
 
@@ -671,111 +742,122 @@
                 group.position.set(x, 0, z);
                 let updateFn = null;
 
-                const baseMat = new THREE.MeshStandardMaterial({color:0x999999});
-                const winMat = this.matGen.windowMaterial;
+                const baseMat = new THREE.MeshStandardMaterial({color:0x888888});
+                const hWinMat = this.matGen.houseWindowMaterial;
+                const bWinMat = this.matGen.buildingWindowMaterial;
 
                 if (type === 'road' || type === 'track') {
                     // 自動生成
                 } else if (type === 'house') {
-                    const body = this.createBox(0.7, 0.4, 0.7, new THREE.MeshStandardMaterial({ color: 0xF5F5F5 }));
+                    // 家：ベース＋屋根＋光る窓
+                    const body = this.createBox(0.65, 0.4, 0.65, new THREE.MeshStandardMaterial({ color: 0xFDFEFE }));
                     group.add(body);
-                    const roof = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 4), new THREE.MeshStandardMaterial({ color: [0xEF5350, 0x42A5F5, 0x66BB6A, 0x8D6E63][Math.floor(Math.random() * 4)] }));
-                    roof.position.y = 0.6; roof.rotation.y = Math.PI/4; roof.castShadow = true; group.add(roof);
+                    const roof = new THREE.Mesh(new THREE.ConeGeometry(0.55, 0.35, 4), new THREE.MeshStandardMaterial({ color: [0xEF5350, 0x42A5F5, 0x66BB6A, 0x8D6E63][Math.floor(Math.random() * 4)], roughness: 0.8 }));
+                    roof.position.y = 0.575; roof.rotation.y = Math.PI/4; roof.castShadow = true; group.add(roof);
+                    
+                    // 家の窓
+                    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.66, 0.41), hWinMat);
+                    w.position.set(0, 0.2, 0); group.add(w);
 
                 } else if (type === 'apartment') {
-                    const h = 1.2 + Math.random() * 0.5;
-                    const body = this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xCFD8DC }));
+                    const h = 1.2 + Math.random() * 0.6;
+                    const body = this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xE0E0E0 }));
                     group.add(body);
-                    // 窓
-                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, h-0.2), winMat);
-                    wMesh.position.set(0, h/2, 0.41); group.add(wMesh);
-                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI; wMesh2.position.set(0, h/2, -0.41); group.add(wMesh2);
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.75, h-0.1), bWinMat);
+                    wMesh.position.set(0, h/2, 0.401); group.add(wMesh);
+                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI; wMesh2.position.set(0, h/2, -0.401); group.add(wMesh2);
 
                 } else if (type === 'shop') {
                     const h = 0.8;
-                    group.add(this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFCC80 })));
-                    const sign = this.createBox(0.6, 0.3, 0.1, new THREE.MeshStandardMaterial({ color: 0xFF5252 }), h+0.15);
+                    group.add(this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFF3E0 })));
+                    const sign = this.createBox(0.7, 0.25, 0.1, new THREE.MeshStandardMaterial({ color: [0xFF5252, 0x448AFF, 0x69F0AE][Math.floor(Math.random()*3)] }), h+0.125);
                     group.add(sign);
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.75, 0.6), bWinMat);
+                    wMesh.position.set(0, 0.4, 0.401); group.add(wMesh);
 
                 } else if (type === 'office') {
-                    const h = 1.8 + Math.random();
-                    group.add(this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0x90CAF9, roughness:0.2 })));
-                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, h-0.2), winMat);
-                    wMesh.position.set(0, h/2, 0.41); group.add(wMesh);
-                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI/2; wMesh2.position.set(0.41, h/2, 0); group.add(wMesh2);
+                    const h = 2.0 + Math.random();
+                    group.add(this.createBox(0.85, h, 0.85, new THREE.MeshStandardMaterial({ color: 0xB0BEC5, roughness:0.3 })));
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.8, h-0.2), bWinMat);
+                    wMesh.position.set(0, h/2, 0.426); group.add(wMesh);
+                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI/2; wMesh2.position.set(0.426, h/2, 0); group.add(wMesh2);
 
                 } else if (type === 'skyscraper') {
-                    const h = 3.0 + Math.random() * 2;
-                    group.add(this.createBox(0.9, h, 0.9, new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.8, roughness: 0.2 })));
-                    const top = this.createBox(0.5, 0.5, 0.5, new THREE.MeshStandardMaterial({ color: 0x546E7A }), h+0.25);
+                    const h = 3.5 + Math.random() * 2.5;
+                    group.add(this.createBox(0.9, h, 0.9, new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.9, roughness: 0.1 })));
+                    const top = this.createBox(0.5, 0.6, 0.5, new THREE.MeshStandardMaterial({ color: 0x455A64 }), h+0.3);
                     group.add(top);
-                    const antenna = this.createBox(0.05, 1.0, 0.05, new THREE.MeshStandardMaterial({color:0xffffff}), h+1.0);
+                    const antenna = this.createBox(0.04, 1.2, 0.04, new THREE.MeshStandardMaterial({color:0xffffff}), h+1.2);
                     group.add(antenna);
-                    // 4面に窓
-                    [[0,0.46,0],[Math.PI, -0.46,0],[Math.PI/2,0,0.46],[-Math.PI/2,0,-0.46]].forEach(([rot, px, pz]) => {
-                        const w = new THREE.Mesh(new THREE.PlaneGeometry(0.8, h-0.2), winMat);
+                    [[0,0.451,0],[Math.PI, -0.451,0],[Math.PI/2,0,0.451],[-Math.PI/2,0,-0.451]].forEach(([rot, px, pz]) => {
+                        const w = new THREE.Mesh(new THREE.PlaneGeometry(0.8, h-0.2), bWinMat);
                         w.rotation.y = rot; w.position.set(px, h/2, pz); group.add(w);
                     });
 
                 } else if (type === 'hospital') {
-                    group.add(this.createBox(1.2, 1.0, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFFFFF })));
-                    // 赤十字マーク
+                    group.add(this.createBox(1.4, 1.2, 0.8, new THREE.MeshStandardMaterial({ color: 0xFAFAFA })));
                     const crossMat = new THREE.MeshBasicMaterial({color: 0xE53935});
-                    const c1 = this.createBox(0.1, 0.4, 0.1, crossMat, 0.5); c1.position.z = 0.41; group.add(c1);
-                    const c2 = this.createBox(0.4, 0.1, 0.1, crossMat, 0.5); c2.position.z = 0.41; group.add(c2);
+                    const c1 = this.createBox(0.12, 0.4, 0.1, crossMat, 0.6); c1.position.z = 0.41; group.add(c1);
+                    const c2 = this.createBox(0.4, 0.12, 0.1, crossMat, 0.6); c2.position.z = 0.41; group.add(c2);
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.0), bWinMat);
+                    wMesh.position.set(0, 0.6, 0.401); group.add(wMesh);
 
                 } else if (type === 'school') {
-                    group.add(this.createBox(1.4, 0.6, 0.6, new THREE.MeshStandardMaterial({ color: 0xFFE082 })));
+                    group.add(this.createBox(1.6, 0.6, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFE082 })));
                     const clock = new THREE.Mesh(new THREE.CircleGeometry(0.15, 16), new THREE.MeshBasicMaterial({color:0xffffff}));
-                    clock.position.set(0, 0.7, 0.31); group.add(clock);
+                    clock.position.set(0, 0.7, 0.41); group.add(clock);
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.4), bWinMat);
+                    wMesh.position.set(0, 0.3, 0.401); group.add(wMesh);
 
                 } else if (type === 'solar') {
                     const base = this.createBox(0.9, 0.1, 0.9, baseMat); group.add(base);
-                    const panelMat = new THREE.MeshStandardMaterial({color:0x0D47A1, roughness:0.1, metalness:0.8});
+                    const panelMat = new THREE.MeshStandardMaterial({color:0x1565C0, roughness:0.2, metalness:0.8});
                     const panel = this.createBox(0.8, 0.05, 0.8, panelMat, 0.2);
                     panel.rotation.x = -Math.PI/6; group.add(panel);
 
                 } else if (type === 'coal') {
-                    group.add(this.createBox(1.2, 0.8, 1.0, new THREE.MeshStandardMaterial({ color: 0x5D4037 })));
-                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), new THREE.MeshStandardMaterial({ color: 0x424242 }));
+                    group.add(this.createBox(1.2, 0.8, 1.0, new THREE.MeshStandardMaterial({ color: 0x4E342E })));
+                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), new THREE.MeshStandardMaterial({ color: 0x212121 }));
                     pipe.position.set(-0.3, 1.0, -0.2); pipe.castShadow = true; group.add(pipe);
                     
                     updateFn = (delta) => {
                         if(!this.state.isBlackout && Math.random() < 0.2) {
-                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.2, 0x555555);
+                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.2, 0x444444);
                         }
                     };
 
                 } else if (type === 'nuclear') {
-                    group.add(this.createBox(1.5, 0.5, 1.5, new THREE.MeshStandardMaterial({ color: 0xB0BEC5 })));
-                    // 冷却塔
-                    const towerGeo = new THREE.CylinderGeometry(0.3, 0.5, 1.5, 16);
+                    group.add(this.createBox(1.5, 0.5, 1.5, new THREE.MeshStandardMaterial({ color: 0x90A4AE })));
+                    const towerGeo = new THREE.CylinderGeometry(0.35, 0.5, 1.5, 16);
                     const towerMat = new THREE.MeshStandardMaterial({color: 0xCFD8DC});
                     const t1 = new THREE.Mesh(towerGeo, towerMat); t1.position.set(-0.3, 1.0, -0.3); t1.castShadow=true; group.add(t1);
                     const t2 = new THREE.Mesh(towerGeo, towerMat); t2.position.set(0.4, 1.0, 0.2); t2.castShadow=true; group.add(t2);
                     
                     updateFn = (delta) => {
                         if(!this.state.isBlackout && Math.random() < 0.3) {
-                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.3, 0xffffff); // 白い水蒸気
+                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.3, 0xffffff);
                             this.spawnSmoke(group.position.x + 0.4, 1.8, group.position.z + 0.2, 0xffffff);
                         }
                     };
 
                 } else if (type === 'station') {
-                    const plat = this.createBox(1, 0.15, 0.8, new THREE.MeshStandardMaterial({color: 0xE0E0E0}), 0.075); group.add(plat);
-                    const roof = this.createBox(0.9, 0.05, 0.7, new THREE.MeshStandardMaterial({color: 0x0288D1}), 0.6); group.add(roof);
+                    const plat = this.createBox(1, 0.15, 0.8, new THREE.MeshStandardMaterial({color: 0xBDBDBD}), 0.075); group.add(plat);
+                    const roof = this.createBox(0.9, 0.05, 0.7, new THREE.MeshStandardMaterial({color: 0x0277BD}), 0.6); group.add(roof);
                     [[-0.3,-0.2],[0.3,-0.2],[-0.3,0.2],[0.3,0.2]].forEach(([px,pz]) => {
-                        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.5), new THREE.MeshStandardMaterial({color: 0xFFFFFF}));
+                        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.5), new THREE.MeshStandardMaterial({color: 0xFFFFFF}));
                         p.position.set(px, 0.35, pz); p.castShadow=true; group.add(p);
                     });
                 } else if (type === 'park') {
                     const base = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({color: 0x8BC34A}));
                     base.rotation.x = -Math.PI/2; base.position.y = 0.025; base.receiveShadow = true; group.add(base);
-                    const tGeo = new THREE.ConeGeometry(0.15, 0.4, 4), tMat = new THREE.MeshStandardMaterial({color: 0x2E7D32});
-                    const t1 = new THREE.Mesh(tGeo, tMat); t1.position.set(-0.25, 0.2, 0.25); t1.castShadow=true; group.add(t1);
-                    const t2 = new THREE.Mesh(tGeo, tMat); t2.position.set(-0.3, 0.2, -0.2); t2.castShadow=true; group.add(t2);
+                    const tGeo = new THREE.ConeGeometry(0.18, 0.5, 5), tMat = new THREE.MeshStandardMaterial({color: 0x2E7D32});
+                    const t1 = new THREE.Mesh(tGeo, tMat); t1.position.set(-0.25, 0.25, 0.25); t1.castShadow=true; group.add(t1);
+                    const t2 = new THREE.Mesh(tGeo, tMat); t2.position.set(0.2, 0.2, -0.2); t2.castShadow=true; group.add(t2);
+                    const path = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), new THREE.MeshStandardMaterial({color:0xD7CCC8}));
+                    path.rotation.x=-Math.PI/2; path.rotation.z=Math.PI/4; path.position.y=0.03; group.add(path);
                 }
 
+                // ポップアップアニメーション用
                 group.scale.set(0, 0, 0); 
                 this.buildGroup.add(group);
                 this.buildings.set(`${x},${z}`, { mesh: group, type: type, mask: 0, update: updateFn });
@@ -783,26 +865,24 @@
 
             // --- エフェクト ---
             spawnSmoke(x, y, z, colorHex) {
-                const mat = new THREE.MeshBasicMaterial({color: colorHex, transparent: true, opacity: 0.6});
-                const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), mat);
+                const mat = new THREE.MeshBasicMaterial({color: colorHex, transparent: true, opacity: 0.5});
+                const mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.15), mat);
                 mesh.position.set(x + (Math.random()-0.5)*0.2, y, z + (Math.random()-0.5)*0.2);
-                
-                // 回転をランダムに
                 mesh.rotation.set(Math.random(), Math.random(), Math.random());
                 this.particleGroup.add(mesh);
                 
                 this.particles.push({
-                    mesh: mesh,
-                    life: 1.0,
-                    velY: 0.5 + Math.random() * 0.5,
-                    velX: (Math.random() - 0.5) * 0.2
+                    mesh: mesh, life: 1.0, isDust: false,
+                    velY: 0.6 + Math.random() * 0.4,
+                    velX: (Math.random() - 0.5) * 0.3,
+                    velZ: (Math.random() - 0.5) * 0.3
                 });
             }
 
             updateParticles(delta) {
                 for(let i = this.particles.length - 1; i >= 0; i--) {
                     const p = this.particles[i];
-                    p.life -= delta * 0.5;
+                    p.life -= delta * (p.isDust ? 1.5 : 0.4);
                     if(p.life <= 0) {
                         this.particleGroup.remove(p.mesh);
                         this.particles.splice(i, 1);
@@ -810,12 +890,17 @@
                     }
                     p.mesh.position.y += p.velY * delta;
                     p.mesh.position.x += p.velX * delta;
-                    p.mesh.scale.setScalar(p.life * 1.5);
-                    p.mesh.material.opacity = p.life * 0.6;
+                    p.mesh.position.z += p.velZ * delta;
+                    if (p.isDust) {
+                        p.mesh.scale.setScalar(p.life);
+                    } else {
+                        p.mesh.scale.setScalar(1.0 + (1.0 - p.life) * 2.0); // 煙は広がる
+                    }
+                    p.mesh.material.opacity = p.life * 0.5;
                 }
             }
 
-            // --- 交通システム (ディテールアップ版) ---
+            // --- 交通システム ---
             lerpAngle(a, b, t) {
                 const da = (b - a) % (Math.PI * 2);
                 const dist = 2 * da % (Math.PI * 2) - da;
@@ -823,7 +908,6 @@
             }
 
             updateActors(delta) {
-                // ブラックアウト時は交通停止
                 if (this.state.isBlackout) return;
 
                 for (let i = this.actors.length - 1; i >= 0; i--) {
@@ -876,7 +960,6 @@
                         a.mesh.rotation.y = this.lerpAngle(a.mesh.rotation.y, targetAngle, delta * 15);
                     }
 
-                    // 軌跡追従
                     if (a.history) {
                         const dist = a.mesh.position.distanceTo(a.lastPos);
                         if (dist > 0.05) {
@@ -886,7 +969,7 @@
                         }
                         
                         if (a.trailMeshes) {
-                            const delay1 = 12; const delay2 = 24;
+                            const delay1 = 12, delay2 = 24;
                             if (a.history[delay1]) {
                                 a.trailMeshes[0].position.set(a.history[delay1].x, a.history[delay1].y, a.history[delay1].z);
                                 a.trailMeshes[0].rotation.y = a.history[delay1].rotY;
@@ -903,7 +986,7 @@
             spawnActors() {
                 if (this.state.isBlackout) return;
 
-                const maxCars = 30, maxTrains = 8, maxPeds = 50;
+                const maxCars = 40, maxTrains = 10, maxPeds = 60;
                 let carCount = 0, trainCount = 0, pedCount = 0;
                 this.actors.forEach(a => {
                     if(a.type === 'car') carCount++;
@@ -916,18 +999,18 @@
                     const [x, z] = key.split(',').map(Number);
                     if (b.type === 'road') { roads.push({x,z}); walks.push({x,z}); }
                     if (b.type === 'track' || b.type === 'station') tracks.push({x,z});
-                    if (!['track','water'].includes(b.type)) walks.push({x,z});
+                    if (!['track'].includes(b.type)) walks.push({x,z});
                 });
 
-                if (roads.length > 0 && carCount < maxCars && Math.random() < 0.5) {
+                if (roads.length > 0 && carCount < maxCars && Math.random() < 0.6) {
                     const start = roads[Math.floor(Math.random() * roads.length)];
                     this.createActor('car', start.x, start.z);
                 }
-                if (tracks.length > 0 && trainCount < maxTrains && Math.random() < 0.2) {
+                if (tracks.length > 0 && trainCount < maxTrains && Math.random() < 0.3) {
                     const start = tracks[Math.floor(Math.random() * tracks.length)];
                     this.createActor('train', start.x, start.z);
                 }
-                if (walks.length > 0 && pedCount < maxPeds && Math.random() < 0.6) {
+                if (walks.length > 0 && pedCount < maxPeds && Math.random() < 0.7) {
                     const start = walks[Math.floor(Math.random() * walks.length)];
                     this.createActor('ped', start.x, start.z);
                 }
@@ -938,30 +1021,23 @@
                 const group = new THREE.Group();
 
                 if (type === 'car') {
-                    // リアルな車モデル
                     const colors = [0xF44336, 0x2196F3, 0xFFEB3B, 0xFFFFFF, 0x9C27B0, 0x4CAF50, 0x263238];
                     const bodyMat = new THREE.MeshStandardMaterial({color: colors[Math.floor(Math.random()*colors.length)], roughness: 0.3});
                     const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.5), bodyMat);
                     body.position.y = 0.1; body.castShadow = true; group.add(body);
-                    
-                    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.25), new THREE.MeshStandardMaterial({color:0xffffff}));
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.25), new THREE.MeshStandardMaterial({color:0xeeeeee}));
                     roof.position.set(0, 0.21, -0.05); roof.castShadow = true; group.add(roof);
-                    
-                    const tireMat = new THREE.MeshStandardMaterial({color:0x222222});
-                    const tireGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.04, 8); tireGeo.rotateZ(Math.PI/2);
-                    [[-0.15, 0.15], [0.15, 0.15], [-0.15, -0.15], [0.15, -0.15]].forEach(([tx, tz]) => {
-                        const t = new THREE.Mesh(tireGeo, tireMat); t.position.set(tx, 0.06, tz); group.add(t);
-                    });
+                    // ライト
+                    const headlight = new THREE.Mesh(new THREE.PlaneGeometry(0.08, 0.05), new THREE.MeshBasicMaterial({color:0xffffff}));
+                    headlight.position.set(0.1, 0.1, 0.251); group.add(headlight);
+                    const headlight2 = headlight.clone(); headlight2.position.set(-0.1, 0.1, 0.251); group.add(headlight2);
                     
                     group.position.set(-0.15, 0, 0); // 右側通行
-                    mesh = group;
-                    speed = 1.5; allowedTypes = ['road'];
+                    mesh = group; speed = 1.8; allowedTypes = ['road'];
 
                 } else if (type === 'train') {
-                    // リアルな電車
                     const mat = new THREE.MeshStandardMaterial({color: 0x8BC34A, metalness: 0.3});
-                    const winMat = this.matGen.darkWindowMaterial; // 電車の窓
-                    
+                    const winMat = this.matGen.darkWindowMaterial;
                     const createTrainCar = () => {
                         const car = new THREE.Group();
                         const body = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.7), mat);
@@ -971,28 +1047,21 @@
                         const w2 = w1.clone(); w2.rotation.y = -Math.PI/2; w2.position.set(-0.18, 0.3, 0); car.add(w2);
                         return car;
                     };
-
                     mesh = createTrainCar();
                     trailMeshes = [createTrainCar(), createTrainCar()];
                     trailMeshes.forEach(m => { m.position.set(x, 0, z); this.actorGroup.add(m); });
-                    
-                    history = []; speed = 1.8; allowedTypes = ['track', 'station'];
+                    history = []; speed = 2.0; allowedTypes = ['track', 'station'];
                     
                 } else if (type === 'ped') {
                     mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 8), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
                     mesh.position.set((Math.random()-0.5)*0.6, 0.1, (Math.random()-0.5)*0.6);
                     group.add(mesh);
-                    mesh = group; speed = 0.6;
-                    allowedTypes = Object.keys(this.buildConfig).filter(t => !['water','track','bulldoze'].includes(t));
+                    mesh = group; speed = 0.8;
+                    allowedTypes = Object.keys(this.buildConfig).filter(t => !['track','bulldoze'].includes(t));
                 }
 
-                if(type !== 'train') { // Train is handled differently above
-                    mesh.position.set(x, 0, z);
-                    this.actorGroup.add(mesh);
-                } else {
-                    mesh.position.set(x, 0, z);
-                    this.actorGroup.add(mesh);
-                }
+                if(type !== 'train') { mesh.position.set(x, 0, z); this.actorGroup.add(mesh); } 
+                else { mesh.position.set(x, 0, z); this.actorGroup.add(mesh); }
 
                 const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
                 const validDirs = dirs.map(d => ({x: x + d.x, z: z + d.z}))
@@ -1031,12 +1100,15 @@
                 setInterval(() => { this.fetchWeather(); }, 600000);
             }
 
-            showNotification(msg) {
+            showNotification(msg, icon="fa-info-circle", colorClass="text-blue-500") {
                 const notif = document.getElementById('notification');
-                notif.innerText = msg;
-                notif.classList.remove('opacity-0');
+                document.getElementById('notif-text').innerText = msg;
+                const i = notif.querySelector('i');
+                i.className = `fas ${icon} ${colorClass} text-lg`;
+                
+                notif.classList.add('show');
                 if(this.notifTimeout) clearTimeout(this.notifTimeout);
-                this.notifTimeout = setTimeout(() => { notif.classList.add('opacity-0'); }, 2000);
+                this.notifTimeout = setTimeout(() => { notif.classList.remove('show'); }, 2500);
             }
 
             setupWeatherParticles() {
@@ -1058,16 +1130,10 @@
             getLocationAndWeather() {
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(
-                        (position) => {
-                            this.locationInfo.lat = position.coords.latitude;
-                            this.locationInfo.lon = position.coords.longitude;
-                            this.fetchWeather();
-                        },
+                        (pos) => { this.locationInfo.lat = pos.coords.latitude; this.locationInfo.lon = pos.coords.longitude; this.fetchWeather(); },
                         () => { this.fetchWeather(); }
                     );
-                } else {
-                    this.fetchWeather();
-                }
+                } else { this.fetchWeather(); }
             }
 
             async fetchWeather() {
@@ -1075,16 +1141,11 @@
                     const url = `https://api.open-meteo.com/v1/forecast?latitude=${this.locationInfo.lat}&longitude=${this.locationInfo.lon}&current_weather=true&timezone=auto`;
                     const response = await fetch(url);
                     const data = await response.json();
-                    
                     if (data.current_weather) {
                         const code = data.current_weather.weathercode;
                         const wasDay = this.weatherConfig.isDay;
                         this.weatherConfig.isDay = data.current_weather.is_day === 1;
-                        
-                        // 昼夜が変わったら電力再計算 (太陽光の影響)
-                        if(wasDay !== this.weatherConfig.isDay) {
-                            this.updateCityStats();
-                        }
+                        if(wasDay !== this.weatherConfig.isDay) this.updateCityStats();
 
                         if (code <= 3) this.weatherConfig.type = 'clear';
                         else if (code >= 51 && code <= 67) this.weatherConfig.type = 'rain';
@@ -1093,9 +1154,7 @@
                         else this.weatherConfig.type = 'cloudy';
                         this.applyWeatherToScene();
                     }
-                } catch (e) {
-                    this.applyWeatherToScene();
-                }
+                } catch (e) { this.applyWeatherToScene(); }
             }
 
             applyWeatherToScene() {
@@ -1103,35 +1162,33 @@
                 const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
                 
                 let iconClass = 'fa-sun'; let weatherText = '晴れ';
-                let skyColor = 0x87CEEB; let lightInt = 1.0; let ambientInt = 0.6;
+                let skyColor = 0x87CEEB; let lightInt = 1.2; let ambientInt = 0.5;
 
                 if (!this.weatherConfig.isDay) {
-                    skyColor = 0x0B1D3A; 
-                    // ブラックアウト時は月明かりだけに
-                    lightInt = this.state.isBlackout ? 0.05 : 0.15; 
-                    ambientInt = this.state.isBlackout ? 0.1 : 0.25;
+                    // 夜の表現を少し明るく（街の明かりが映えるように）
+                    skyColor = 0x0f172a; 
+                    lightInt = this.state.isBlackout ? 0.05 : 0.1; 
+                    ambientInt = this.state.isBlackout ? 0.05 : 0.15;
                     iconClass = 'fa-moon';
                     this.dirLight.color.setHex(0xaaccFF);
                 } else {
-                    this.dirLight.color.setHex(0xffffff);
+                    this.dirLight.color.setHex(0xfff7ed);
                 }
 
                 this.rainSystem.visible = false;
                 if (this.weatherConfig.type === 'rain' || this.weatherConfig.type === 'snow') {
                     weatherText = this.weatherConfig.type === 'rain' ? '雨' : '雪';
                     iconClass = this.weatherConfig.type === 'rain' ? 'fa-cloud-rain' : 'fa-snowflake';
-                    skyColor = this.weatherConfig.isDay ? 0x607D8B : 0x1c2833;
-                    lightInt *= 0.5; this.rainSystem.visible = true;
-                    if(this.weatherConfig.type === 'snow') {
-                        this.rainSystem.material.color.setHex(0xffffff); this.rainSystem.material.size = 0.15;
-                    } else {
-                        this.rainSystem.material.color.setHex(0xaaccff); this.rainSystem.material.size = 0.1;
-                    }
+                    skyColor = this.weatherConfig.isDay ? 0x64748b : 0x0f172a;
+                    lightInt *= 0.6; this.rainSystem.visible = true;
+                    if(this.weatherConfig.type === 'snow') { this.rainSystem.material.color.setHex(0xffffff); this.rainSystem.material.size = 0.15; } 
+                    else { this.rainSystem.material.color.setHex(0xaaccff); this.rainSystem.material.size = 0.1; }
                 } else if (this.weatherConfig.type === 'cloudy') {
                     weatherText = '曇り'; iconClass = 'fa-cloud';
-                    skyColor = this.weatherConfig.isDay ? 0x90A4AE : 0x1A252C; lightInt *= 0.7;
+                    skyColor = this.weatherConfig.isDay ? 0x94a3b8 : 0x1e293b; lightInt *= 0.8;
                 }
 
+                // Tweenのようなスムーズな色変更（今回は直接代入）
                 this.scene.background = new THREE.Color(skyColor);
                 this.scene.fog.color = new THREE.Color(skyColor);
                 this.dirLight.intensity = lightInt;
@@ -1140,7 +1197,6 @@
                 document.getElementById('weather-icon').innerHTML = `<i class="fas ${iconClass}"></i>`;
                 document.getElementById('time-weather-info').innerText = `${timeStr} | ${weatherText}`;
                 
-                // 照明の更新
                 this.matGen.updateLighting(!this.weatherConfig.isDay, this.state.isBlackout);
             }
 
@@ -1156,7 +1212,7 @@
 
                 this.buildings.forEach((b) => {
                     if (b.mesh.scale.x < 1) {
-                        const s = Math.min(1, b.mesh.scale.x + delta * 3);
+                        const s = Math.min(1, b.mesh.scale.x + delta * 4);
                         b.mesh.scale.set(s, s, s);
                     }
                     if (b.update) b.update(delta);
