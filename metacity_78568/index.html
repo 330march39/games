@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D メタシティ - リアル電力・都市拡張アップデート版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a202c; font-family: 'Rounded Mplus 1c', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; }
+        #canvas-container { width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; }
+        .pointer-events-auto { pointer-events: auto; }
+        .glass-panel { background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .tool-btn { transition: all 0.2s; border: 2px solid transparent; flex: 0 0 auto; width: 68px; }
+        .tool-btn.active { border-color: #38BDF8; background: rgba(56, 189, 248, 0.25); transform: translateY(-4px); box-shadow: 0 4px 12px rgba(56, 189, 248, 0.4); }
+        .tool-btn:hover:not(.active) { background: rgba(255, 255, 255, 0.15); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 電力バーのアニメーション */
+        .power-bar-fill { transition: width 0.5s ease, background-color 0.5s ease; }
+        @keyframes flashRed { 0% { background-color: rgba(239, 68, 68, 0.2); } 50% { background-color: rgba(239, 68, 68, 0.8); } 100% { background-color: rgba(239, 68, 68, 0.2); } }
+        .blackout-alert { animation: flashRed 1s infinite; border-color: #EF4444; }
+    </style>
+</head>
+<body class="text-white select-none">
+
+    <div id="canvas-container"></div>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="flex flex-col justify-between p-3 md:p-5 pb-5">
+        
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 pointer-events-auto">
+            
+            <!-- Left: Weather & Location -->
+            <div class="glass-panel p-3 rounded-2xl flex items-center space-x-3 w-full md:w-auto">
+                <div id="weather-icon" class="text-3xl text-yellow-300 w-8 text-center"><i class="fas fa-sun"></i></div>
+                <div>
+                    <h1 class="font-bold text-sm md:text-base leading-tight text-blue-100" id="location-name">現在地を取得中...</h1>
+                    <p class="text-xs md:text-sm text-blue-200/80" id="time-weather-info">--:-- | --</p>
+                </div>
+            </div>
+
+            <!-- Center: Power Management -->
+            <div id="power-panel" class="glass-panel p-3 rounded-2xl w-full md:w-1/3 min-w-[250px] relative overflow-hidden transition-all">
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-xs md:text-sm font-bold flex items-center gap-1"><i class="fas fa-bolt text-yellow-400"></i> 電力状況</span>
+                    <span id="power-text" class="text-xs md:text-sm font-mono font-bold">0 / 0 kW</span>
+                </div>
+                <div class="w-full h-3 bg-gray-700 rounded-full overflow-hidden">
+                    <div id="power-bar" class="power-bar-fill h-full bg-yellow-400" style="width: 0%;"></div>
+                </div>
+                <div id="blackout-warning" class="absolute inset-0 flex items-center justify-center bg-red-600/80 text-white font-bold text-sm opacity-0 transition-opacity">
+                    <i class="fas fa-triangle-exclamation mr-2"></i>ブラックアウト発生中！経済停止！
+                </div>
+            </div>
+
+            <!-- Right: City Stats -->
+            <div class="glass-panel p-3 rounded-2xl flex flex-col space-y-1.5 w-full md:w-auto min-w-[160px]">
+                <div class="flex justify-between items-center text-sm font-bold">
+                    <span><i class="fas fa-coins text-yellow-400 w-5"></i>資金</span>
+                    <span id="stat-funds" class="text-yellow-300 font-mono">$5000</span>
+                </div>
+                <div class="flex justify-between items-center text-sm font-bold">
+                    <span><i class="fas fa-users text-blue-400 w-5"></i>人口</span>
+                    <span id="stat-pop" class="text-white font-mono">0 人</span>
+                </div>
+                <div class="w-full h-px bg-white/20 my-0.5"></div>
+                <div class="flex justify-between items-center text-xs">
+                    <span class="text-gray-300">日次収益</span>
+                    <span id="stat-income" class="text-green-400 font-mono font-bold">+$0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer: Build Tools -->
+        <div class="flex flex-col items-center pointer-events-auto w-full max-w-5xl mx-auto mt-auto">
+            <div class="text-xs mb-2 px-4 py-1.5 glass-panel rounded-full text-center text-blue-100 shadow-md">
+                右クリック(2本指)で視点移動。電力が不足すると街が機能停止します。
+            </div>
+            
+            <div class="w-full glass-panel p-2 rounded-2xl shadow-2xl">
+                <div class="flex space-x-2 overflow-x-auto no-scrollbar pb-2 pt-1 px-1 items-center">
+                    
+                    <!-- インフラ -->
+                    <button onclick="game.selectTool('road')" id="tool-road" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-road text-xl mb-1 text-gray-400"></i><span class="text-[10px] font-bold">道路</span><span class="text-[9px] text-yellow-400">$10</span>
+                    </button>
+                    <button onclick="game.selectTool('track')" id="tool-track" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-train-tram text-xl mb-1 text-orange-300"></i><span class="text-[10px] font-bold">線路</span><span class="text-[9px] text-yellow-400">$20</span>
+                    </button>
+                    
+                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+
+                    <!-- 発電 -->
+                    <button onclick="game.selectTool('solar')" id="tool-solar" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
+                        <i class="fas fa-solar-panel text-xl mb-1 text-blue-300"></i><span class="text-[10px] font-bold">太陽光</span><span class="text-[9px] text-yellow-400">$300</span>
+                    </button>
+                    <button onclick="game.selectTool('coal')" id="tool-coal" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
+                        <i class="fas fa-industry text-xl mb-1 text-gray-500"></i><span class="text-[10px] font-bold">火力発電</span><span class="text-[9px] text-yellow-400">$500</span>
+                    </button>
+                    <button onclick="game.selectTool('nuclear')" id="tool-nuclear" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-blue-900/30 border border-blue-500/30">
+                        <i class="fas fa-radiation text-xl mb-1 text-green-400"></i><span class="text-[10px] font-bold">原発</span><span class="text-[9px] text-yellow-400">$3000</span>
+                    </button>
+
+                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+
+                    <!-- 居住・商業 -->
+                    <button onclick="game.selectTool('house')" id="tool-house" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-home text-xl mb-1 text-blue-300"></i><span class="text-[10px] font-bold">住宅</span><span class="text-[9px] text-yellow-400">$100</span>
+                    </button>
+                    <button onclick="game.selectTool('apartment')" id="tool-apartment" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-building text-xl mb-1 text-blue-400"></i><span class="text-[10px] font-bold">ﾏﾝｼｮﾝ</span><span class="text-[9px] text-yellow-400">$400</span>
+                    </button>
+                    <button onclick="game.selectTool('shop')" id="tool-shop" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-store text-xl mb-1 text-pink-300"></i><span class="text-[10px] font-bold">商店</span><span class="text-[9px] text-yellow-400">$300</span>
+                    </button>
+                    <button onclick="game.selectTool('office')" id="tool-office" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-briefcase text-xl mb-1 text-indigo-300"></i><span class="text-[10px] font-bold">ｵﾌｨｽ</span><span class="text-[9px] text-yellow-400">$800</span>
+                    </button>
+                    <button onclick="game.selectTool('skyscraper')" id="tool-skyscraper" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-city text-xl mb-1 text-purple-400"></i><span class="text-[10px] font-bold">高層ﾋﾞﾙ</span><span class="text-[9px] text-yellow-400">$2000</span>
+                    </button>
+
+                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+
+                    <!-- 公共・その他 -->
+                    <button onclick="game.selectTool('hospital')" id="tool-hospital" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-hospital text-xl mb-1 text-red-400"></i><span class="text-[10px] font-bold">病院</span><span class="text-[9px] text-yellow-400">$1000</span>
+                    </button>
+                    <button onclick="game.selectTool('school')" id="tool-school" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-school text-xl mb-1 text-yellow-200"></i><span class="text-[10px] font-bold">学校</span><span class="text-[9px] text-yellow-400">$600</span>
+                    </button>
+                    <button onclick="game.selectTool('station')" id="tool-station" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-train text-xl mb-1 text-red-300"></i><span class="text-[10px] font-bold">駅</span><span class="text-[9px] text-yellow-400">$500</span>
+                    </button>
+                    <button onclick="game.selectTool('park')" id="tool-park" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center">
+                        <i class="fas fa-tree text-xl mb-1 text-green-300"></i><span class="text-[10px] font-bold">公園</span><span class="text-[9px] text-yellow-400">$150</span>
+                    </button>
+
+                    <div class="w-px h-10 bg-white/20 mx-1"></div>
+
+                    <button onclick="game.selectTool('bulldoze')" id="tool-bulldoze" class="tool-btn px-1 py-2 rounded-xl flex flex-col items-center bg-red-900/30">
+                        <i class="fas fa-bulldozer text-xl mb-1 text-red-400"></i><span class="text-[10px] font-bold">撤去</span><span class="text-[9px] text-yellow-400">$10</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="fixed top-24 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-md text-gray-800 px-6 py-2.5 rounded-full font-bold shadow-xl opacity-0 transition-opacity duration-300 z-50 pointer-events-none border border-white/50">
+        メッセージ
+    </div>
+
+    <script>
+        // --- テクスチャ・マテリアル生成 (ディテールアップ) ---
+        class MaterialFactory {
+            constructor() {
+                this.cache = {};
+                this.emissiveMaterials = []; // 照明制御用リストを先に初期化してエラーを修正
+                this.windowMaterial = this.createWindowMaterial();
+                this.darkWindowMaterial = this.createWindowMaterial(true); // 停電/昼用
+            }
+
+            createWindowMaterial(isDark = false) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128; canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = isDark ? '#111111' : '#2a2a2a'; 
+                ctx.fillRect(0,0,128,128);
+                
+                // 窓の格子パターン
+                ctx.fillStyle = isDark ? '#333333' : '#FFF59D';
+                for(let y=10; y<128; y+=25) {
+                    for(let x=10; x<128; x+=25) {
+                        // ランダムに少し暗くしてリアルに
+                        if(!isDark && Math.random() < 0.2) ctx.fillStyle = '#555';
+                        else if(!isDark) ctx.fillStyle = '#FFF59D';
+                        ctx.fillRect(x, y, 15, 15);
+                    }
+                }
+                const tex = new THREE.CanvasTexture(canvas);
+                tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+                
+                const mat = new THREE.MeshStandardMaterial({ 
+                    map: tex, roughness: 0.2, metalness: 0.5,
+                    emissive: isDark ? 0x000000 : 0xFFF59D,
+                    emissiveIntensity: isDark ? 0 : 0.8,
+                    emissiveMap: tex
+                });
+                if(!isDark) this.emissiveMaterials.push(mat);
+                return mat;
+            }
+
+            updateLighting(isNight, isBlackout) {
+                const intensity = (isNight && !isBlackout) ? 0.8 : 0.0;
+                this.emissiveMaterials.forEach(mat => {
+                    mat.emissiveIntensity = intensity;
+                });
+            }
+        }
+
+        class TileTextureGenerator {
+            constructor() {
+                this.cache = { road: {}, track: {} };
+                this.generateAll();
+            }
+            generateAll() {
+                for (let i = 0; i < 16; i++) {
+                    this.cache.road[i] = this.createTexture('road', i);
+                    this.cache.track[i] = this.createTexture('track', i);
+                }
+            }
+            createTexture(type, mask) {
+                const canvas = document.createElement('canvas'); canvas.width = 256; canvas.height = 256;
+                const ctx = canvas.getContext('2d');
+                const n = (mask&1)!==0, e = (mask&2)!==0, s = (mask&4)!==0, w = (mask&8)!==0;
+                const c = 128, pi = Math.PI;
+
+                if (type === 'road') {
+                    const rw = 120;
+                    ctx.fillStyle = '#424242'; ctx.strokeStyle = '#424242'; ctx.lineWidth = rw;
+                    ctx.lineCap = 'square'; ctx.lineJoin = 'round';
+                    ctx.beginPath();
+                    if (mask===3) { ctx.arc(256, 0, 128, pi, pi/2, true); ctx.stroke(); }
+                    else if (mask===6) { ctx.arc(256, 256, 128, pi*1.5, pi, true); ctx.stroke(); }
+                    else if (mask===12) { ctx.arc(0, 256, 128, 0, pi*1.5, true); ctx.stroke(); }
+                    else if (mask===9) { ctx.arc(0, 0, 128, pi/2, 0, true); ctx.stroke(); }
+                    else {
+                        if (n) { ctx.moveTo(c, c); ctx.lineTo(c, 0); }
+                        if (s) { ctx.moveTo(c, c); ctx.lineTo(c, 256); }
+                        if (e) { ctx.moveTo(c, c); ctx.lineTo(256, c); }
+                        if (w) { ctx.moveTo(c, c); ctx.lineTo(0, c); }
+                        if (mask===0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
+                        ctx.stroke();
+                        if (mask>0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
+                    }
+                    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 6; ctx.setLineDash([20, 20]);
+                    ctx.beginPath();
+                    if (mask===3) { ctx.arc(256, 0, 128, pi, pi/2, true); ctx.stroke(); }
+                    else if (mask===6) { ctx.arc(256, 256, 128, pi*1.5, pi, true); ctx.stroke(); }
+                    else if (mask===12) { ctx.arc(0, 256, 128, 0, pi*1.5, true); ctx.stroke(); }
+                    else if (mask===9) { ctx.arc(0, 0, 128, pi/2, 0, true); ctx.stroke(); }
+                    else {
+                        if (n) { ctx.moveTo(c, c); ctx.lineTo(c, 0); }
+                        if (s) { ctx.moveTo(c, c); ctx.lineTo(c, 256); }
+                        if (e) { ctx.moveTo(c, c); ctx.lineTo(256, c); }
+                        if (w) { ctx.moveTo(c, c); ctx.lineTo(0, c); }
+                        ctx.stroke();
+                    }
+                } else if (type === 'track') {
+                    ctx.strokeStyle = '#757575'; ctx.lineWidth = 140; ctx.lineCap = 'square';
+                    this.drawPath(ctx, mask, c, pi, n, e, s, w);
+                    ctx.strokeStyle = '#4E342E'; ctx.lineWidth = 100; ctx.setLineDash([12, 18]);
+                    this.drawPath(ctx, mask, c, pi, n, e, s, w);
+                    ctx.setLineDash([]); ctx.lineWidth = 8; ctx.strokeStyle = '#B0BEC5';
+                    if ([3,6,9,12].includes(mask)) {
+                        let cx=0, cy=0, sAngle=0, eAngle=0;
+                        if(mask===3){ cx=256; cy=0; sAngle=pi; eAngle=pi/2; }
+                        if(mask===6){ cx=256; cy=256; sAngle=pi*1.5; eAngle=pi; }
+                        if(mask===12){ cx=0; cy=256; sAngle=0; eAngle=pi*1.5; }
+                        if(mask===9){ cx=0; cy=0; sAngle=pi/2; eAngle=0; }
+                        ctx.beginPath(); ctx.arc(cx, cy, 128 - 25, sAngle, eAngle, true); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx, cy, 128 + 25, sAngle, eAngle, true); ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        if (n || s) { let sy = n ? 0 : c, ey = s ? 256 : c; ctx.moveTo(c-25, sy); ctx.lineTo(c-25, ey); ctx.moveTo(c+25, sy); ctx.lineTo(c+25, ey); }
+                        if (e || w) { let sx = w ? 0 : c, ex = e ? 256 : c; ctx.moveTo(sx, c-25); ctx.lineTo(ex, c-25); ctx.moveTo(sx, c+25); ctx.lineTo(ex, c+25); }
+                        ctx.stroke();
+                    }
+                }
+                const tex = new THREE.CanvasTexture(canvas); tex.anisotropy = 4; return tex;
+            }
+            drawPath(ctx, mask, c, pi, n, e, s, w) {
+                ctx.beginPath();
+                if(mask===3) ctx.arc(256, 0, 128, pi, pi/2, true); else if(mask===6) ctx.arc(256, 256, 128, pi*1.5, pi, true);
+                else if(mask===12) ctx.arc(0, 256, 128, 0, pi*1.5, true); else if(mask===9) ctx.arc(0, 0, 128, pi/2, 0, true);
+                else {
+                    if(n){ ctx.moveTo(c,c); ctx.lineTo(c,0); } if(s){ ctx.moveTo(c,c); ctx.lineTo(c,256); }
+                    if(e){ ctx.moveTo(c,c); ctx.lineTo(256,c); } if(w){ ctx.moveTo(c,c); ctx.lineTo(0,c); }
+                    if(mask===0) ctx.fillRect(c-ctx.lineWidth/2, c-ctx.lineWidth/2, ctx.lineWidth, ctx.lineWidth);
+                }
+                ctx.stroke();
+            }
+        }
+
+        // --- ゲームエンジン ---
+        class MetaCityGame {
+            constructor() {
+                this.state = { 
+                    funds: 8000, // 初期資金
+                    population: 0, 
+                    income: 0, 
+                    powerGen: 0, 
+                    powerReq: 0, 
+                    isBlackout: false,
+                    dayLength: 5000 
+                };
+
+                // cost:費用, pop:人口変動, inc:収益, pwr:電力(正=発電,負=消費)
+                this.buildConfig = {
+                    road:       { cost: 10,   pop: 0,   inc: -1,  pwr: 0,   name: "道路" },
+                    track:      { cost: 20,   pop: 0,   inc: -2,  pwr: 0,   name: "線路" },
+                    
+                    // 発電インフラ
+                    solar:      { cost: 300,  pop: 0,   inc: -5,  pwr: 40,  name: "太陽光発電" }, // 夜は発電0になる
+                    coal:       { cost: 500,  pop: -10, inc: -20, pwr: 150, name: "火力発電" },
+                    nuclear:    { cost: 3000, pop: -20, inc: -100,pwr: 800, name: "原子力発電" },
+                    
+                    // 居住・商業
+                    house:      { cost: 100,  pop: 10,  inc: 10,  pwr: -2,  name: "住宅" },
+                    apartment:  { cost: 400,  pop: 50,  inc: 40,  pwr: -10, name: "マンション" },
+                    shop:       { cost: 300,  pop: 5,   inc: 40,  pwr: -10, name: "商店" },
+                    office:     { cost: 800,  pop: 10,  inc: 100, pwr: -25, name: "オフィス" },
+                    skyscraper: { cost: 2000, pop: 100, inc: 250, pwr: -60, name: "高層ビル" },
+                    
+                    // 公共・その他
+                    hospital:   { cost: 1000, pop: 80,  inc: -30, pwr: -20, name: "病院" },
+                    school:     { cost: 600,  pop: 40,  inc: -15, pwr: -10, name: "学校" },
+                    station:    { cost: 500,  pop: 20,  inc: 60,  pwr: -10, name: "駅" },
+                    park:       { cost: 150,  pop: 5,   inc: -5,  pwr: -1,  name: "公園" },
+                    bulldoze:   { cost: 10,   pop: 0,   inc: 0,   pwr: 0,   name: "撤去" }
+                };
+
+                this.currentTool = 'road';
+                this.buildings = new Map(); 
+                this.actors = []; 
+                this.particles = []; // 煙などのエフェクト用
+                
+                this.weatherConfig = { isDay: true, type: 'clear' };
+                this.locationInfo = { lat: 35.6895, lon: 139.6917, name: 'メタ・シティ' };
+                this.mapRadius = 40; 
+                
+                this.texGen = new TileTextureGenerator();
+                this.matGen = new MaterialFactory();
+
+                this.init3D();
+                this.setupInteraction();
+                this.initGameLoop();
+                this.getLocationAndWeather();
+                
+                this.selectTool('road');
+                
+                // 初期インフラ（最初から電力を少し与える）
+                this.createBuilding('coal', -2, -2);
+                this.createBuilding('road', 0, 1);
+                this.createBuilding('road', 0, 0);
+                this.updateTileAndNeighbors(0, 1, 'road');
+                this.updateTileAndNeighbors(0, 0, 'road');
+                this.updateCityStats();
+
+                this.showNotification("電力に気をつけながら街を拡大しよう！");
+                window.addEventListener('resize', () => this.onWindowResize(), false);
+            }
+
+            init3D() {
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x87CEEB);
+                this.scene.fog = new THREE.Fog(0x87CEEB, 20, 90); 
+
+                this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
+                this.camera.position.set(20, 25, 25);
+
+                this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.getElementById('canvas-container').appendChild(this.renderer.domElement);
+
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.enablePan = true;
+                this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+                this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
+                this.controls.minDistance = 2; 
+                this.controls.maxDistance = 100;
+                this.controls.target.set(0, 0, 0);
+
+                this.setupLighting();
+                this.createEnvironment();
+                this.setupWeatherParticles();
+
+                this.actorGroup = new THREE.Group();
+                this.particleGroup = new THREE.Group();
+                this.scene.add(this.actorGroup);
+                this.scene.add(this.particleGroup);
+                
+                this.clock = new THREE.Clock();
+                this.animate();
+            }
+
+            setupLighting() {
+                this.ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                this.scene.add(this.ambientLight);
+
+                this.dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                this.dirLight.position.set(30, 40, 20);
+                this.dirLight.castShadow = true;
+                this.dirLight.shadow.mapSize.width = 2048;
+                this.dirLight.shadow.mapSize.height = 2048;
+                this.dirLight.shadow.camera.near = 0.5;
+                this.dirLight.shadow.camera.far = 120;
+                const d = 50;
+                this.dirLight.shadow.camera.left = -d; this.dirLight.shadow.camera.right = d;
+                this.dirLight.shadow.camera.top = d; this.dirLight.shadow.camera.bottom = -d;
+                this.dirLight.shadow.bias = -0.0005;
+                this.scene.add(this.dirLight);
+            }
+
+            createEnvironment() {
+                this.buildGroup = new THREE.Group();
+                this.scene.add(this.buildGroup);
+
+                const groundGeo = new THREE.PlaneGeometry(300, 300);
+                groundGeo.rotateX(-Math.PI / 2);
+                const groundMat = new THREE.MeshStandardMaterial({ color: 0x558B2F, roughness: 1.0 }); // 少し落ち着いた緑
+                this.ground = new THREE.Mesh(groundGeo, groundMat);
+                this.ground.receiveShadow = true;
+                this.scene.add(this.ground);
+
+                const planeGeo = new THREE.PlaneGeometry(this.mapRadius * 2, this.mapRadius * 2);
+                planeGeo.rotateX(-Math.PI / 2);
+                const planeMat = new THREE.MeshBasicMaterial({ visible: false });
+                this.buildPlane = new THREE.Mesh(planeGeo, planeMat);
+                this.buildPlane.position.y = 0.01;
+                this.scene.add(this.buildPlane);
+
+                this.gridHelper = new THREE.GridHelper(this.mapRadius * 2, this.mapRadius * 2, 0xffffff, 0xffffff);
+                this.gridHelper.position.y = 0.02;
+                this.gridHelper.material.opacity = 0.1;
+                this.gridHelper.material.transparent = true;
+                this.scene.add(this.gridHelper);
+
+                this.hoverCursor = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1, 1),
+                    new THREE.MeshBasicMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.5, depthWrite: false })
+                );
+                this.hoverCursor.rotation.x = -Math.PI / 2;
+                this.hoverCursor.position.y = 0.03;
+                this.hoverCursor.visible = false;
+                this.scene.add(this.hoverCursor);
+            }
+
+            setupInteraction() {
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
+                this.isDragging = false;
+                const container = document.getElementById('canvas-container');
+
+                container.addEventListener('pointerdown', () => this.isDragging = false);
+                container.addEventListener('pointermove', (e) => {
+                    this.isDragging = true;
+                    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+                    const intersects = this.raycaster.intersectObject(this.buildPlane);
+                    
+                    if (intersects.length > 0) {
+                        const point = intersects[0].point;
+                        const gridX = Math.round(point.x);
+                        const gridZ = Math.round(point.z);
+                        if (Math.abs(gridX) <= this.mapRadius && Math.abs(gridZ) <= this.mapRadius) {
+                            this.hoverCursor.position.set(gridX, 0.03, gridZ);
+                            this.hoverCursor.visible = true;
+                        } else {
+                            this.hoverCursor.visible = false;
+                        }
+                    } else {
+                        this.hoverCursor.visible = false;
+                    }
+                });
+                
+                container.addEventListener('pointerup', (e) => {
+                    if (this.isDragging && (Math.abs(e.movementX) > 2 || Math.abs(e.movementY) > 2)) return;
+
+                    this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                    this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+                    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+                    const intersects = this.raycaster.intersectObject(this.buildPlane);
+                    if (intersects.length > 0) {
+                        const point = intersects[0].point;
+                        const gridX = Math.round(point.x);
+                        const gridZ = Math.round(point.z);
+
+                        if (Math.abs(gridX) <= this.mapRadius && Math.abs(gridZ) <= this.mapRadius) {
+                            this.handleGridClick(gridX, gridZ);
+                        }
+                    }
+                });
+            }
+
+            selectTool(toolType) {
+                this.currentTool = toolType;
+                document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+                document.getElementById(`tool-${toolType}`).classList.add('active');
+            }
+
+            handleGridClick(x, z) {
+                const key = `${x},${z}`;
+                const existing = this.buildings.get(key);
+                const conf = this.buildConfig[this.currentTool];
+
+                if (this.currentTool === 'bulldoze') {
+                    if (existing) {
+                        if (this.state.funds >= conf.cost) {
+                            this.state.funds -= conf.cost;
+                            const type = existing.type;
+                            this.removeBuilding(key);
+                            this.updateCityStats();
+                            if (type === 'road' || type === 'track') this.updateTileAndNeighbors(x, z, type);
+                        } else {
+                            this.showNotification("撤去費用が足りません。");
+                        }
+                    }
+                } else {
+                    if (!existing) {
+                        if (this.state.funds >= conf.cost) {
+                            this.state.funds -= conf.cost;
+                            this.createBuilding(this.currentTool, x, z);
+                            this.updateCityStats();
+                            if (this.currentTool === 'road' || this.currentTool === 'track') {
+                                this.updateTileAndNeighbors(x, z, this.currentTool);
+                            }
+                        } else {
+                            this.showNotification("資金が足りません！");
+                        }
+                    }
+                }
+            }
+
+            removeBuilding(key) {
+                const b = this.buildings.get(key);
+                if (b) {
+                    this.buildGroup.remove(b.mesh);
+                    this.buildings.delete(key);
+                }
+            }
+
+            // --- オートタイリング ---
+            getTileMask(x, z, type) {
+                let mask = 0;
+                const check = (dx, dz) => { const b = this.buildings.get(`${x+dx},${z+dz}`); return b && b.type === type; };
+                if (check(0,-1) || (type==='track' && this.buildings.get(`${x},${z-1}`)?.type==='station')) mask |= 1;
+                if (check(1,0) || (type==='track' && this.buildings.get(`${x+1},${z}`)?.type==='station')) mask |= 2;
+                if (check(0,1) || (type==='track' && this.buildings.get(`${x},${z+1}`)?.type==='station')) mask |= 4;
+                if (check(-1,0) || (type==='track' && this.buildings.get(`${x-1},${z}`)?.type==='station')) mask |= 8;
+                return mask;
+            }
+
+            updateTileAndNeighbors(x, z, type) {
+                const dirs = [[0,0], [0,-1], [1,0], [0,1], [-1,0]];
+                dirs.forEach(([dx, dz]) => {
+                    const nx = x + dx, nz = z + dz;
+                    const b = this.buildings.get(`${nx},${nz}`);
+                    if (b && b.type === type) {
+                        const mask = this.getTileMask(nx, nz, type);
+                        this.applyTileMesh(b, mask);
+                    }
+                });
+            }
+
+            applyTileMesh(buildingObj, mask) {
+                while(buildingObj.mesh.children.length > 0) buildingObj.mesh.remove(buildingObj.mesh.children[0]); 
+                const planeGeo = new THREE.PlaneGeometry(1, 1); planeGeo.rotateX(-Math.PI/2);
+                const tex = this.texGen.cache[buildingObj.type][mask];
+                const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, depthWrite: false });
+                const mesh = new THREE.Mesh(planeGeo, mat); mesh.position.y = 0.025; mesh.receiveShadow = true;
+                buildingObj.mesh.add(mesh); buildingObj.mask = mask;
+            }
+
+            // --- 統計と電力計算 ---
+            updateCityStats() {
+                let pop = 0, inc = 0, req = 0, gen = 0;
+                
+                this.buildings.forEach((b) => {
+                    const conf = this.buildConfig[b.type];
+                    if (conf) {
+                        pop += conf.pop;
+                        
+                        // 電力計算
+                        if (conf.pwr < 0) {
+                            req += Math.abs(conf.pwr); // 消費
+                        } else if (conf.pwr > 0) {
+                            // 太陽光は夜間発電しない
+                            if (b.type === 'solar' && !this.weatherConfig.isDay) {
+                                // 発電0
+                            } else {
+                                gen += conf.pwr; // 発電
+                            }
+                        }
+                    }
+                });
+
+                this.state.population = pop;
+                this.state.powerReq = req;
+                this.state.powerGen = gen;
+                
+                // ブラックアウト判定
+                this.state.isBlackout = (req > gen);
+                
+                // 収益計算 (ブラックアウト時は0)
+                if (this.state.isBlackout) {
+                    inc = 0;
+                } else {
+                    this.buildings.forEach((b) => {
+                        const conf = this.buildConfig[b.type];
+                        if (conf) inc += conf.inc;
+                    });
+                }
+                this.state.income = inc;
+
+                // 窓の明かりの更新
+                this.matGen.updateLighting(!this.weatherConfig.isDay, this.state.isBlackout);
+                this.updateUI();
+            }
+
+            updateUI() {
+                document.getElementById('stat-funds').innerText = `$${this.state.funds}`;
+                document.getElementById('stat-pop').innerText = `${this.state.population} 人`;
+                
+                const incElem = document.getElementById('stat-income');
+                if (this.state.isBlackout) {
+                    incElem.innerText = `停止中`;
+                    incElem.className = `font-mono font-bold text-red-500`;
+                } else {
+                    incElem.innerText = (this.state.income >= 0 ? '+' : '') + `$${this.state.income}`;
+                    incElem.className = `font-mono font-bold ${this.state.income >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                }
+
+                // 電力UI更新
+                const pwrText = document.getElementById('power-text');
+                const pwrBar = document.getElementById('power-bar');
+                const pwrPanel = document.getElementById('power-panel');
+                const blackoutWarning = document.getElementById('blackout-warning');
+
+                pwrText.innerText = `${this.state.powerReq} / ${this.state.powerGen} kW`;
+                
+                let ratio = this.state.powerGen > 0 ? (this.state.powerReq / this.state.powerGen) * 100 : (this.state.powerReq > 0 ? 100 : 0);
+                pwrBar.style.width = `${Math.min(ratio, 100)}%`;
+
+                if (this.state.isBlackout) {
+                    pwrBar.className = "power-bar-fill h-full bg-red-500";
+                    pwrPanel.classList.add('blackout-alert');
+                    blackoutWarning.classList.remove('opacity-0');
+                } else {
+                    if(ratio > 80) pwrBar.className = "power-bar-fill h-full bg-orange-400";
+                    else pwrBar.className = "power-bar-fill h-full bg-green-400";
+                    pwrPanel.classList.remove('blackout-alert');
+                    blackoutWarning.classList.add('opacity-0');
+                }
+            }
+
+            // --- 3Dオブジェクト生成 (ディテールアップ版) ---
+            createBox(w,h,d, mat, yOffset=h/2) {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
+                mesh.position.y = yOffset;
+                mesh.castShadow = true; mesh.receiveShadow = true;
+                return mesh;
+            }
+
+            createBuilding(type, x, z) {
+                const group = new THREE.Group();
+                group.position.set(x, 0, z);
+                let updateFn = null;
+
+                const baseMat = new THREE.MeshStandardMaterial({color:0x999999});
+                const winMat = this.matGen.windowMaterial;
+
+                if (type === 'road' || type === 'track') {
+                    // 自動生成
+                } else if (type === 'house') {
+                    const body = this.createBox(0.7, 0.4, 0.7, new THREE.MeshStandardMaterial({ color: 0xF5F5F5 }));
+                    group.add(body);
+                    const roof = new THREE.Mesh(new THREE.ConeGeometry(0.6, 0.4, 4), new THREE.MeshStandardMaterial({ color: [0xEF5350, 0x42A5F5, 0x66BB6A, 0x8D6E63][Math.floor(Math.random() * 4)] }));
+                    roof.position.y = 0.6; roof.rotation.y = Math.PI/4; roof.castShadow = true; group.add(roof);
+
+                } else if (type === 'apartment') {
+                    const h = 1.2 + Math.random() * 0.5;
+                    const body = this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xCFD8DC }));
+                    group.add(body);
+                    // 窓
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, h-0.2), winMat);
+                    wMesh.position.set(0, h/2, 0.41); group.add(wMesh);
+                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI; wMesh2.position.set(0, h/2, -0.41); group.add(wMesh2);
+
+                } else if (type === 'shop') {
+                    const h = 0.8;
+                    group.add(this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFCC80 })));
+                    const sign = this.createBox(0.6, 0.3, 0.1, new THREE.MeshStandardMaterial({ color: 0xFF5252 }), h+0.15);
+                    group.add(sign);
+
+                } else if (type === 'office') {
+                    const h = 1.8 + Math.random();
+                    group.add(this.createBox(0.8, h, 0.8, new THREE.MeshStandardMaterial({ color: 0x90CAF9, roughness:0.2 })));
+                    const wMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.7, h-0.2), winMat);
+                    wMesh.position.set(0, h/2, 0.41); group.add(wMesh);
+                    const wMesh2 = wMesh.clone(); wMesh2.rotation.y=Math.PI/2; wMesh2.position.set(0.41, h/2, 0); group.add(wMesh2);
+
+                } else if (type === 'skyscraper') {
+                    const h = 3.0 + Math.random() * 2;
+                    group.add(this.createBox(0.9, h, 0.9, new THREE.MeshStandardMaterial({ color: 0x263238, metalness: 0.8, roughness: 0.2 })));
+                    const top = this.createBox(0.5, 0.5, 0.5, new THREE.MeshStandardMaterial({ color: 0x546E7A }), h+0.25);
+                    group.add(top);
+                    const antenna = this.createBox(0.05, 1.0, 0.05, new THREE.MeshStandardMaterial({color:0xffffff}), h+1.0);
+                    group.add(antenna);
+                    // 4面に窓
+                    [[0,0.46,0],[Math.PI, -0.46,0],[Math.PI/2,0,0.46],[-Math.PI/2,0,-0.46]].forEach(([rot, px, pz]) => {
+                        const w = new THREE.Mesh(new THREE.PlaneGeometry(0.8, h-0.2), winMat);
+                        w.rotation.y = rot; w.position.set(px, h/2, pz); group.add(w);
+                    });
+
+                } else if (type === 'hospital') {
+                    group.add(this.createBox(1.2, 1.0, 0.8, new THREE.MeshStandardMaterial({ color: 0xFFFFFF })));
+                    // 赤十字マーク
+                    const crossMat = new THREE.MeshBasicMaterial({color: 0xE53935});
+                    const c1 = this.createBox(0.1, 0.4, 0.1, crossMat, 0.5); c1.position.z = 0.41; group.add(c1);
+                    const c2 = this.createBox(0.4, 0.1, 0.1, crossMat, 0.5); c2.position.z = 0.41; group.add(c2);
+
+                } else if (type === 'school') {
+                    group.add(this.createBox(1.4, 0.6, 0.6, new THREE.MeshStandardMaterial({ color: 0xFFE082 })));
+                    const clock = new THREE.Mesh(new THREE.CircleGeometry(0.15, 16), new THREE.MeshBasicMaterial({color:0xffffff}));
+                    clock.position.set(0, 0.7, 0.31); group.add(clock);
+
+                } else if (type === 'solar') {
+                    const base = this.createBox(0.9, 0.1, 0.9, baseMat); group.add(base);
+                    const panelMat = new THREE.MeshStandardMaterial({color:0x0D47A1, roughness:0.1, metalness:0.8});
+                    const panel = this.createBox(0.8, 0.05, 0.8, panelMat, 0.2);
+                    panel.rotation.x = -Math.PI/6; group.add(panel);
+
+                } else if (type === 'coal') {
+                    group.add(this.createBox(1.2, 0.8, 1.0, new THREE.MeshStandardMaterial({ color: 0x5D4037 })));
+                    const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1.5), new THREE.MeshStandardMaterial({ color: 0x424242 }));
+                    pipe.position.set(-0.3, 1.0, -0.2); pipe.castShadow = true; group.add(pipe);
+                    
+                    updateFn = (delta) => {
+                        if(!this.state.isBlackout && Math.random() < 0.2) {
+                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.2, 0x555555);
+                        }
+                    };
+
+                } else if (type === 'nuclear') {
+                    group.add(this.createBox(1.5, 0.5, 1.5, new THREE.MeshStandardMaterial({ color: 0xB0BEC5 })));
+                    // 冷却塔
+                    const towerGeo = new THREE.CylinderGeometry(0.3, 0.5, 1.5, 16);
+                    const towerMat = new THREE.MeshStandardMaterial({color: 0xCFD8DC});
+                    const t1 = new THREE.Mesh(towerGeo, towerMat); t1.position.set(-0.3, 1.0, -0.3); t1.castShadow=true; group.add(t1);
+                    const t2 = new THREE.Mesh(towerGeo, towerMat); t2.position.set(0.4, 1.0, 0.2); t2.castShadow=true; group.add(t2);
+                    
+                    updateFn = (delta) => {
+                        if(!this.state.isBlackout && Math.random() < 0.3) {
+                            this.spawnSmoke(group.position.x - 0.3, 1.8, group.position.z - 0.3, 0xffffff); // 白い水蒸気
+                            this.spawnSmoke(group.position.x + 0.4, 1.8, group.position.z + 0.2, 0xffffff);
+                        }
+                    };
+
+                } else if (type === 'station') {
+                    const plat = this.createBox(1, 0.15, 0.8, new THREE.MeshStandardMaterial({color: 0xE0E0E0}), 0.075); group.add(plat);
+                    const roof = this.createBox(0.9, 0.05, 0.7, new THREE.MeshStandardMaterial({color: 0x0288D1}), 0.6); group.add(roof);
+                    [[-0.3,-0.2],[0.3,-0.2],[-0.3,0.2],[0.3,0.2]].forEach(([px,pz]) => {
+                        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.5), new THREE.MeshStandardMaterial({color: 0xFFFFFF}));
+                        p.position.set(px, 0.35, pz); p.castShadow=true; group.add(p);
+                    });
+                } else if (type === 'park') {
+                    const base = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({color: 0x8BC34A}));
+                    base.rotation.x = -Math.PI/2; base.position.y = 0.025; base.receiveShadow = true; group.add(base);
+                    const tGeo = new THREE.ConeGeometry(0.15, 0.4, 4), tMat = new THREE.MeshStandardMaterial({color: 0x2E7D32});
+                    const t1 = new THREE.Mesh(tGeo, tMat); t1.position.set(-0.25, 0.2, 0.25); t1.castShadow=true; group.add(t1);
+                    const t2 = new THREE.Mesh(tGeo, tMat); t2.position.set(-0.3, 0.2, -0.2); t2.castShadow=true; group.add(t2);
+                }
+
+                group.scale.set(0, 0, 0); 
+                this.buildGroup.add(group);
+                this.buildings.set(`${x},${z}`, { mesh: group, type: type, mask: 0, update: updateFn });
+            }
+
+            // --- エフェクト ---
+            spawnSmoke(x, y, z, colorHex) {
+                const mat = new THREE.MeshBasicMaterial({color: colorHex, transparent: true, opacity: 0.6});
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), mat);
+                mesh.position.set(x + (Math.random()-0.5)*0.2, y, z + (Math.random()-0.5)*0.2);
+                
+                // 回転をランダムに
+                mesh.rotation.set(Math.random(), Math.random(), Math.random());
+                this.particleGroup.add(mesh);
+                
+                this.particles.push({
+                    mesh: mesh,
+                    life: 1.0,
+                    velY: 0.5 + Math.random() * 0.5,
+                    velX: (Math.random() - 0.5) * 0.2
+                });
+            }
+
+            updateParticles(delta) {
+                for(let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.life -= delta * 0.5;
+                    if(p.life <= 0) {
+                        this.particleGroup.remove(p.mesh);
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+                    p.mesh.position.y += p.velY * delta;
+                    p.mesh.position.x += p.velX * delta;
+                    p.mesh.scale.setScalar(p.life * 1.5);
+                    p.mesh.material.opacity = p.life * 0.6;
+                }
+            }
+
+            // --- 交通システム (ディテールアップ版) ---
+            lerpAngle(a, b, t) {
+                const da = (b - a) % (Math.PI * 2);
+                const dist = 2 * da % (Math.PI * 2) - da;
+                return a + dist * t;
+            }
+
+            updateActors(delta) {
+                // ブラックアウト時は交通停止
+                if (this.state.isBlackout) return;
+
+                for (let i = this.actors.length - 1; i >= 0; i--) {
+                    const a = this.actors[i];
+                    a.progress += delta * a.speed;
+
+                    if (a.progress >= 1.0) {
+                        const overshoot = a.progress - 1.0;
+                        a.gridX = a.targetX; a.gridZ = a.targetZ;
+                        
+                        const currentTile = this.buildings.get(`${a.gridX},${a.gridZ}`);
+                        if (!currentTile || !a.allowedTypes.includes(currentTile.type)) {
+                            this.actorGroup.remove(a.mesh);
+                            if(a.trailMeshes) a.trailMeshes.forEach(m => this.actorGroup.remove(m));
+                            this.actors.splice(i, 1);
+                            continue;
+                        }
+
+                        const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
+                        const validDirs = dirs.map(d => ({x: a.gridX + d.x, z: a.gridZ + d.z}))
+                                              .filter(pos => {
+                                                  if (pos.x === a.prevX && pos.z === a.prevZ) return false;
+                                                  const b = this.buildings.get(`${pos.x},${pos.z}`);
+                                                  return b && a.allowedTypes.includes(b.type);
+                                              });
+
+                        let nextPos = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : {x: a.prevX, z: a.prevZ};
+                        a.prevX = a.gridX; a.prevZ = a.gridZ;
+                        a.targetX = nextPos.x; a.targetZ = nextPos.z;
+                        a.progress = Math.min(overshoot, 0.99);
+                    }
+
+                    const t = a.progress;
+                    const p0x = (a.prevX + a.gridX) / 2, p0z = (a.prevZ + a.gridZ) / 2;
+                    const p1x = a.gridX, p1z = a.gridZ;
+                    const p2x = (a.targetX + a.gridX) / 2, p2z = (a.targetZ + a.gridZ) / 2;
+
+                    const invT = 1 - t;
+                    const posX = invT * invT * p0x + 2 * invT * t * p1x + t * t * p2x;
+                    const posZ = invT * invT * p0z + 2 * invT * t * p1z + t * t * p2z;
+
+                    a.mesh.position.x = posX;
+                    a.mesh.position.z = posZ;
+
+                    const dx = 2 * invT * (p1x - p0x) + 2 * t * (p2x - p1x);
+                    const dz = 2 * invT * (p1z - p0z) + 2 * t * (p2z - p1z);
+                    
+                    if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
+                        const targetAngle = Math.atan2(dx, dz);
+                        a.mesh.rotation.y = this.lerpAngle(a.mesh.rotation.y, targetAngle, delta * 15);
+                    }
+
+                    // 軌跡追従
+                    if (a.history) {
+                        const dist = a.mesh.position.distanceTo(a.lastPos);
+                        if (dist > 0.05) {
+                            a.history.unshift({x: a.mesh.position.x, y: a.mesh.position.y, z: a.mesh.position.z, rotY: a.mesh.rotation.y});
+                            if (a.history.length > 40) a.history.pop();
+                            a.lastPos.copy(a.mesh.position);
+                        }
+                        
+                        if (a.trailMeshes) {
+                            const delay1 = 12; const delay2 = 24;
+                            if (a.history[delay1]) {
+                                a.trailMeshes[0].position.set(a.history[delay1].x, a.history[delay1].y, a.history[delay1].z);
+                                a.trailMeshes[0].rotation.y = a.history[delay1].rotY;
+                            }
+                            if (a.history[delay2]) {
+                                a.trailMeshes[1].position.set(a.history[delay2].x, a.history[delay2].y, a.history[delay2].z);
+                                a.trailMeshes[1].rotation.y = a.history[delay2].rotY;
+                            }
+                        }
+                    }
+                }
+            }
+
+            spawnActors() {
+                if (this.state.isBlackout) return;
+
+                const maxCars = 30, maxTrains = 8, maxPeds = 50;
+                let carCount = 0, trainCount = 0, pedCount = 0;
+                this.actors.forEach(a => {
+                    if(a.type === 'car') carCount++;
+                    if(a.type === 'train') trainCount++;
+                    if(a.type === 'ped') pedCount++;
+                });
+
+                const roads = [], tracks = [], walks = [];
+                this.buildings.forEach((b, key) => {
+                    const [x, z] = key.split(',').map(Number);
+                    if (b.type === 'road') { roads.push({x,z}); walks.push({x,z}); }
+                    if (b.type === 'track' || b.type === 'station') tracks.push({x,z});
+                    if (!['track','water'].includes(b.type)) walks.push({x,z});
+                });
+
+                if (roads.length > 0 && carCount < maxCars && Math.random() < 0.5) {
+                    const start = roads[Math.floor(Math.random() * roads.length)];
+                    this.createActor('car', start.x, start.z);
+                }
+                if (tracks.length > 0 && trainCount < maxTrains && Math.random() < 0.2) {
+                    const start = tracks[Math.floor(Math.random() * tracks.length)];
+                    this.createActor('train', start.x, start.z);
+                }
+                if (walks.length > 0 && pedCount < maxPeds && Math.random() < 0.6) {
+                    const start = walks[Math.floor(Math.random() * walks.length)];
+                    this.createActor('ped', start.x, start.z);
+                }
+            }
+
+            createActor(type, x, z) {
+                let mesh, speed, allowedTypes, history = null, trailMeshes = null;
+                const group = new THREE.Group();
+
+                if (type === 'car') {
+                    // リアルな車モデル
+                    const colors = [0xF44336, 0x2196F3, 0xFFEB3B, 0xFFFFFF, 0x9C27B0, 0x4CAF50, 0x263238];
+                    const bodyMat = new THREE.MeshStandardMaterial({color: colors[Math.floor(Math.random()*colors.length)], roughness: 0.3});
+                    const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.12, 0.5), bodyMat);
+                    body.position.y = 0.1; body.castShadow = true; group.add(body);
+                    
+                    const roof = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.1, 0.25), new THREE.MeshStandardMaterial({color:0xffffff}));
+                    roof.position.set(0, 0.21, -0.05); roof.castShadow = true; group.add(roof);
+                    
+                    const tireMat = new THREE.MeshStandardMaterial({color:0x222222});
+                    const tireGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.04, 8); tireGeo.rotateZ(Math.PI/2);
+                    [[-0.15, 0.15], [0.15, 0.15], [-0.15, -0.15], [0.15, -0.15]].forEach(([tx, tz]) => {
+                        const t = new THREE.Mesh(tireGeo, tireMat); t.position.set(tx, 0.06, tz); group.add(t);
+                    });
+                    
+                    group.position.set(-0.15, 0, 0); // 右側通行
+                    mesh = group;
+                    speed = 1.5; allowedTypes = ['road'];
+
+                } else if (type === 'train') {
+                    // リアルな電車
+                    const mat = new THREE.MeshStandardMaterial({color: 0x8BC34A, metalness: 0.3});
+                    const winMat = this.matGen.darkWindowMaterial; // 電車の窓
+                    
+                    const createTrainCar = () => {
+                        const car = new THREE.Group();
+                        const body = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 0.7), mat);
+                        body.position.y = 0.3; body.castShadow = true; car.add(body);
+                        const w1 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.15), winMat);
+                        w1.rotation.y = Math.PI/2; w1.position.set(0.18, 0.3, 0); car.add(w1);
+                        const w2 = w1.clone(); w2.rotation.y = -Math.PI/2; w2.position.set(-0.18, 0.3, 0); car.add(w2);
+                        return car;
+                    };
+
+                    mesh = createTrainCar();
+                    trailMeshes = [createTrainCar(), createTrainCar()];
+                    trailMeshes.forEach(m => { m.position.set(x, 0, z); this.actorGroup.add(m); });
+                    
+                    history = []; speed = 1.8; allowedTypes = ['track', 'station'];
+                    
+                } else if (type === 'ped') {
+                    mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 8), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
+                    mesh.position.set((Math.random()-0.5)*0.6, 0.1, (Math.random()-0.5)*0.6);
+                    group.add(mesh);
+                    mesh = group; speed = 0.6;
+                    allowedTypes = Object.keys(this.buildConfig).filter(t => !['water','track','bulldoze'].includes(t));
+                }
+
+                if(type !== 'train') { // Train is handled differently above
+                    mesh.position.set(x, 0, z);
+                    this.actorGroup.add(mesh);
+                } else {
+                    mesh.position.set(x, 0, z);
+                    this.actorGroup.add(mesh);
+                }
+
+                const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
+                const validDirs = dirs.map(d => ({x: x + d.x, z: z + d.z}))
+                                      .filter(pos => {
+                                          const b = this.buildings.get(`${pos.x},${pos.z}`);
+                                          return b && allowedTypes.includes(b.type);
+                                      });
+                let nextPos = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : {x, z};
+
+                this.actors.push({
+                    mesh: mesh, type: type, speed: speed, allowedTypes: allowedTypes,
+                    gridX: x, gridZ: z, targetX: nextPos.x, targetZ: nextPos.z,
+                    prevX: x, prevZ: z, progress: 0.5,
+                    history: history, trailMeshes: trailMeshes, lastPos: new THREE.Vector3(x,0,z)
+                });
+            }
+
+            // --- ゲームループ・環境 ---
+            initGameLoop() {
+                setInterval(() => {
+                    if (this.state.income !== 0) {
+                        this.state.funds += this.state.income;
+                        this.updateUI();
+                        
+                        const incomeElem = document.getElementById('stat-funds');
+                        const colorClass = this.state.income > 0 ? 'text-green-400' : 'text-red-400';
+                        incomeElem.classList.add(colorClass);
+                        incomeElem.classList.remove('text-yellow-300');
+                        setTimeout(() => {
+                            incomeElem.classList.remove(colorClass);
+                            incomeElem.classList.add('text-yellow-300');
+                        }, 500);
+                    }
+                    this.spawnActors();
+                }, this.state.dayLength);
+                setInterval(() => { this.fetchWeather(); }, 600000);
+            }
+
+            showNotification(msg) {
+                const notif = document.getElementById('notification');
+                notif.innerText = msg;
+                notif.classList.remove('opacity-0');
+                if(this.notifTimeout) clearTimeout(this.notifTimeout);
+                this.notifTimeout = setTimeout(() => { notif.classList.add('opacity-0'); }, 2000);
+            }
+
+            setupWeatherParticles() {
+                const rainCount = 2000;
+                const rainGeo = new THREE.BufferGeometry();
+                const rainPos = new Float32Array(rainCount * 3);
+                for(let i=0; i<rainCount; i++) {
+                    rainPos[i*3] = (Math.random() - 0.5) * 80;
+                    rainPos[i*3+1] = Math.random() * 30;
+                    rainPos[i*3+2] = (Math.random() - 0.5) * 80;
+                }
+                rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+                const rainMat = new THREE.PointsMaterial({ color: 0xaaccff, size: 0.1, transparent: true, opacity: 0.6 });
+                this.rainSystem = new THREE.Points(rainGeo, rainMat);
+                this.rainSystem.visible = false;
+                this.scene.add(this.rainSystem);
+            }
+
+            getLocationAndWeather() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            this.locationInfo.lat = position.coords.latitude;
+                            this.locationInfo.lon = position.coords.longitude;
+                            this.fetchWeather();
+                        },
+                        () => { this.fetchWeather(); }
+                    );
+                } else {
+                    this.fetchWeather();
+                }
+            }
+
+            async fetchWeather() {
+                try {
+                    const url = `https://api.open-meteo.com/v1/forecast?latitude=${this.locationInfo.lat}&longitude=${this.locationInfo.lon}&current_weather=true&timezone=auto`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    if (data.current_weather) {
+                        const code = data.current_weather.weathercode;
+                        const wasDay = this.weatherConfig.isDay;
+                        this.weatherConfig.isDay = data.current_weather.is_day === 1;
+                        
+                        // 昼夜が変わったら電力再計算 (太陽光の影響)
+                        if(wasDay !== this.weatherConfig.isDay) {
+                            this.updateCityStats();
+                        }
+
+                        if (code <= 3) this.weatherConfig.type = 'clear';
+                        else if (code >= 51 && code <= 67) this.weatherConfig.type = 'rain';
+                        else if (code >= 71 && code <= 77) this.weatherConfig.type = 'snow';
+                        else if (code >= 80) this.weatherConfig.type = 'rain';
+                        else this.weatherConfig.type = 'cloudy';
+                        this.applyWeatherToScene();
+                    }
+                } catch (e) {
+                    this.applyWeatherToScene();
+                }
+            }
+
+            applyWeatherToScene() {
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+                
+                let iconClass = 'fa-sun'; let weatherText = '晴れ';
+                let skyColor = 0x87CEEB; let lightInt = 1.0; let ambientInt = 0.6;
+
+                if (!this.weatherConfig.isDay) {
+                    skyColor = 0x0B1D3A; 
+                    // ブラックアウト時は月明かりだけに
+                    lightInt = this.state.isBlackout ? 0.05 : 0.15; 
+                    ambientInt = this.state.isBlackout ? 0.1 : 0.25;
+                    iconClass = 'fa-moon';
+                    this.dirLight.color.setHex(0xaaccFF);
+                } else {
+                    this.dirLight.color.setHex(0xffffff);
+                }
+
+                this.rainSystem.visible = false;
+                if (this.weatherConfig.type === 'rain' || this.weatherConfig.type === 'snow') {
+                    weatherText = this.weatherConfig.type === 'rain' ? '雨' : '雪';
+                    iconClass = this.weatherConfig.type === 'rain' ? 'fa-cloud-rain' : 'fa-snowflake';
+                    skyColor = this.weatherConfig.isDay ? 0x607D8B : 0x1c2833;
+                    lightInt *= 0.5; this.rainSystem.visible = true;
+                    if(this.weatherConfig.type === 'snow') {
+                        this.rainSystem.material.color.setHex(0xffffff); this.rainSystem.material.size = 0.15;
+                    } else {
+                        this.rainSystem.material.color.setHex(0xaaccff); this.rainSystem.material.size = 0.1;
+                    }
+                } else if (this.weatherConfig.type === 'cloudy') {
+                    weatherText = '曇り'; iconClass = 'fa-cloud';
+                    skyColor = this.weatherConfig.isDay ? 0x90A4AE : 0x1A252C; lightInt *= 0.7;
+                }
+
+                this.scene.background = new THREE.Color(skyColor);
+                this.scene.fog.color = new THREE.Color(skyColor);
+                this.dirLight.intensity = lightInt;
+                this.ambientLight.intensity = ambientInt;
+
+                document.getElementById('weather-icon').innerHTML = `<i class="fas ${iconClass}"></i>`;
+                document.getElementById('time-weather-info').innerText = `${timeStr} | ${weatherText}`;
+                
+                // 照明の更新
+                this.matGen.updateLighting(!this.weatherConfig.isDay, this.state.isBlackout);
+            }
+
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                const delta = this.clock.getDelta();
+
+                this.buildings.forEach((b) => {
+                    if (b.mesh.scale.x < 1) {
+                        const s = Math.min(1, b.mesh.scale.x + delta * 3);
+                        b.mesh.scale.set(s, s, s);
+                    }
+                    if (b.update) b.update(delta);
+                });
+
+                this.updateActors(delta);
+                this.updateParticles(delta);
+
+                if (this.rainSystem && this.rainSystem.visible) {
+                    const positions = this.rainSystem.geometry.attributes.position.array;
+                    const speed = this.weatherConfig.type === 'snow' ? 1.5 * delta : 12 * delta;
+                    for (let i = 1; i < positions.length; i += 3) {
+                        positions[i] -= speed;
+                        if (positions[i] < 0) positions[i] = 30;
+                    }
+                    this.rainSystem.geometry.attributes.position.needsUpdate = true;
+                }
+
+                this.controls.update();
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        let game;
+        window.onload = () => { game = new MetaCityGame(); };
+    </script>
+</body>
+</html>
