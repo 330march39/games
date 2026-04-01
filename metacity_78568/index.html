@@ -564,10 +564,18 @@
             setupInteraction() {
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
+                this.pointerDownPos = new THREE.Vector2();
                 this.isDragging = false;
                 const container = document.getElementById('canvas-container');
 
-                container.addEventListener('pointerdown', () => this.isDragging = false);
+                container.addEventListener('pointerdown', (e) => {
+                    this.isDragging = false;
+                    let clientX = e.clientX, clientY = e.clientY;
+                    if(e.touches && e.touches.length > 0) {
+                        clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+                    }
+                    this.pointerDownPos.set(clientX, clientY);
+                });
                 
                 const updateCursor = (e) => {
                     let clientX = e.clientX, clientY = e.clientY;
@@ -595,27 +603,37 @@
                 };
 
                 container.addEventListener('pointermove', (e) => {
-                    this.isDragging = true; updateCursor(e);
+                    let clientX = e.clientX, clientY = e.clientY;
+                    if(e.touches && e.touches.length > 0) {
+                        clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
+                    }
+                    // 一定距離以上指が動いたらドラッグ(視点移動)と判定
+                    if (this.pointerDownPos.distanceTo(new THREE.Vector2(clientX, clientY)) > 5) {
+                        this.isDragging = true;
+                    }
+                    updateCursor(e);
                 });
                 
                 container.addEventListener('pointerup', (e) => {
-                    if (this.isDragging && (Math.abs(e.movementX) > 2 || Math.abs(e.movementY) > 2)) return;
+                    if (this.isDragging) return; // ドラッグ中なら建設しない
 
                     let clientX = e.clientX, clientY = e.clientY;
                     if(e.changedTouches && e.changedTouches.length > 0) {
                         clientX = e.changedTouches[0].clientX; clientY = e.changedTouches[0].clientY;
                     }
 
+                    // タッチ開始地点からズレていたら無効
+                    if (this.pointerDownPos.distanceTo(new THREE.Vector2(clientX, clientY)) > 5) return;
+
                     this.mouse.x = (clientX / window.innerWidth) * 2 - 1;
                     this.mouse.y = -(clientY / window.innerHeight) * 2 + 1;
                     this.raycaster.setFromCamera(this.mouse, this.camera);
-
                     const intersects = this.raycaster.intersectObject(this.buildPlane);
+                    
                     if (intersects.length > 0) {
                         const point = intersects[0].point;
                         const gridX = Math.round(point.x);
                         const gridZ = Math.round(point.z);
-
                         if (Math.abs(gridX) <= this.mapRadius && Math.abs(gridZ) <= this.mapRadius) {
                             this.handleGridClick(gridX, gridZ);
                         }
@@ -1148,7 +1166,11 @@
                     
                     if (Math.abs(dx) > 0.001 || Math.abs(dz) > 0.001) {
                         const targetAngle = Math.atan2(dx, dz);
-                        a.mesh.rotation.y = this.lerpAngle(a.mesh.rotation.y, targetAngle, delta * 15);
+                        // 回転のバグを修正（差分を正規化して実車のように滑らかに向きを変える）
+                        let diff = targetAngle - a.mesh.rotation.y;
+                        while (diff < -Math.PI) diff += Math.PI * 2;
+                        while (diff > Math.PI) diff -= Math.PI * 2;
+                        a.mesh.rotation.y += diff * Math.min(1, delta * 15);
                     }
 
                     // 軌跡追従 (電車など)
