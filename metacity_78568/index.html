@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D メタシティ - 交通AI＆2車線対応アップデート</title>
+    <title>3D メタシティ - リアル交通AI＆滑らか補間アップデート</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -628,12 +628,13 @@
                     this.mouse.x = (clientX / window.innerWidth) * 2 - 1;
                     this.mouse.y = -(clientY / window.innerHeight) * 2 + 1;
                     this.raycaster.setFromCamera(this.mouse, this.camera);
+
                     const intersects = this.raycaster.intersectObject(this.buildPlane);
-                    
                     if (intersects.length > 0) {
                         const point = intersects[0].point;
                         const gridX = Math.round(point.x);
                         const gridZ = Math.round(point.z);
+
                         if (Math.abs(gridX) <= this.mapRadius && Math.abs(gridZ) <= this.mapRadius) {
                             this.handleGridClick(gridX, gridZ);
                         }
@@ -838,6 +839,8 @@
                 document.getElementById('stat-pop').innerText = `${this.state.population}`;
                 
                 const incElem = document.getElementById('stat-income');
+                const blackoutWarning = document.getElementById('blackout-warning');
+                
                 if (this.state.isBlackout) {
                     incElem.innerText = `停止中`; incElem.className = `text-[10px] md:text-sm font-mono font-bold text-red-500`;
                 } else {
@@ -848,7 +851,6 @@
                 const pwrText = document.getElementById('power-text');
                 const pwrBar = document.getElementById('power-bar');
                 const pwrPanel = document.getElementById('power-panel');
-                const blackoutWarning = document.getElementById('blackout-warning');
 
                 pwrText.innerHTML = `${this.state.powerReq} <span class="text-[8px] md:text-[9px] text-gray-400">/ ${this.state.powerGen} kW</span>`;
                 
@@ -1037,8 +1039,7 @@
 
                     // --- 交差点の信号判定 ---
                     if (canMove && a.type === 'car' && this.isIntersection(a.gridX, a.gridZ, 'road')) {
-                        const inDz = Math.abs(a.gridZ - a.prevZ);
-                        const isNS = inDz > 0;
+                        const isNS = Math.abs(a.targetZ - a.prevZ) > Math.abs(a.targetX - a.prevX);
                         // 自分の進行方向が赤信号の場合
                         if ((isNS && this.state.trafficSignal !== 0) || (!isNS && this.state.trafficSignal !== 1)) {
                             // 交差点に入る手前で止まる
@@ -1051,6 +1052,9 @@
 
                     // --- 衝突回避 (前方車両チェック) ---
                     if (canMove) {
+                        const myDirX = Math.sin(a.mesh.rotation.y);
+                        const myDirZ = Math.cos(a.mesh.rotation.y);
+
                         for (let j = 0; j < this.actors.length; j++) {
                             if (i === j) continue;
                             const other = this.actors[j];
@@ -1058,22 +1062,15 @@
                             
                             const dist = a.mesh.position.distanceTo(other.mesh.position);
                             if (dist < 1.0) {
-                                // 自分の進行方向ベクトル
-                                const myDirX = a.lastDir ? a.lastDir.x : (a.targetX - a.prevX);
-                                const myDirZ = a.lastDir ? a.lastDir.z : (a.targetZ - a.prevZ);
-                                
-                                // 相手が自分の前にいるか
                                 const dx = other.mesh.position.x - a.mesh.position.x;
                                 const dz = other.mesh.position.z - a.mesh.position.z;
-                                const dot = myDirX * dx + myDirZ * dz;
+                                const dot = myDirX * dx + myDirZ * dz; // 前方にいるか
                                 
-                                // 同じ方向に進んでいるか (すれ違いの対向車を無視するため)
-                                const otherDirX = other.lastDir ? other.lastDir.x : (other.targetX - other.prevX);
-                                const otherDirZ = other.lastDir ? other.lastDir.z : (other.targetZ - other.prevZ);
-                                const dotDir = myDirX * otherDirX + myDirZ * otherDirZ;
+                                const otherDirX = Math.sin(other.mesh.rotation.y);
+                                const otherDirZ = Math.cos(other.mesh.rotation.y);
+                                const dotDir = myDirX * otherDirX + myDirZ * otherDirZ; // 同じ方向を向いているか
 
-                                // 前方にいて、かつ同じ方向に進んでいる場合
-                                if (dot > 0.2 && dotDir > 0 && dist < 0.7) {
+                                if (dot > 0.2 && dotDir > 0 && dist < 0.8) {
                                     a.currentSpeed = Math.max(0, a.currentSpeed - delta * 8);
                                     canMove = false;
                                     break;
@@ -1083,7 +1080,6 @@
                     }
 
                     if (canMove) {
-                        // 少しずつ加速
                         a.currentSpeed = Math.min(a.baseSpeed, a.currentSpeed + delta * 3);
                     }
 
@@ -1094,9 +1090,11 @@
                     // --- タイル移動の遷移 ---
                     if (a.progress >= 1.0) {
                         const overshoot = a.progress - 1.0;
-                        a.gridX = a.targetX; a.gridZ = a.targetZ;
                         
-                        const currentTile = this.buildings.get(`${a.gridX},${a.gridZ}`);
+                        const nextGridX = a.targetX;
+                        const nextGridZ = a.targetZ;
+                        const currentTile = this.buildings.get(`${nextGridX},${nextGridZ}`);
+
                         if (!currentTile || !a.allowedTypes.includes(currentTile.type)) {
                             this.actorGroup.remove(a.mesh);
                             if(a.trailMeshes) a.trailMeshes.forEach(m => this.actorGroup.remove(m));
@@ -1104,27 +1102,28 @@
                             continue;
                         }
 
-                        // 駅での停車
-                        if (currentTile.type === 'station' && a.type === 'train' && !a.isWaiting) {
-                            a.isWaiting = true;
-                            a.waitTime = 2.0; 
-                            a.progress = 0.5; 
-                            continue;
-                        }
-
                         const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
-                        const validDirs = dirs.map(d => ({x: a.gridX + d.x, z: a.gridZ + d.z}))
+                        const validDirs = dirs.map(d => ({x: nextGridX + d.x, z: nextGridZ + d.z}))
                                               .filter(pos => {
                                                   // 直前の場所には戻らない（行き止まり以外）
-                                                  if (pos.x === a.prevX && pos.z === a.prevZ) return false;
+                                                  if (pos.x === a.gridX && pos.z === a.gridZ) return false;
                                                   const b = this.buildings.get(`${pos.x},${pos.z}`);
                                                   return b && a.allowedTypes.includes(b.type);
                                               });
 
-                        let nextPos = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : {x: a.prevX, z: a.prevZ};
+                        let nextTarget = validDirs.length > 0 ? validDirs[Math.floor(Math.random() * validDirs.length)] : {x: a.gridX, z: a.gridZ};
+
+                        // シフトを正しく行う
                         a.prevX = a.gridX; a.prevZ = a.gridZ;
-                        a.targetX = nextPos.x; a.targetZ = nextPos.z;
+                        a.gridX = nextGridX; a.gridZ = nextGridZ;
+                        a.targetX = nextTarget.x; a.targetZ = nextTarget.z;
                         a.progress = Math.min(overshoot, 0.99);
+
+                        if (currentTile.type === 'station' && a.type === 'train' && !a.isWaiting) {
+                            a.isWaiting = true;
+                            a.waitTime = 2.0; 
+                            a.progress = 0.5; // 駅のマスの中央で停車
+                        }
                     }
 
                     // --- 左側通行（車線オフセット）を考慮したベジェ曲線補間 ---
@@ -1141,11 +1140,9 @@
                     let outDx = a.targetX - a.gridX; let outDz = a.targetZ - a.gridZ;
                     if (outDx === 0 && outDz === 0) { outDx = inDx; outDz = inDz; }
 
-                    // 左側通行のオフセット計算 (進行方向ベクトルの左)
                     const inLeftX = inDz * offset; const inLeftZ = -inDx * offset;
                     const outLeftX = outDz * offset; const outLeftZ = -outDx * offset;
 
-                    // 制御点の計算
                     const p0x = (a.prevX + a.gridX) / 2 + inLeftX;
                     const p0z = (a.prevZ + a.gridZ) / 2 + inLeftZ;
                     const p2x = (a.targetX + a.gridX) / 2 + outLeftX;
@@ -1311,8 +1308,10 @@
                     mesh: mesh, type: type, 
                     baseSpeed: speed, currentSpeed: speed,
                     allowedTypes: allowedTypes,
-                    gridX: x, gridZ: z, targetX: nextPos.x, targetZ: nextPos.z,
-                    prevX: x, prevZ: z, progress: 0.5,
+                    gridX: x, gridZ: z, 
+                    targetX: nextPos.x, targetZ: nextPos.z,
+                    prevX: x, prevZ: z, 
+                    progress: 0.5, // マスの中心からスタート
                     isWaiting: false, waitTime: 0,
                     history: history, trailMeshes: trailMeshes, lastPos: new THREE.Vector3(x,0,z)
                 });
