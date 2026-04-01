@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D メタシティ - リアル交通＆セーブ対応アップデート</title>
+    <title>3D メタシティ - 交通AI＆2車線対応アップデート</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -20,38 +20,38 @@
         
         /* Modern Compact Header */
         .header-panel {
-            background: rgba(15, 23, 42, 0.75);
-            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
         
         /* Modern Dock */
         .dock-container {
-            display: flex; gap: 0.3rem; overflow-x: auto; padding: 0.5rem; scroll-behavior: smooth;
+            display: flex; gap: 0.25rem; overflow-x: auto; padding: 0.4rem; scroll-behavior: smooth;
             -ms-overflow-style: none; scrollbar-width: none;
-            background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
         .dock-container::-webkit-scrollbar { display: none; }
         
         .tool-btn {
-            flex: 0 0 auto; width: 60px; height: 70px; 
+            flex: 0 0 auto; width: 56px; height: 64px; 
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            border-radius: 0.75rem; transition: all 0.2s;
+            border-radius: 0.5rem; transition: all 0.2s;
             background: rgba(255, 255, 255, 0.05); border: 1px solid transparent;
             position: relative;
         }
         @media (min-width: 768px) {
-            .tool-btn { width: 70px; height: 80px; }
+            .tool-btn { width: 64px; height: 72px; }
         }
-        .tool-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .tool-btn:hover { background: rgba(255, 255, 255, 0.15); }
         .tool-btn.active {
-            background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.5);
-            transform: translateY(-4px); box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+            background: rgba(56, 189, 248, 0.25); border-color: rgba(56, 189, 248, 0.5);
+            transform: translateY(-3px); box-shadow: 0 4px 10px rgba(56, 189, 248, 0.3);
         }
-        .tool-btn i { font-size: 1.2rem; margin-bottom: 2px; transition: transform 0.2s; }
-        @media (min-width: 768px) { .tool-btn i { font-size: 1.5rem; } }
-        .tool-btn.active i { transform: scale(1.2); color: #fff !important; text-shadow: 0 0 8px rgba(255,255,255,0.5); }
+        .tool-btn i { font-size: 1.1rem; margin-bottom: 2px; transition: transform 0.2s; }
+        @media (min-width: 768px) { .tool-btn i { font-size: 1.3rem; } }
+        .tool-btn.active i { transform: scale(1.1); color: #fff !important; text-shadow: 0 0 8px rgba(255,255,255,0.6); }
         
         /* Power Bar */
         .power-bar-fill { transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s ease; }
@@ -67,125 +67,123 @@
     <div id="ui-layer">
         
         <!-- Compact Header -->
-        <div class="header-panel w-full pointer-events-auto flex flex-wrap items-center justify-between gap-2 p-2 md:px-4 md:py-3 shadow-lg">
+        <div class="header-panel w-full pointer-events-auto flex flex-wrap items-center justify-between gap-1 p-2 md:px-4 md:py-2 shadow-lg">
             
             <!-- Location & Weather -->
-            <div class="flex items-center space-x-2 w-full md:w-auto justify-between md:justify-start">
+            <div class="flex items-center space-x-1 w-full md:w-auto justify-between md:justify-start">
                 <div class="flex items-center space-x-2">
-                    <div id="weather-icon" class="text-2xl md:text-3xl text-yellow-300 drop-shadow-md w-6 text-center"><i class="fas fa-sun"></i></div>
+                    <div id="weather-icon" class="text-xl md:text-2xl text-yellow-300 drop-shadow-md w-5 text-center"><i class="fas fa-sun"></i></div>
                     <div class="flex flex-col">
-                        <span class="font-bold text-xs md:text-sm text-white tracking-wide leading-none" id="location-name">メタ・シティ</span>
-                        <span class="text-[10px] md:text-xs text-blue-200" id="time-weather-info">--:-- | --</span>
+                        <span class="font-bold text-[11px] md:text-sm text-white tracking-wide leading-none" id="location-name">メタ・シティ</span>
+                        <span class="text-[9px] md:text-xs text-blue-200" id="time-weather-info">--:-- | --</span>
                     </div>
                 </div>
                 
                 <!-- Tools (Save/Reset) for Mobile -->
-                <div class="flex md:hidden space-x-2">
-                    <button onclick="game.saveGame()" class="p-1.5 bg-white/10 rounded text-xs"><i class="fas fa-save"></i></button>
-                    <button onclick="game.resetGameConfirm()" class="p-1.5 bg-red-500/20 rounded text-xs text-red-300"><i class="fas fa-trash"></i></button>
+                <div class="flex md:hidden space-x-1">
+                    <button onclick="game.saveGame()" class="p-1.5 bg-white/10 rounded text-[10px]"><i class="fas fa-save"></i></button>
+                    <button onclick="game.resetGameConfirm()" class="p-1.5 bg-red-500/20 rounded text-[10px] text-red-300"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
 
             <!-- Stats (Funds & Pop) -->
-            <div class="flex items-center gap-3 md:gap-6 bg-black/20 px-3 py-1.5 rounded-xl border border-white/5 order-3 md:order-2 w-full md:w-auto justify-center">
-                <div class="flex items-center gap-1.5">
-                    <i class="fas fa-coins text-yellow-400 text-sm md:text-base"></i>
+            <div class="flex items-center justify-between md:justify-center gap-2 md:gap-4 bg-black/30 px-2 py-1 rounded-lg border border-white/5 order-3 md:order-2 w-full md:w-auto flex-1">
+                <div class="flex items-center gap-1">
+                    <i class="fas fa-coins text-yellow-400 text-xs md:text-sm"></i>
                     <div class="flex flex-col leading-none">
-                        <span class="text-[9px] text-gray-400 font-bold hidden md:inline">資金</span>
-                        <span id="stat-funds" class="text-sm md:text-lg text-yellow-300 font-mono font-bold">$5000</span>
+                        <span id="stat-funds" class="text-sm md:text-base text-yellow-300 font-mono font-bold">$5000</span>
                     </div>
                 </div>
-                <div class="w-px h-6 bg-white/10"></div>
-                <div class="flex items-center gap-1.5">
-                    <i class="fas fa-users text-blue-400 text-sm md:text-base"></i>
+                <div class="w-px h-5 bg-white/20"></div>
+                <div class="flex items-center gap-1">
+                    <i class="fas fa-users text-blue-400 text-xs md:text-sm"></i>
                     <div class="flex flex-col leading-none">
-                        <span class="text-[9px] text-gray-400 font-bold hidden md:inline">人口</span>
-                        <span id="stat-pop" class="text-sm md:text-lg text-white font-mono font-bold">0</span>
+                        <span id="stat-pop" class="text-sm md:text-base text-white font-mono font-bold">0</span>
                     </div>
                 </div>
-                <div class="w-px h-6 bg-white/10"></div>
-                <div class="flex items-center gap-1.5">
+                <div class="w-px h-5 bg-white/20"></div>
+                <div class="flex items-center gap-1">
                     <div class="flex flex-col leading-none text-right">
-                        <span class="text-[9px] text-gray-400 font-bold">日次収益</span>
+                        <span class="text-[8px] text-gray-400 font-bold hidden md:block">日次収益</span>
                         <span id="stat-income" class="text-xs md:text-sm text-green-400 font-mono font-bold">+$0</span>
                     </div>
                 </div>
             </div>
 
             <!-- Power Management -->
-            <div id="power-panel" class="flex flex-col gap-1 bg-black/20 px-3 py-1.5 rounded-xl border border-white/5 w-full md:w-48 order-2 md:order-3 transition-colors">
+            <div id="power-panel" class="flex flex-col justify-center gap-0.5 bg-black/30 px-2 py-1 rounded-lg border border-white/5 w-full md:w-40 order-2 md:order-3 transition-colors">
                 <div class="flex justify-between items-center w-full">
-                    <span class="text-[10px] md:text-xs font-bold text-gray-300 flex items-center gap-1"><i class="fas fa-bolt text-yellow-400"></i>電力</span>
-                    <span id="power-text" class="text-[10px] md:text-xs font-mono text-white">0 / 0 kW</span>
+                    <span class="text-[9px] md:text-[10px] font-bold text-gray-300 flex items-center gap-1"><i class="fas fa-bolt text-yellow-400"></i>電力</span>
+                    <span id="power-text" class="text-[9px] md:text-[10px] font-mono text-white">0 / 0</span>
                 </div>
                 <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden relative">
                     <div id="power-bar" class="power-bar-fill h-full bg-blue-400" style="width: 0%;"></div>
                 </div>
-                <div id="blackout-warning" class="hidden text-[9px] font-bold text-red-300 text-center w-full mt-0.5">
-                    <i class="fas fa-exclamation-triangle"></i> ブラックアウト！
+                <div id="blackout-warning" class="hidden text-[9px] font-bold text-red-400 text-center w-full mt-0.5">
+                    <i class="fas fa-exclamation-triangle"></i> 停電中！
                 </div>
             </div>
 
             <!-- Tools (Save/Reset) for Desktop -->
             <div class="hidden md:flex space-x-2 order-4">
-                <button onclick="game.saveGame(true)" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 transition rounded-lg text-xs font-bold"><i class="fas fa-save mr-1"></i>保存</button>
-                <button onclick="game.resetGameConfirm()" class="px-3 py-1.5 bg-red-500/20 hover:bg-red-500/40 transition rounded-lg text-xs font-bold text-red-300"><i class="fas fa-trash mr-1"></i>リセット</button>
+                <button onclick="game.saveGame(true)" class="px-2 py-1 bg-white/10 hover:bg-white/20 transition rounded-md text-xs font-bold"><i class="fas fa-save mr-1"></i>保存</button>
+                <button onclick="game.resetGameConfirm()" class="px-2 py-1 bg-red-500/20 hover:bg-red-500/40 transition rounded-md text-xs font-bold text-red-300"><i class="fas fa-trash mr-1"></i>リセット</button>
             </div>
         </div>
 
         <!-- Footer: Tools Dock -->
         <div class="pointer-events-auto w-full mt-auto">
-            <div class="text-[10px] md:text-xs mb-1 text-center text-blue-100/70 drop-shadow-md pointer-events-none">
-                右ドラッグで視点移動 / スクロールでズーム
+            <div class="text-[9px] md:text-xs mb-1 text-center text-blue-100/70 drop-shadow-md pointer-events-none">
+                右ドラッグで視点移動 / 左側通行の滑らかな2車線交通
             </div>
             
             <div class="dock-container w-full">
                 <!-- インフラ -->
-                <button onclick="game.selectTool('road')" id="tool-road" class="tool-btn"><i class="fas fa-road text-gray-400"></i><span class="text-[9px] md:text-[10px] font-bold">道路</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$10</span></button>
-                <button onclick="game.selectTool('track')" id="tool-track" class="tool-btn"><i class="fas fa-train-tram text-orange-300"></i><span class="text-[9px] md:text-[10px] font-bold">線路</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$20</span></button>
+                <button onclick="game.selectTool('road')" id="tool-road" class="tool-btn"><i class="fas fa-road text-gray-400"></i><span class="text-[9px] font-bold">道路</span><span class="text-[8px] text-yellow-400/80 font-mono">$10</span></button>
+                <button onclick="game.selectTool('track')" id="tool-track" class="tool-btn"><i class="fas fa-train-tram text-orange-300"></i><span class="text-[9px] font-bold">線路</span><span class="text-[8px] text-yellow-400/80 font-mono">$20</span></button>
                 
-                <div class="w-px h-10 bg-white/10 mx-0.5 md:mx-1 self-center rounded-full shrink-0"></div>
+                <div class="w-px h-8 bg-white/10 mx-0.5 self-center rounded-full shrink-0"></div>
 
                 <!-- 発電 -->
-                <button onclick="game.selectTool('solar')" id="tool-solar" class="tool-btn bg-blue-500/10"><i class="fas fa-solar-panel text-blue-300"></i><span class="text-[9px] md:text-[10px] font-bold">太陽光</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$300</span></button>
-                <button onclick="game.selectTool('coal')" id="tool-coal" class="tool-btn bg-blue-500/10"><i class="fas fa-industry text-gray-400"></i><span class="text-[9px] md:text-[10px] font-bold">火力</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$500</span></button>
-                <button onclick="game.selectTool('nuclear')" id="tool-nuclear" class="tool-btn bg-blue-500/10"><i class="fas fa-radiation text-green-400"></i><span class="text-[9px] md:text-[10px] font-bold">原発</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$3k</span></button>
+                <button onclick="game.selectTool('solar')" id="tool-solar" class="tool-btn bg-blue-500/10"><i class="fas fa-solar-panel text-blue-300"></i><span class="text-[9px] font-bold">太陽光</span><span class="text-[8px] text-yellow-400/80 font-mono">$300</span></button>
+                <button onclick="game.selectTool('coal')" id="tool-coal" class="tool-btn bg-blue-500/10"><i class="fas fa-industry text-gray-400"></i><span class="text-[9px] font-bold">火力</span><span class="text-[8px] text-yellow-400/80 font-mono">$500</span></button>
+                <button onclick="game.selectTool('nuclear')" id="tool-nuclear" class="tool-btn bg-blue-500/10"><i class="fas fa-radiation text-green-400"></i><span class="text-[9px] font-bold">原発</span><span class="text-[8px] text-yellow-400/80 font-mono">$3k</span></button>
 
-                <div class="w-px h-10 bg-white/10 mx-0.5 md:mx-1 self-center rounded-full shrink-0"></div>
+                <div class="w-px h-8 bg-white/10 mx-0.5 self-center rounded-full shrink-0"></div>
 
                 <!-- 建物 -->
-                <button onclick="game.selectTool('house')" id="tool-house" class="tool-btn"><i class="fas fa-home text-blue-300"></i><span class="text-[9px] md:text-[10px] font-bold">住宅</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$100</span></button>
-                <button onclick="game.selectTool('apartment')" id="tool-apartment" class="tool-btn"><i class="fas fa-building text-blue-400"></i><span class="text-[9px] md:text-[10px] font-bold">ﾏﾝｼｮﾝ</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$400</span></button>
-                <button onclick="game.selectTool('shop')" id="tool-shop" class="tool-btn"><i class="fas fa-store text-pink-300"></i><span class="text-[9px] md:text-[10px] font-bold">商店</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$300</span></button>
-                <button onclick="game.selectTool('office')" id="tool-office" class="tool-btn"><i class="fas fa-briefcase text-indigo-300"></i><span class="text-[9px] md:text-[10px] font-bold">ｵﾌｨｽ</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$800</span></button>
-                <button onclick="game.selectTool('skyscraper')" id="tool-skyscraper" class="tool-btn"><i class="fas fa-city text-purple-400"></i><span class="text-[9px] md:text-[10px] font-bold">高層ﾋﾞﾙ</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$2k</span></button>
+                <button onclick="game.selectTool('house')" id="tool-house" class="tool-btn"><i class="fas fa-home text-blue-300"></i><span class="text-[9px] font-bold">住宅</span><span class="text-[8px] text-yellow-400/80 font-mono">$100</span></button>
+                <button onclick="game.selectTool('apartment')" id="tool-apartment" class="tool-btn"><i class="fas fa-building text-blue-400"></i><span class="text-[9px] font-bold">ﾏﾝｼｮﾝ</span><span class="text-[8px] text-yellow-400/80 font-mono">$400</span></button>
+                <button onclick="game.selectTool('shop')" id="tool-shop" class="tool-btn"><i class="fas fa-store text-pink-300"></i><span class="text-[9px] font-bold">商店</span><span class="text-[8px] text-yellow-400/80 font-mono">$300</span></button>
+                <button onclick="game.selectTool('office')" id="tool-office" class="tool-btn"><i class="fas fa-briefcase text-indigo-300"></i><span class="text-[9px] font-bold">ｵﾌｨｽ</span><span class="text-[8px] text-yellow-400/80 font-mono">$800</span></button>
+                <button onclick="game.selectTool('skyscraper')" id="tool-skyscraper" class="tool-btn"><i class="fas fa-city text-purple-400"></i><span class="text-[9px] font-bold">高層ﾋﾞﾙ</span><span class="text-[8px] text-yellow-400/80 font-mono">$2k</span></button>
 
-                <div class="w-px h-10 bg-white/10 mx-0.5 md:mx-1 self-center rounded-full shrink-0"></div>
+                <div class="w-px h-8 bg-white/10 mx-0.5 self-center rounded-full shrink-0"></div>
 
                 <!-- 公共・他 -->
-                <button onclick="game.selectTool('hospital')" id="tool-hospital" class="tool-btn"><i class="fas fa-hospital text-red-400"></i><span class="text-[9px] md:text-[10px] font-bold">病院</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$1k</span></button>
-                <button onclick="game.selectTool('station')" id="tool-station" class="tool-btn"><i class="fas fa-train text-red-300"></i><span class="text-[9px] md:text-[10px] font-bold">駅</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$500</span></button>
-                <button onclick="game.selectTool('park')" id="tool-park" class="tool-btn"><i class="fas fa-tree text-green-400"></i><span class="text-[9px] md:text-[10px] font-bold">公園</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$150</span></button>
+                <button onclick="game.selectTool('hospital')" id="tool-hospital" class="tool-btn"><i class="fas fa-hospital text-red-400"></i><span class="text-[9px] font-bold">病院</span><span class="text-[8px] text-yellow-400/80 font-mono">$1k</span></button>
+                <button onclick="game.selectTool('station')" id="tool-station" class="tool-btn"><i class="fas fa-train text-red-300"></i><span class="text-[9px] font-bold">駅</span><span class="text-[8px] text-yellow-400/80 font-mono">$500</span></button>
+                <button onclick="game.selectTool('park')" id="tool-park" class="tool-btn"><i class="fas fa-tree text-green-400"></i><span class="text-[9px] font-bold">公園</span><span class="text-[8px] text-yellow-400/80 font-mono">$150</span></button>
 
-                <div class="w-px h-10 bg-white/10 mx-0.5 md:mx-1 self-center rounded-full shrink-0"></div>
+                <div class="w-px h-8 bg-white/10 mx-0.5 self-center rounded-full shrink-0"></div>
 
-                <button onclick="game.selectTool('bulldoze')" id="tool-bulldoze" class="tool-btn bg-red-500/10 hover:bg-red-500/20"><i class="fas fa-bulldozer text-red-400"></i><span class="text-[9px] md:text-[10px] font-bold">撤去</span><span class="text-[8px] md:text-[9px] text-yellow-400/80 font-mono">$10</span></button>
+                <button onclick="game.selectTool('bulldoze')" id="tool-bulldoze" class="tool-btn bg-red-500/10 hover:bg-red-500/20"><i class="fas fa-bulldozer text-red-400"></i><span class="text-[9px] font-bold">撤去</span><span class="text-[8px] text-yellow-400/80 font-mono">$10</span></button>
             </div>
         </div>
     </div>
 
     <!-- Notification / Confirm -->
-    <div id="notification" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl text-slate-800 px-6 py-3 rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 z-50 pointer-events-none border border-white/50 flex items-center gap-2 translate-y-4">
-        <i class="fas fa-info-circle text-blue-500"></i><span id="notif-text">メッセージ</span>
+    <div id="notification" class="fixed top-16 left-1/2 transform -translate-x-1/2 bg-white/95 backdrop-blur-xl text-slate-800 px-5 py-2.5 rounded-full font-bold shadow-2xl opacity-0 transition-all duration-300 z-50 pointer-events-none border border-white/50 flex items-center gap-2 translate-y-4">
+        <i class="fas fa-info-circle text-blue-500"></i><span id="notif-text" class="text-sm">メッセージ</span>
     </div>
     
     <div id="confirm-modal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center pointer-events-auto">
-        <div class="bg-slate-800 border border-slate-600 p-6 rounded-2xl shadow-2xl max-w-sm w-[90%] mx-auto text-center">
-            <h3 class="text-xl font-bold mb-4 text-white">街をリセットしますか？</h3>
-            <p class="text-sm text-gray-300 mb-6">セーブデータが消去され、初期状態に戻ります。この操作は取り消せません。</p>
-            <div class="flex justify-center gap-4">
-                <button onclick="game.closeResetConfirm()" class="px-5 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg font-bold transition">キャンセル</button>
-                <button onclick="game.resetGame()" class="px-5 py-2 bg-red-600 hover:bg-red-500 rounded-lg font-bold transition">リセットする</button>
+        <div class="bg-slate-800 border border-slate-600 p-6 rounded-xl shadow-2xl max-w-sm w-[90%] mx-auto text-center">
+            <h3 class="text-lg font-bold mb-3 text-white">街をリセットしますか？</h3>
+            <p class="text-xs text-gray-300 mb-5">セーブデータが消去され、初期状態に戻ります。この操作は取り消せません。</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="game.closeResetConfirm()" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-lg text-sm font-bold transition">キャンセル</button>
+                <button onclick="game.resetGame()" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-sm font-bold transition">リセットする</button>
             </div>
         </div>
     </div>
@@ -307,6 +305,7 @@
                         ctx.stroke();
                         if(mask>0) ctx.fillRect(c-rw/2, c-rw/2, rw, rw);
                     }
+                    // 白線（2車線の中央線）
                     ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 4; ctx.setLineDash([20, 20]);
                     ctx.beginPath();
                     if (mask===3) { ctx.arc(256, 0, 128, pi, pi/2, true); ctx.stroke(); }
@@ -360,7 +359,9 @@
             constructor() {
                 this.state = { 
                     funds: 8000, population: 0, income: 0, powerGen: 0, powerReq: 0, 
-                    isBlackout: false, dayLength: 5000 
+                    isBlackout: false, dayLength: 5000,
+                    trafficSignal: 0, // 0: N-S, 1: E-W (信号機システム)
+                    signalTimer: 0
                 };
 
                 this.buildConfig = {
@@ -388,7 +389,7 @@
                 this.weatherConfig = { isDay: true, type: 'clear' };
                 this.locationInfo = { lat: 35.6895, lon: 139.6917, name: 'メタ・シティ' };
                 this.mapRadius = 40; 
-                this.saveKey = 'metacity_save_v1';
+                this.saveKey = 'metacity_save_v2';
                 
                 this.texGen = new TileTextureGenerator();
                 this.matGen = new MaterialFactory();
@@ -396,10 +397,8 @@
                 this.init3D();
                 this.setupInteraction();
                 
-                // ロード処理
                 const loaded = this.loadGame();
                 if (!loaded) {
-                    // 初期インフラ
                     this.createBuilding('coal', -2, -2, false);
                     this.createBuilding('road', 0, 1, false);
                     this.createBuilding('road', 0, 0, false);
@@ -425,10 +424,7 @@
                     const [x, z] = key.split(',');
                     bList.push({x: parseInt(x), z: parseInt(z), type: b.type});
                 });
-                const data = {
-                    funds: this.state.funds,
-                    buildings: bList
-                };
+                const data = { funds: this.state.funds, buildings: bList };
                 localStorage.setItem(this.saveKey, JSON.stringify(data));
                 if (manual) this.showNotification("セーブしました", "fa-save", "text-blue-400");
             }
@@ -439,13 +435,11 @@
                 try {
                     const data = JSON.parse(dataStr);
                     this.state.funds = data.funds;
-                    // 一括で建てる
                     const tilesToUpdate = new Set();
                     data.buildings.forEach(b => {
-                        this.createBuilding(b.type, b.x, b.z, true); // no animation, no save
+                        this.createBuilding(b.type, b.x, b.z, true);
                         if(b.type === 'road' || b.type === 'track') tilesToUpdate.add(`${b.x},${b.z}:${b.type}`);
                     });
-                    // オートタイリングを一括更新
                     tilesToUpdate.forEach(key => {
                         const [coords, type] = key.split(':');
                         const [x, z] = coords.split(',');
@@ -496,7 +490,6 @@
                 this.controls.dampingFactor = 0.05;
                 this.controls.enablePan = true;
                 this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
-                // スマートフォンでのパン操作を2本指に設定
                 this.controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.PAN };
                 this.controls.maxPolarAngle = Math.PI / 2 - 0.02;
                 this.controls.minDistance = 2; 
@@ -577,7 +570,6 @@
                 container.addEventListener('pointerdown', () => this.isDragging = false);
                 
                 const updateCursor = (e) => {
-                    // タッチデバイスの場合は最初に入った指の座標を使う
                     let clientX = e.clientX, clientY = e.clientY;
                     if(e.touches && e.touches.length > 0) {
                         clientX = e.touches[0].clientX; clientY = e.touches[0].clientY;
@@ -603,8 +595,7 @@
                 };
 
                 container.addEventListener('pointermove', (e) => {
-                    this.isDragging = true;
-                    updateCursor(e);
+                    this.isDragging = true; updateCursor(e);
                 });
                 
                 container.addEventListener('pointerup', (e) => {
@@ -693,10 +684,8 @@
                     this.particleGroup.add(mesh);
                     
                     this.particles.push({
-                        mesh: mesh, life: 1.0,
-                        velY: 0.5 + Math.random() * 1.0,
-                        velX: (Math.random() - 0.5) * 1.5,
-                        velZ: (Math.random() - 0.5) * 1.5,
+                        mesh: mesh, life: 1.0, velY: 0.5 + Math.random() * 1.0,
+                        velX: (Math.random() - 0.5) * 1.5, velZ: (Math.random() - 0.5) * 1.5,
                         isDust: true
                     });
                 }
@@ -712,8 +701,7 @@
                 this.particles.push({
                     mesh: mesh, life: 1.0, isDust: false,
                     velY: 0.6 + Math.random() * 0.4,
-                    velX: (Math.random() - 0.5) * 0.3,
-                    velZ: (Math.random() - 0.5) * 0.3
+                    velX: (Math.random() - 0.5) * 0.3, velZ: (Math.random() - 0.5) * 0.3
                 });
             }
 
@@ -732,7 +720,7 @@
                     if (p.isDust) {
                         p.mesh.scale.setScalar(Math.max(0, p.life));
                     } else {
-                        p.mesh.scale.setScalar(1.0 + (1.0 - Math.max(0, p.life)) * 2.0); // 煙は広がる
+                        p.mesh.scale.setScalar(1.0 + (1.0 - Math.max(0, p.life)) * 2.0); 
                     }
                     p.mesh.material.opacity = Math.max(0, p.life) * 0.5;
                 }
@@ -811,7 +799,7 @@
                     }
                 });
 
-                this.state.population = pop; this.state.powerReq = req; this.state.powerGen = gen;
+                this.state.population = Math.max(0, pop); this.state.powerReq = req; this.state.powerGen = gen;
                 this.state.isBlackout = (req > gen);
                 
                 if (this.state.isBlackout) inc = 0;
@@ -833,10 +821,10 @@
                 
                 const incElem = document.getElementById('stat-income');
                 if (this.state.isBlackout) {
-                    incElem.innerText = `停止中`; incElem.className = `text-xs md:text-sm font-mono font-bold text-red-500`;
+                    incElem.innerText = `停止中`; incElem.className = `text-[10px] md:text-sm font-mono font-bold text-red-500`;
                 } else {
                     incElem.innerText = (this.state.income >= 0 ? '+' : '') + `$${this.state.income}`;
-                    incElem.className = `text-xs md:text-sm font-mono font-bold ${this.state.income >= 0 ? 'text-green-400' : 'text-red-400'}`;
+                    incElem.className = `text-[10px] md:text-sm font-mono font-bold ${this.state.income >= 0 ? 'text-green-400' : 'text-red-400'}`;
                 }
 
                 const pwrText = document.getElementById('power-text');
@@ -844,7 +832,7 @@
                 const pwrPanel = document.getElementById('power-panel');
                 const blackoutWarning = document.getElementById('blackout-warning');
 
-                pwrText.innerHTML = `${this.state.powerReq} <span class="text-[9px] md:text-[10px] text-gray-400">/ ${this.state.powerGen} kW</span>`;
+                pwrText.innerHTML = `${this.state.powerReq} <span class="text-[8px] md:text-[9px] text-gray-400">/ ${this.state.powerGen} kW</span>`;
                 
                 let ratio = this.state.powerGen > 0 ? (this.state.powerReq / this.state.powerGen) * 100 : (this.state.powerReq > 0 ? 100 : 0);
                 pwrBar.style.width = `${Math.min(ratio, 100)}%`;
@@ -852,12 +840,12 @@
                 if (this.state.isBlackout) {
                     pwrBar.className = "power-bar-fill h-full bg-red-500";
                     pwrPanel.classList.add('blackout-alert');
-                    blackoutWarning.classList.remove('hidden');
+                    if (blackoutWarning) blackoutWarning.classList.remove('hidden');
                 } else {
                     if(ratio > 80) pwrBar.className = "power-bar-fill h-full bg-orange-400";
                     else pwrBar.className = "power-bar-fill h-full bg-blue-400";
                     pwrPanel.classList.remove('blackout-alert');
-                    blackoutWarning.classList.add('hidden');
+                    if (blackoutWarning) blackoutWarning.classList.add('hidden');
                 }
             }
 
@@ -992,48 +980,83 @@
                 this.buildings.set(`${x},${z}`, { mesh: group, type: type, mask: 0, update: updateFn });
             }
 
-            // --- 交通システム (AI対応版) ---
+            // --- 交通システム (AI対応版・2車線左側通行) ---
             lerpAngle(a, b, t) {
                 const da = (b - a) % (Math.PI * 2);
                 const dist = 2 * da % (Math.PI * 2) - da;
                 return a + dist * t;
             }
 
+            isIntersection(x, z, type) {
+                let count = 0;
+                if (this.buildings.get(`${x+1},${z}`)?.type === type) count++;
+                if (this.buildings.get(`${x-1},${z}`)?.type === type) count++;
+                if (this.buildings.get(`${x},${z+1}`)?.type === type) count++;
+                if (this.buildings.get(`${x},${z-1}`)?.type === type) count++;
+                return count >= 3; // 3方向以上で交差点
+            }
+
             updateActors(delta) {
                 if (this.state.isBlackout) return;
 
+                // 信号機の切り替え
+                this.state.signalTimer += delta;
+                if (this.state.signalTimer > 6.0) {
+                    this.state.trafficSignal = 1 - this.state.trafficSignal;
+                    this.state.signalTimer = 0;
+                }
+
                 for (let i = this.actors.length - 1; i >= 0; i--) {
                     const a = this.actors[i];
-                    
-                    // --- 衝突回避 (距離チェック) ---
                     let canMove = true;
-                    // 停車中の処理
+                    
+                    // --- 駅での停車処理 ---
                     if (a.isWaiting) {
                         a.waitTime -= delta;
                         if (a.waitTime <= 0) a.isWaiting = false;
                         else canMove = false;
                     }
 
+                    // --- 交差点の信号判定 ---
+                    if (canMove && a.type === 'car' && this.isIntersection(a.gridX, a.gridZ, 'road')) {
+                        const inDz = Math.abs(a.gridZ - a.prevZ);
+                        const isNS = inDz > 0;
+                        // 自分の進行方向が赤信号の場合
+                        if ((isNS && this.state.trafficSignal !== 0) || (!isNS && this.state.trafficSignal !== 1)) {
+                            // 交差点に入る手前で止まる
+                            if (a.progress < 0.4) {
+                                a.currentSpeed = Math.max(0, a.currentSpeed - delta * 8);
+                                if (a.currentSpeed < 0.1) canMove = false;
+                            }
+                        }
+                    }
+
+                    // --- 衝突回避 (前方車両チェック) ---
                     if (canMove) {
-                        // 前方に他の車がいないかチェック
                         for (let j = 0; j < this.actors.length; j++) {
                             if (i === j) continue;
                             const other = this.actors[j];
-                            // 同じ種類（車なら車）のみチェック、歩行者は無視（轢く）
-                            if (a.type !== other.type) continue;
+                            if (a.type !== other.type) continue; // 異種は無視
                             
                             const dist = a.mesh.position.distanceTo(other.mesh.position);
-                            if (dist < 1.2) {
-                                // 相手が自分の前方にいるか（進行方向ベクトルとの内積）
-                                const dirX = a.targetX - a.prevX;
-                                const dirZ = a.targetZ - a.prevZ;
+                            if (dist < 1.0) {
+                                // 自分の進行方向ベクトル
+                                const myDirX = a.lastDir ? a.lastDir.x : (a.targetX - a.prevX);
+                                const myDirZ = a.lastDir ? a.lastDir.z : (a.targetZ - a.prevZ);
+                                
+                                // 相手が自分の前にいるか
                                 const dx = other.mesh.position.x - a.mesh.position.x;
                                 const dz = other.mesh.position.z - a.mesh.position.z;
-                                const dot = (dirX * dx + dirZ * dz);
+                                const dot = myDirX * dx + myDirZ * dz;
                                 
-                                if (dot > 0) {
-                                    // 前方にいる -> 減速または停止
-                                    a.currentSpeed = Math.max(0, a.currentSpeed - delta * 5);
+                                // 同じ方向に進んでいるか (すれ違いの対向車を無視するため)
+                                const otherDirX = other.lastDir ? other.lastDir.x : (other.targetX - other.prevX);
+                                const otherDirZ = other.lastDir ? other.lastDir.z : (other.targetZ - other.prevZ);
+                                const dotDir = myDirX * otherDirX + myDirZ * otherDirZ;
+
+                                // 前方にいて、かつ同じ方向に進んでいる場合
+                                if (dot > 0.2 && dotDir > 0 && dist < 0.7) {
+                                    a.currentSpeed = Math.max(0, a.currentSpeed - delta * 8);
                                     canMove = false;
                                     break;
                                 }
@@ -1043,7 +1066,7 @@
 
                     if (canMove) {
                         // 少しずつ加速
-                        a.currentSpeed = Math.min(a.baseSpeed, a.currentSpeed + delta * 2);
+                        a.currentSpeed = Math.min(a.baseSpeed, a.currentSpeed + delta * 3);
                     }
 
                     if (a.currentSpeed > 0) {
@@ -1066,14 +1089,15 @@
                         // 駅での停車
                         if (currentTile.type === 'station' && a.type === 'train' && !a.isWaiting) {
                             a.isWaiting = true;
-                            a.waitTime = 2.0; // 2秒停車
-                            a.progress = 0.5; // 駅の中央で止まる
+                            a.waitTime = 2.0; 
+                            a.progress = 0.5; 
                             continue;
                         }
 
                         const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
                         const validDirs = dirs.map(d => ({x: a.gridX + d.x, z: a.gridZ + d.z}))
                                               .filter(pos => {
+                                                  // 直前の場所には戻らない（行き止まり以外）
                                                   if (pos.x === a.prevX && pos.z === a.prevZ) return false;
                                                   const b = this.buildings.get(`${pos.x},${pos.z}`);
                                                   return b && a.allowedTypes.includes(b.type);
@@ -1085,12 +1109,33 @@
                         a.progress = Math.min(overshoot, 0.99);
                     }
 
-                    // ベジェ曲線補間
-                    const t = a.progress;
-                    const p0x = (a.prevX + a.gridX) / 2, p0z = (a.prevZ + a.gridZ) / 2;
-                    const p1x = a.gridX, p1z = a.gridZ;
-                    const p2x = (a.targetX + a.gridX) / 2, p2z = (a.targetZ + a.gridZ) / 2;
+                    // --- 左側通行（車線オフセット）を考慮したベジェ曲線補間 ---
+                    const offset = a.type === 'car' ? 0.16 : (a.type === 'ped' ? 0.25 : 0);
 
+                    let inDx = a.gridX - a.prevX; let inDz = a.gridZ - a.prevZ;
+                    if (inDx === 0 && inDz === 0) {
+                        if (a.lastDir) { inDx = a.lastDir.x; inDz = a.lastDir.z; }
+                        else { inDx = 1; inDz = 0; }
+                    } else {
+                        a.lastDir = {x: inDx, z: inDz};
+                    }
+
+                    let outDx = a.targetX - a.gridX; let outDz = a.targetZ - a.gridZ;
+                    if (outDx === 0 && outDz === 0) { outDx = inDx; outDz = inDz; }
+
+                    // 左側通行のオフセット計算 (進行方向ベクトルの左)
+                    const inLeftX = inDz * offset; const inLeftZ = -inDx * offset;
+                    const outLeftX = outDz * offset; const outLeftZ = -outDx * offset;
+
+                    // 制御点の計算
+                    const p0x = (a.prevX + a.gridX) / 2 + inLeftX;
+                    const p0z = (a.prevZ + a.gridZ) / 2 + inLeftZ;
+                    const p2x = (a.targetX + a.gridX) / 2 + outLeftX;
+                    const p2z = (a.targetZ + a.gridZ) / 2 + outLeftZ;
+                    const p1x = a.gridX + (inLeftX + outLeftX) / 2;
+                    const p1z = a.gridZ + (inLeftZ + outLeftZ) / 2;
+
+                    const t = a.progress;
                     const invT = 1 - t;
                     const posX = invT * invT * p0x + 2 * invT * t * p1x + t * t * p2x;
                     const posZ = invT * invT * p0z + 2 * invT * t * p1z + t * t * p2z;
@@ -1106,6 +1151,7 @@
                         a.mesh.rotation.y = this.lerpAngle(a.mesh.rotation.y, targetAngle, delta * 15);
                     }
 
+                    // 軌跡追従 (電車など)
                     if (a.history) {
                         const dist = a.mesh.position.distanceTo(a.lastPos);
                         if (dist > 0.05) {
@@ -1132,20 +1178,23 @@
             spawnActors() {
                 if (this.state.isBlackout) return;
 
-                // マップの道路数に応じて上限を動的に変更
                 let roadCount = 0, trackCount = 0, walkCount = 0;
-                const roads = [], tracks = [], walks = [];
+                const roads = [], tracks = [], walkSpots = [];
                 
                 this.buildings.forEach((b, key) => {
                     const [x, z] = key.split(',').map(Number);
-                    if (b.type === 'road') { roads.push({x,z}); walks.push({x,z}); roadCount++; }
+                    if (b.type === 'road') { roads.push({x,z}); roadCount++; }
                     if (b.type === 'track' || b.type === 'station') { tracks.push({x,z}); trackCount++; }
-                    if (!['track'].includes(b.type)) { walks.push({x,z}); walkCount++; }
+                    // 歩行者のスポーン地点（商業や公園などの近く）
+                    if (['shop', 'office', 'skyscraper', 'park', 'stadium', 'school', 'hospital'].includes(b.type)) {
+                        walkSpots.push({x,z});
+                    }
                 });
 
-                const maxCars = Math.min(30, Math.floor(roadCount / 2));
-                const maxTrains = Math.min(8, Math.floor(trackCount / 3));
-                const maxPeds = Math.min(50, Math.floor(walkCount / 2));
+                // 生成上限の最適化（人口ベースなど）
+                const maxCars = Math.min(25, Math.floor(roadCount / 3));
+                const maxTrains = Math.min(5, Math.floor(trackCount / 4));
+                const maxPeds = Math.min(50, Math.floor(this.state.population / 2)); // 人口に比例！
 
                 let carCount = 0, trainCount = 0, pedCount = 0;
                 this.actors.forEach(a => {
@@ -1161,17 +1210,26 @@
                     return false;
                 };
 
-                if (roads.length > 0 && carCount < maxCars && Math.random() < 0.5) {
+                if (roads.length > 0 && carCount < maxCars && Math.random() < 0.3) {
                     const start = roads[Math.floor(Math.random() * roads.length)];
                     if(!isTileOccupied(start.x, start.z)) this.createActor('car', start.x, start.z);
                 }
-                if (tracks.length > 0 && trainCount < maxTrains && Math.random() < 0.2) {
+                if (tracks.length > 0 && trainCount < maxTrains && Math.random() < 0.1) {
                     const start = tracks[Math.floor(Math.random() * tracks.length)];
                     if(!isTileOccupied(start.x, start.z)) this.createActor('train', start.x, start.z);
                 }
-                if (walks.length > 0 && pedCount < maxPeds && Math.random() < 0.5) {
-                    const start = walks[Math.floor(Math.random() * walks.length)];
-                    this.createActor('ped', start.x, start.z);
+                if (walkSpots.length > 0 && pedCount < maxPeds && Math.random() < 0.5) {
+                    const spot = walkSpots[Math.floor(Math.random() * walkSpots.length)];
+                    // 施設の隣の道などを探す
+                    const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
+                    for (let d of dirs) {
+                        const nx = spot.x + d.x, nz = spot.z + d.z;
+                        const b = this.buildings.get(`${nx},${nz}`);
+                        if (b && !['track','bulldoze'].includes(b.type)) {
+                            this.createActor('ped', nx, nz);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -1190,7 +1248,6 @@
                     headlight.position.set(0.1, 0.1, 0.251); group.add(headlight);
                     const headlight2 = headlight.clone(); headlight2.position.set(-0.1, 0.1, 0.251); group.add(headlight2);
                     
-                    group.position.set(-0.15, 0, 0); 
                     mesh = group; speed = 1.8; allowedTypes = ['road'];
 
                 } else if (type === 'train') {
@@ -1212,14 +1269,13 @@
                     
                 } else if (type === 'ped') {
                     mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.2, 8), new THREE.MeshStandardMaterial({color: Math.random() * 0xffffff}));
-                    mesh.position.set((Math.random()-0.5)*0.6, 0.1, (Math.random()-0.5)*0.6);
+                    mesh.position.set(0, 0.1, 0);
                     group.add(mesh);
                     mesh = group; speed = 0.8;
                     allowedTypes = Object.keys(this.buildConfig).filter(t => !['track','bulldoze'].includes(t));
                 }
 
-                if(type !== 'train') { mesh.position.set(x, 0, z); this.actorGroup.add(mesh); } 
-                else { mesh.position.set(x, 0, z); this.actorGroup.add(mesh); }
+                mesh.position.set(x, 0, z); this.actorGroup.add(mesh);
 
                 const dirs = [{x:1,z:0}, {x:-1,z:0}, {x:0,z:1}, {x:0,z:-1}];
                 const validDirs = dirs.map(d => ({x: x + d.x, z: z + d.z}))
@@ -1231,7 +1287,7 @@
 
                 this.actors.push({
                     mesh: mesh, type: type, 
-                    baseSpeed: speed, currentSpeed: speed, // 衝突判定用の速度変数
+                    baseSpeed: speed, currentSpeed: speed,
                     allowedTypes: allowedTypes,
                     gridX: x, gridZ: z, targetX: nextPos.x, targetZ: nextPos.z,
                     prevX: x, prevZ: z, progress: 0.5,
@@ -1256,7 +1312,6 @@
                             incomeElem.classList.add('text-yellow-300');
                         }, 500);
 
-                        // 収益発生のタイミングでオートセーブ
                         this.saveGame();
                     }
                     this.spawnActors();
