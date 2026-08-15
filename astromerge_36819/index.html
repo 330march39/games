@@ -114,16 +114,16 @@
         <!-- Header HUD -->
         <div id="hud" class="flex justify-between items-start hidden">
             <div class="flex gap-2 sm:gap-4">
-                <!-- Score Board -->
-                <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-white/10 flex flex-col items-center min-w-[100px] sm:min-w-[120px]">
+                <!-- Combined Score Board -->
+                <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-3 sm:p-4 shadow-lg border-2 border-white/10 flex flex-col items-center min-w-[120px] sm:min-w-[150px]">
                     <span class="text-gray-400 text-xs font-bold uppercase tracking-wider">SCORE</span>
-                    <span id="scoreDisplay" class="text-3xl font-black text-white">0</span>
-                </div>
-
-                <!-- BEST Score Board -->
-                <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-[var(--neon-yellow)]/30 flex flex-col items-center min-w-[100px] sm:min-w-[120px]">
-                    <span class="text-[var(--neon-yellow)] text-xs font-bold uppercase tracking-wider">BEST</span>
-                    <span id="bestDisplay" class="text-3xl font-black text-[var(--neon-yellow)]">0</span>
+                    <span id="scoreDisplay" class="text-3xl sm:text-4xl font-black text-white leading-none my-1">0</span>
+                    
+                    <!-- BEST Score Sub-display -->
+                    <div class="bg-black/30 rounded-full px-3 py-0.5 mt-1 border border-[var(--neon-yellow)]/20 flex items-center gap-2">
+                        <span class="text-[var(--neon-yellow)] text-[9px] font-bold uppercase tracking-wider">BEST</span>
+                        <span id="bestDisplay" class="text-sm font-black text-[var(--neon-yellow)]">0</span>
+                    </div>
                 </div>
             </div>
 
@@ -141,8 +141,11 @@
             <div class="flex flex-col items-center transition-transform duration-200" id="shuffleBtnContainer">
                 <button id="shuffleBtn" class="btn-nintendo bg-[#2b2b2b] w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-[0_6px_0_#008298] hover:shadow-[0_4px_0_#008298] hover:translate-y-[2px] active:shadow-none active:translate-y-[6px] border-4 border-[var(--neon-blue)]">
                     <svg class="fan-spin" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--neon-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 0 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 0-7.002 8.618l1.45-5.412Z"/>
-                        <circle cx="12" cy="12" r="2"/>
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 12v-9l4.912 1.914a1.7 1.7 0 0 1 .428 2.925l-5.34 4.161" />
+                        <path d="M12 12h9l-1.914 4.912a1.7 1.7 0 0 1 -2.925 .428l-4.161 -5.34" />
+                        <path d="M12 12h-9l1.914 -4.912a1.7 1.7 0 0 1 2.925 -.428l4.161 5.34" />
+                        <path d="M12 12v9l-4.912 -1.914a1.7 1.7 0 0 1 -.428 -2.925l5.34 -4.161" />
                     </svg>
                 </button>
                 <div class="mt-2 bg-[#2b2b2b] px-4 py-1 rounded-full border-2 border-[var(--neon-blue)]/50 shadow-lg flex items-center">
