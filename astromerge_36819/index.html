@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AstroMerge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --switch-bg: #2b2b2b;
+            --switch-panel: #3a3a3a;
+            --neon-red: #ff003c;
+            --neon-blue: #00c3e3;
+            --neon-green: #10e300;
+            --neon-yellow: #ffea00;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--switch-bg);
+            color: white;
+            font-family: 'Nunito', sans-serif;
+            overflow: hidden;
+            touch-action: none; /* Prevent scrolling on mobile */
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* Nintendo-style Button Animations */
+        .btn-nintendo {
+            transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-nintendo:active {
+            transform: scale(0.92);
+        }
+        .btn-nintendo::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .btn-nintendo:active::after {
+            opacity: 0.2;
+            transition: opacity 0s;
+        }
+
+        /* Modal Pop Animation */
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .modal-animate {
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Custom Scrollbar for high scores if needed */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--switch-bg); }
+        ::-webkit-scrollbar-thumb { background: var(--switch-panel); border-radius: 10px; }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        /* UI Overlays */
+        #ui-layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 20;
+            pointer-events: none; /* Let clicks pass to canvas */
+        }
+        .pointer-events-auto { pointer-events: auto; }
+
+        .pulse-danger {
+            animation: pulseRed 1s infinite alternate;
+        }
+        @keyframes pulseRed {
+            0% { box-shadow: inset 0 0 0px var(--neon-red); }
+            100% { box-shadow: inset 0 0 50px var(--neon-red); }
+        }
+        @keyframes spinFan {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .fan-spin {
+            animation: spinFan 8s linear infinite;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI Layer -->
+    <div id="ui-layer" class="flex flex-col justify-between p-4 sm:p-8">
+        
+        <!-- Header HUD -->
+        <div id="hud" class="flex justify-between items-start hidden">
+            <div class="flex gap-2 sm:gap-4">
+                <!-- Score Board -->
+                <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-white/10 flex flex-col items-center min-w-[100px] sm:min-w-[120px]">
+                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider">SCORE</span>
+                    <span id="scoreDisplay" class="text-3xl font-black text-white">0</span>
+                </div>
+
+                <!-- BEST Score Board -->
+                <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-[var(--neon-yellow)]/30 flex flex-col items-center min-w-[100px] sm:min-w-[120px]">
+                    <span class="text-[var(--neon-yellow)] text-xs font-bold uppercase tracking-wider">BEST</span>
+                    <span id="bestDisplay" class="text-3xl font-black text-[var(--neon-yellow)]">0</span>
+                </div>
+            </div>
+
+            <!-- Next Orb Indicator -->
+            <div class="bg-[#3a3a3a]/90 backdrop-blur-md rounded-2xl p-4 shadow-lg border-2 border-white/10 flex flex-col items-center min-w-[100px] sm:min-w-[120px]">
+                <span class="text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">NEXT</span>
+                <div id="nextOrbContainer" class="w-12 h-12 rounded-full flex items-center justify-center relative">
+                    <div id="nextOrbPreview" class="absolute rounded-full shadow-inner" style="width: 20px; height: 20px; background: white;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Shuffle Button (Bottom Right) -->
+        <div id="bottomControls" class="absolute bottom-6 right-6 sm:bottom-10 sm:right-10 hidden pointer-events-auto z-30">
+            <div class="flex flex-col items-center transition-transform duration-200" id="shuffleBtnContainer">
+                <button id="shuffleBtn" class="btn-nintendo bg-[#2b2b2b] w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center shadow-[0_6px_0_#008298] hover:shadow-[0_4px_0_#008298] hover:translate-y-[2px] active:shadow-none active:translate-y-[6px] border-4 border-[var(--neon-blue)]">
+                    <svg class="fan-spin" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--neon-blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.827 16.379a6.082 6.082 0 0 1-8.618-7.002l5.412 1.45a6.082 6.082 0 0 0 7.002-8.618l-1.45 5.412a6.082 6.082 0 0 1 8.618 7.002l-5.412-1.45a6.082 6.082 0 0 0-7.002 8.618l1.45-5.412Z"/>
+                        <circle cx="12" cy="12" r="2"/>
+                    </svg>
+                </button>
+                <div class="mt-2 bg-[#2b2b2b] px-4 py-1 rounded-full border-2 border-[var(--neon-blue)]/50 shadow-lg flex items-center">
+                    <span class="text-gray-400 text-[10px] font-bold uppercase tracking-wider mr-1">SHUFFLE</span>
+                    <span class="text-white font-black text-sm">x<span id="shuffleCount">3</span></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Danger Overlay (Hidden by default) -->
+        <div id="dangerOverlay" class="absolute inset-0 pointer-events-none hidden transition-opacity duration-300">
+            <div class="absolute inset-0 pulse-danger opacity-50"></div>
+            <div class="absolute top-1/4 w-full text-center text-[var(--neon-red)] font-black text-4xl animate-bounce tracking-widest uppercase" style="text-shadow: 0 0 20px var(--neon-red);">
+                WARNING
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Start Menu -->
+    <div id="startMenu" class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto">
+        <div class="bg-white text-[#2b2b2b] rounded-[40px] p-8 md:p-12 shadow-2xl max-w-sm w-11/12 text-center modal-animate border-8 border-[var(--neon-blue)] relative overflow-hidden">
+            <!-- Decorative accents -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 bg-[var(--neon-blue)] rounded-full opacity-10"></div>
+            <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-[var(--neon-red)] rounded-full opacity-10"></div>
+
+            <h1 class="text-4xl md:text-5xl font-black mb-2 tracking-tight" style="color: var(--neon-red);">ASTRO<br><span style="color: var(--neon-blue);">MERGE</span></h1>
+            <p class="text-gray-500 font-bold mb-8 text-sm uppercase tracking-widest">中心に向かって合体させよう！</p>
+            
+            <div class="flex flex-col gap-4">
+                <button id="startBtn" class="btn-nintendo bg-[#2b2b2b] text-white text-xl font-bold py-4 rounded-full shadow-[0_6px_0_#1a1a1a] hover:shadow-[0_4px_0_#1a1a1a] hover:translate-y-[2px] active:shadow-none active:translate-y-[6px]">
+                    ゲームスタート
+                </button>
+                <div class="bg-gray-100 rounded-2xl p-4 mt-2">
+                    <p class="text-sm font-bold text-gray-600 mb-2">遊び方</p>
+                    <p class="text-xs text-gray-600 text-left leading-relaxed">外側のリングを<b>タッチしたまま</b>狙いを定め、<b>指を離すと</b>オーブを発射します。<br>同じ色のオーブを2つぶつけて合体させましょう！<br>円からあふれないように気をつけて。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Menu -->
+    <div id="gameOverMenu" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md pointer-events-auto hidden">
+        <div class="bg-[#2b2b2b] text-white rounded-[40px] p-8 md:p-12 shadow-2xl max-w-sm w-11/12 text-center modal-animate border-8 border-[var(--neon-red)]">
+            <h2 class="text-4xl font-black mb-2 text-white">GAME OVER</h2>
+            <div class="bg-[#1a1a1a] rounded-3xl p-6 my-6 border-2 border-white/5">
+                <p class="text-gray-400 text-sm font-bold uppercase tracking-wider mb-1">SCORE</p>
+                <p id="finalScore" class="text-5xl font-black text-[var(--neon-yellow)] drop-shadow-[0_0_15px_rgba(255,234,0,0.5)]">0</p>
+                
+                <p class="text-gray-400 text-xs font-bold uppercase tracking-wider mt-4 mb-1">HIGH SCORE</p>
+                <p id="highScore" class="text-xl font-bold text-white">0</p>
+            </div>
+            
+            <button id="restartBtn" class="btn-nintendo bg-white text-[#2b2b2b] w-full text-xl font-bold py-4 rounded-full shadow-[0_6px_0_#d1d5db] hover:shadow-[0_4px_0_#d1d5db] hover:translate-y-[2px] active:shadow-none active:translate-y-[6px]">
+                もう一度遊ぶ
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME CONFIGURATION & DATA ---
+        // Orb types (Colors, Base sizes, Points)
+        const ORB_TYPES = [
+            { level: 0, radiusBase: 12, color: '#FFFFFF', name: 'Pluto' },   // White
+            { level: 1, radiusBase: 18, color: '#00c3e3', name: 'Neptune' }, // Neon Blue
+            { level: 2, radiusBase: 26, color: '#10e300', name: 'Uranus' },  // Neon Green
+            { level: 3, radiusBase: 36, color: '#ffea00', name: 'Saturn' },  // Neon Yellow
+            { level: 4, radiusBase: 48, color: '#ff8c00', name: 'Jupiter' }, // Orange
+            { level: 5, radiusBase: 62, color: '#ff003c', name: 'Mars' },    // Neon Red
+            { level: 6, radiusBase: 78, color: '#b500ff', name: 'Earth' },   // Purple
+            { level: 7, radiusBase: 96, color: '#ff00b3', name: 'Venus' },   // Pink
+            { level: 8, radiusBase: 116, color: '#00ffa6', name: 'Mercury' },// Mint
+            { level: 9, radiusBase: 138, color: '#a6ff00', name: 'Moon' },   // Lime
+            { level: 10,radiusBase: 164, color: '#ffffff', name: 'Sun', glow: true } // Super White/Glow
+        ];
+
+        // Global Game State
+        let state = {
+            isPlaying: false,
+            score: 0,
+            highScore: localStorage.getItem('orbitalHighScore') || 0,
+            orbs: [],
+            particles: [],
+            nextOrbLevel: 0,
+            arenaRadius: 0,
+            centerX: 0,
+            centerY: 0,
+            mouseAngle: 0,
+            canShoot: true,
+            isAiming: false,
+            shuffles: 3,
+            shuffleMilestone: 10000,
+            dangerTimer: 0,
+            dangerThreshold: 180, // frames (~3 seconds)
+            shakeAmount: 0
+        };
+
+        // --- AUDIO SYSTEM (Tone.js) ---
+        let synthsReady = false;
+        const sfx = {
+            pop: null,
+            merge: null,
+            over: null,
+            shuffle: null,
+            bonus: null,
+            init: async () => {
+                if (synthsReady) return;
+                try {
+                    await Tone.start();
+                    // Simple membrane synth for launching/small pops
+                    sfx.pop = new Tone.MembraneSynth({
+                        pitchDecay: 0.05, octaves: 4, oscillator: { type: "sine" },
+                        envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 }
+                    }).toDestination();
+                    sfx.pop.volume.value = -10;
+
+                    // Poly synth for satisfying merge chords
+                    sfx.merge = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "triangle" },
+                        envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 1 }
+                    }).toDestination();
+                    sfx.merge.volume.value = -8;
+
+                    // Game over noise
+                    sfx.over = new Tone.FMSynth().toDestination();
+                    sfx.over.volume.value = -5;
+
+                    // Shuffle noise (Crash/Mix sound)
+                    sfx.shuffle = new Tone.NoiseSynth({
+                        noise: { type: "pink" },
+                        envelope: { attack: 0.05, decay: 0.8, sustain: 0, release: 0.1 }
+                    }).toDestination();
+                    sfx.shuffle.volume.value = -2;
+
+                    // Bonus/1UP Synth
+                    sfx.bonus = new Tone.PolySynth(Tone.Synth, {
+                        oscillator: { type: "sine" },
+                        envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 1 }
+                    }).toDestination();
+                    sfx.bonus.volume.value = -5;
+
+                    synthsReady = true;
+                } catch (e) {
+                    console.warn("Audio initialization failed. Playing without sound.", e);
+                }
+            },
+            playShoot: () => { if(synthsReady) sfx.pop.triggerAttackRelease("C4", "32n"); },
+            playMerge: (level) => {
+                if(!synthsReady) return;
+                // Higher level = more complex/higher pitch chord
+                const baseNote = 400 + (level * 50);
+                sfx.merge.triggerAttackRelease([baseNote, baseNote * 1.25, baseNote * 1.5], "8n");
+            },
+            playGameOver: () => {
+                if(!synthsReady) return;
+                sfx.over.triggerAttackRelease("C2", "2n");
+            },
+            playShuffle: () => {
+                if(!synthsReady) return;
+                sfx.shuffle.triggerAttackRelease("8n");
+            },
+            playBonus: () => {
+                if(!synthsReady) return;
+                const now = Tone.now();
+                sfx.bonus.triggerAttackRelease("C5", "16n", now);
+                sfx.bonus.triggerAttackRelease("E5", "16n", now + 0.1);
+                sfx.bonus.triggerAttackRelease("G5", "8n", now + 0.2);
+            }
+        };
+
+        // --- STREAMING_CHUNK:Setting up Canvas and Rendering Context... ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize
+        let dpr = window.devicePixelRatio || 1;
+
+        function resizeCanvas() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            ctx.scale(dpr, dpr);
+            
+            state.centerX = width / 2;
+            state.centerY = height / 2;
+            
+            // Calculate arena size based on screen, keeping padding
+            const minDimension = Math.min(width, height);
+            state.arenaRadius = (minDimension / 2) * 0.85; // 85% of half the smallest dimension
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // --- UI UPDATERS ---
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const bestDisplay = document.getElementById('bestDisplay');
+        const nextOrbPreview = document.getElementById('nextOrbPreview');
+        const dangerOverlay = document.getElementById('dangerOverlay');
+        const shuffleCountDisplay = document.getElementById('shuffleCount');
+        const shuffleBtn = document.getElementById('shuffleBtn');
+        const shuffleBtnContainer = document.getElementById('shuffleBtnContainer');
+        
+        function updateHUD() {
+            scoreDisplay.innerText = state.score;
+            if (bestDisplay) bestDisplay.innerText = state.highScore;
+            shuffleCountDisplay.innerText = state.shuffles;
+
+            // Visual state of shuffle button
+            if (state.shuffles <= 0) {
+                shuffleBtn.classList.add('opacity-50', 'grayscale');
+                shuffleBtnContainer.classList.add('opacity-50');
+            } else {
+                shuffleBtn.classList.remove('opacity-50', 'grayscale');
+                shuffleBtnContainer.classList.remove('opacity-50');
+            }
+
+            const nextOrb = ORB_TYPES[state.nextOrbLevel];
+            nextOrbPreview.style.backgroundColor = nextOrb.color;
+            nextOrbPreview.style.width = `${nextOrb.radiusBase * 0.8}px`; // Scale down for UI
+            nextOrbPreview.style.height = `${nextOrb.radiusBase * 0.8}px`;
+            
+            if(nextOrb.glow) {
+                nextOrbPreview.style.boxShadow = `0 0 10px ${nextOrb.color}`;
+            } else {
+                nextOrbPreview.style.boxShadow = 'inset -2px -2px 6px rgba(0,0,0,0.3)';
+            }
+        }
+
+        // --- STREAMING_CHUNK:Physics Engine & Game Logic... ---
+        
+        // Helper: Generate Random level for next orb (weighted towards lower levels)
+        function getNextLevel() {
+            const r = Math.random();
+            if (r < 0.60) return 0; // 60% level 0
+            if (r < 0.85) return 1; // 25% level 1
+            if (r < 0.95) return 2; // 10% level 2
+            return 3;               // 5% level 3
+        }
+
+        class Orb {
+            constructor(x, y, level, isStatic = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = 0;
+                this.vy = 0;
+                this.level = level;
+                this.type = ORB_TYPES[level];
+                
+                // Adaptive sizing based on screen size (base sizes are for ~800px height)
+                const scaleFactor = state.arenaRadius / 350; 
+                this.targetRadius = this.type.radiusBase * scaleFactor;
+                this.radius = isStatic ? this.targetRadius : 0; // Pop-in animation
+                
+                this.mass = this.targetRadius * this.targetRadius; // Mass proportional to area
+                this.isMerged = false;
+                this.justMerged = isStatic ? 0 : 10; // Frames for visual effect
+            }
+
+            update(dt) {
+                // Grow animation
+                if (this.radius < this.targetRadius) {
+                    this.radius += (this.targetRadius - this.radius) * 0.2;
+                }
+
+                if (this.justMerged > 0) this.justMerged--;
+
+                // Apply central gravity (pulls slightly to center to keep arena clean)
+                const dxCenter = state.centerX - this.x;
+                const dyCenter = state.centerY - this.y;
+                const distCenter = Math.sqrt(dxCenter*dxCenter + dyCenter*dyCenter);
+                
+                if (distCenter > 0) {
+                    // Mild gravity pulling to center
+                    const gravityStrength = 0.05;
+                    this.vx += (dxCenter / distCenter) * gravityStrength;
+                    this.vy += (dyCenter / distCenter) * gravityStrength;
+                }
+
+                // Apply velocity
+                this.x += this.vx;
+                this.y += this.vy;
+
+                // Damping / Friction
+                this.vx *= 0.98;
+                this.vy *= 0.98;
+            }
+
+            draw(ctx) {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.1, this.radius), 0, Math.PI * 2);
+                
+                // Create rich 3D-like gradient
+                const grad = ctx.createRadialGradient(
+                    this.x - this.radius * 0.3, this.y - this.radius * 0.3, this.radius * 0.1,
+                    this.x, this.y, this.radius
+                );
+                
+                if (this.justMerged > 0) {
+                    // Flash white when just merged
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(1, this.type.color);
+                } else {
+                    grad.addColorStop(0, '#ffffff');
+                    grad.addColorStop(0.3, this.type.color);
+                    // Darken edges slightly
+                    grad.addColorStop(1, shadeColor(this.type.color, -30));
+                }
+
+                ctx.fillStyle = grad;
+                if (this.type.glow) {
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = this.type.color;
+                } else {
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                }
+                
+                ctx.fill();
+                ctx.shadowBlur = 0; // Reset
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 5 + 2;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.life = 1.0;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= 0.03;
+            }
+            draw(ctx) {
+                ctx.globalAlpha = Math.max(0, this.life);
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // Helper: Darken/Lighten Hex Colors
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+            R = (R<255)?R:255;  G = (G<255)?G:255;  B = (B<255)?B:255;
+            R = Math.max(0, R); G = Math.max(0, G); B = Math.max(0, B);
+            const RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            const GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            const BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+            return "#"+RR+GG+BB;
+        }
+
+        // --- STREAMING_CHUNK:Collision Detection and Resolution... ---
+        
+        function resolveCollisions() {
+            const orbs = state.orbs;
+            
+            // Multiple iterations for stability (Position-based dynamics approach)
+            const iterations = 3; 
+            for (let iter = 0; iter < iterations; iter++) {
+                
+                // 1. Orb vs Orb Collisions
+                for (let i = 0; i < orbs.length; i++) {
+                    for (let j = i + 1; j < orbs.length; j++) {
+                        let o1 = orbs[i];
+                        let o2 = orbs[j];
+                        
+                        // Don't collide if either is marked for merging removal
+                        if(o1.isMerged || o2.isMerged) continue;
+
+                        let dx = o2.x - o1.x;
+                        let dy = o2.y - o1.y;
+                        let distSq = dx*dx + dy*dy;
+                        let minDist = o1.radius + o2.radius;
+                        
+                        if (distSq < minDist * minDist) {
+                            let dist = Math.sqrt(distSq);
+                            if (dist === 0) { dx = 1; dy = 0; dist = 1; } // Avoid div zero
+
+                            // --- MERGE LOGIC ---
+                            if (o1.level === o2.level && o1.level < ORB_TYPES.length - 1 && o1.radius >= o1.targetRadius*0.9 && o2.radius >= o2.targetRadius*0.9) {
+                                // Mark for removal
+                                o1.isMerged = true;
+                                o2.isMerged = true;
+                                
+                                // Calculate midpoint
+                                let mx = (o1.x + o2.x) / 2;
+                                let my = (o1.y + o2.y) / 2;
+                                
+                                // Create new merged orb
+                                let newLevel = o1.level + 1;
+                                let newOrb = new Orb(mx, my, newLevel);
+                                
+                                // Add explosive outward force to surrounding orbs upon merge
+                                let explosionForce = 5;
+                                orbs.push(newOrb);
+                                
+                                // VFX & SFX
+                                createParticles(mx, my, ORB_TYPES[newLevel].color, 15);
+                                sfx.playMerge(newLevel);
+                                
+                                // Update Score
+                                const points = Math.pow(2, newLevel) * 10;
+                                state.score += points;
+
+                                // Update High Score instantly
+                                if (state.score > state.highScore) {
+                                    state.highScore = state.score;
+                                    localStorage.setItem('orbitalHighScore', state.highScore);
+                                }
+
+                                // Milestone logic for gaining a Shuffle
+                                if (state.score >= state.shuffleMilestone) {
+                                    state.shuffles++;
+                                    state.shuffleMilestone += 10000;
+                                    sfx.playBonus();
+                                    
+                                    // Visual pop effect on shuffle button
+                                    shuffleBtnContainer.style.transform = "scale(1.2)";
+                                    setTimeout(() => shuffleBtnContainer.style.transform = "", 300);
+                                }
+
+                                updateHUD();
+                                
+                                // Screen Shake
+                                state.shakeAmount = Math.min(state.shakeAmount + (newLevel), 15);
+
+                                continue; // Skip physical resolution since they merged
+                            }
+
+                            // --- PHYSICAL RESOLUTION ---
+                            let overlap = minDist - dist;
+                            let nx = dx / dist;
+                            let ny = dy / dist;
+
+                            // Positional correction (Push apart proportionally to mass/size inverse)
+                            let totalMass = o1.mass + o2.mass;
+                            let mRatio1 = o2.mass / totalMass;
+                            let mRatio2 = o1.mass / totalMass;
+
+                            o1.x -= nx * overlap * mRatio1;
+                            o1.y -= ny * overlap * mRatio1;
+                            o2.x += nx * overlap * mRatio2;
+                            o2.y += ny * overlap * mRatio2;
+
+                            // Velocity resolution (Elastic bounce)
+                            if (iter === iterations - 1) { // Only apply velocity change on last iter
+                                let rvx = o2.vx - o1.vx;
+                                let rvy = o2.vy - o1.vy;
+                                let velAlongNormal = rvx * nx + rvy * ny;
+
+                                if (velAlongNormal < 0) {
+                                    let restitution = 0.3; // Bounciness
+                                    let j = -(1 + restitution) * velAlongNormal;
+                                    let impulse = j / (1/o1.mass + 1/o2.mass);
+                                    
+                                    o1.vx -= (impulse * nx) / o1.mass;
+                                    o1.vy -= (impulse * ny) / o1.mass;
+                                    o2.vx += (impulse * nx) / o2.mass;
+                                    o2.vy += (impulse * ny) / o2.mass;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 2. Orb vs Boundary (Circular Arena)
+                for (let i = 0; i < orbs.length; i++) {
+                    let o = orbs[i];
+                    if (o.isMerged) continue;
+
+                    let dx = o.x - state.centerX;
+                    let dy = o.y - state.centerY;
+                    let distFromCenter = Math.sqrt(dx*dx + dy*dy);
+                    let maxDist = state.arenaRadius - o.radius;
+
+                    if (distFromCenter > maxDist) {
+                        // Positional correction
+                        let nx = dx / distFromCenter;
+                        let ny = dy / distFromCenter;
+                        
+                        o.x = state.centerX + nx * maxDist;
+                        o.y = state.centerY + ny * maxDist;
+
+                        // Velocity reflection
+                        if (iter === iterations - 1) {
+                            let dot = o.vx * nx + o.vy * ny;
+                            if (dot > 0) {
+                                let restitution = 0.5; // Wall bounce
+                                o.vx -= (1 + restitution) * dot * nx;
+                                o.vy -= (1 + restitution) * dot * ny;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Remove merged orbs
+            state.orbs = state.orbs.filter(o => !o.isMerged);
+        }
+
+        // --- STREAMING_CHUNK:Input Handling and Game Flow... ---
+        
+        function shootOrb() {
+            if (!state.isPlaying || !state.canShoot) return;
+            
+            // Calculate launch position on outer rim
+            const launchRadius = state.arenaRadius + 20; // Slightly outside
+            const startX = state.centerX + Math.cos(state.mouseAngle) * launchRadius;
+            const startY = state.centerY + Math.sin(state.mouseAngle) * launchRadius;
+
+            // Create Orb
+            let newOrb = new Orb(startX, startY, state.nextOrbLevel);
+            
+            // Calculate inward velocity
+            const speed = 12; // Launch speed
+            newOrb.vx = -Math.cos(state.mouseAngle) * speed;
+            newOrb.vy = -Math.sin(state.mouseAngle) * speed;
+            
+            state.orbs.push(newOrb);
+            
+            sfx.playShoot();
+
+            // Set up next shot
+            state.nextOrbLevel = getNextLevel();
+            updateHUD();
+            
+            // Cooldown
+            state.canShoot = false;
+            setTimeout(() => { state.canShoot = true; }, 500); // 0.5s cooldown
+        }
+
+        function triggerShuffle(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent aiming from triggering
+            }
+            if (state.shuffles <= 0 || !state.isPlaying) return;
+            
+            state.shuffles--;
+            updateHUD();
+            
+            // Mix 'em up! Give random strong velocities to all orbs
+            for (let o of state.orbs) {
+                // Ignore newly spawning or merged orbs for a split second to prevent glitches
+                if(o.isMerged) continue;
+                
+                // Blast them randomly
+                o.vx += (Math.random() - 0.5) * 45;
+                o.vy += (Math.random() - 0.5) * 45;
+            }
+            
+            // Big visual and audio feedback
+            state.shakeAmount = 30; 
+            sfx.playShuffle();
+            
+            // Exciting particle burst
+            for(let i=0; i<40; i++) {
+                createParticles(
+                    state.centerX + (Math.random() - 0.5) * state.arenaRadius,
+                    state.centerY + (Math.random() - 0.5) * state.arenaRadius,
+                    '#ffffff',
+                    2
+                );
+            }
+        }
+
+        // Handle Mouse / Touch movement to update aiming angle
+        function updateAim(e) {
+            if (!state.isPlaying) return;
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+            
+            // Adjust for DPI and canvas bounds implicitly via window coords
+            const dx = clientX - window.innerWidth / 2;
+            const dy = clientY - window.innerHeight / 2;
+            state.mouseAngle = Math.atan2(dy, dx);
+        }
+
+        // Drag to Aim Events
+        window.addEventListener('mousemove', (e) => {
+            if (state.isAiming) updateAim(e);
+        });
+        window.addEventListener('touchmove', (e) => {
+            if (state.isAiming) updateAim(e);
+        }, { passive: false });
+
+        // Touch/Click to start Aiming
+        window.addEventListener('mousedown', (e) => {
+            // Ignore UI clicks
+            if (!state.isPlaying || !state.canShoot || e.target.closest('#bottomControls') || e.target.closest('.modal-animate')) return;
+            state.isAiming = true;
+            updateAim(e);
+        });
+        window.addEventListener('touchstart', (e) => {
+            if (!state.isPlaying || !state.canShoot || e.target.closest('#bottomControls') || e.target.closest('.modal-animate')) return;
+            state.isAiming = true;
+            updateAim(e);
+        }, { passive: false });
+
+        // Release to Shoot
+        window.addEventListener('mouseup', () => {
+            if (state.isAiming) {
+                shootOrb();
+                state.isAiming = false;
+            }
+        });
+        window.addEventListener('touchend', (e) => {
+            if (state.isAiming) {
+                shootOrb();
+                state.isAiming = false;
+            }
+        });
+
+        // Shuffle Button Bindings
+        document.getElementById('shuffleBtn').addEventListener('mousedown', triggerShuffle);
+        document.getElementById('shuffleBtn').addEventListener('touchstart', triggerShuffle, { passive: false });
+
+
+        function createParticles(x, y, color, count) {
+            for(let i=0; i<count; i++) {
+                state.particles.push(new Particle(x, y, color));
+            }
+        }
+
+        // Check for Game Over condition
+        function checkGameOver() {
+            // Game over if any orb is resting at the very edge of the arena for too long.
+            // We define "danger zone" as outer 10% of radius.
+            let inDanger = false;
+            const dangerLimit = state.arenaRadius * 0.90;
+
+            for(let o of state.orbs) {
+                let dx = o.x - state.centerX;
+                let dy = o.y - state.centerY;
+                let dist = Math.sqrt(dx*dx + dy*dy);
+                // Check if its edge is pushing the boundary and it's barely moving
+                if (dist + o.radius > state.arenaRadius - 5 && (Math.abs(o.vx) < 1 && Math.abs(o.vy) < 1)) {
+                    inDanger = true;
+                    break;
+                }
+            }
+
+            if (inDanger) {
+                state.dangerTimer++;
+                dangerOverlay.classList.remove('hidden');
+                
+                if (state.dangerTimer > state.dangerThreshold) {
+                    endGame();
+                }
+            } else {
+                state.dangerTimer = Math.max(0, state.dangerTimer - 2); // Recover slowly
+                if(state.dangerTimer === 0) dangerOverlay.classList.add('hidden');
+            }
+        }
+
+        // --- STREAMING_CHUNK:Main Render Loop... ---
+        function render() {
+            // Clear background
+            ctx.fillStyle = 'var(--switch-bg)';
+            ctx.fillRect(0, 0, canvas.width / dpr, canvas.height / dpr);
+
+            if (!state.isPlaying && state.orbs.length === 0) {
+                 requestAnimationFrame(render);
+                 return;
+            }
+
+            // Handle Screen Shake
+            ctx.save();
+            if (state.shakeAmount > 0) {
+                const dx = (Math.random() - 0.5) * state.shakeAmount;
+                const dy = (Math.random() - 0.5) * state.shakeAmount;
+                ctx.translate(dx, dy);
+                state.shakeAmount *= 0.9; // Decay
+                if(state.shakeAmount < 0.5) state.shakeAmount = 0;
+            }
+
+            // Draw Arena Boundary
+            ctx.beginPath();
+            ctx.arc(state.centerX, state.centerY, state.arenaRadius, 0, Math.PI * 2);
+            
+            // Arena Gradient Fill
+            let arenaGrad = ctx.createRadialGradient(
+                state.centerX, state.centerY, state.arenaRadius * 0.5,
+                state.centerX, state.centerY, state.arenaRadius
+            );
+            arenaGrad.addColorStop(0, '#333333');
+            arenaGrad.addColorStop(1, '#222222');
+            ctx.fillStyle = arenaGrad;
+            ctx.fill();
+
+            // Arena Border
+            ctx.lineWidth = 4;
+            // Pulse border color based on danger
+            if (state.dangerTimer > 0) {
+                let dangerIntensity = state.dangerTimer / state.dangerThreshold;
+                ctx.strokeStyle = `rgba(255, 0, 60, ${0.2 + dangerIntensity * 0.8})`;
+                ctx.shadowBlur = 20 * dangerIntensity;
+                ctx.shadowColor = 'var(--neon-red)';
+            } else {
+                ctx.strokeStyle = '#444';
+                ctx.shadowBlur = 0;
+            }
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Reset
+
+            // Update & Draw Orbs
+            for (let o of state.orbs) {
+                o.update();
+                o.draw(ctx);
+            }
+
+            // Physics & State Checks
+            if (state.isPlaying) {
+                resolveCollisions();
+                checkGameOver();
+            }
+
+            // Draw Particles
+            for(let i=state.particles.length-1; i>=0; i--) {
+                let p = state.particles[i];
+                p.update();
+                p.draw(ctx);
+                if(p.life <= 0) state.particles.splice(i, 1);
+            }
+
+            // Draw Launcher (Turret/Aim line)
+            if (state.isPlaying && state.canShoot && state.isAiming) {
+                const rimX = state.centerX + Math.cos(state.mouseAngle) * state.arenaRadius;
+                const rimY = state.centerY + Math.sin(state.mouseAngle) * state.arenaRadius;
+                
+                // Draw aiming trajectory line
+                ctx.beginPath();
+                ctx.moveTo(rimX, rimY);
+                // Line points towards center and STOPS exactly at the center
+                ctx.lineTo(state.centerX, state.centerY); 
+                
+                // Animated dash effect (smoothed using performance.now())
+                const dashSpeed = 0.03; // Smooth speed
+                const dashOffset = (performance.now() * dashSpeed) % 20;
+                ctx.setLineDash([6, 14]); // 6px dash, 14px gap
+                ctx.lineDashOffset = -dashOffset; // Move dashes inward
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.stroke();
+                ctx.setLineDash([]); // reset
+                ctx.lineDashOffset = 0;
+                
+                // Draw next orb preview on the rim
+                const previewOrb = ORB_TYPES[state.nextOrbLevel];
+                ctx.beginPath();
+                ctx.arc(rimX, rimY, previewOrb.radiusBase * (state.arenaRadius / 350) * 0.8, 0, Math.PI*2);
+                ctx.fillStyle = previewOrb.color;
+                ctx.globalAlpha = 0.9;
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+                
+                // Glow ring around preview to highlight aiming
+                ctx.beginPath();
+                ctx.arc(rimX, rimY, previewOrb.radiusBase * (state.arenaRadius / 350) + 6, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            ctx.restore(); // Restore from screen shake
+            requestAnimationFrame(render);
+        }
+
+        // --- STREAMING_CHUNK:Game Lifecycle Management... ---
+
+        function startGame() {
+            sfx.init();
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('bottomControls').classList.remove('hidden');
+            
+            state.orbs = [];
+            state.particles = [];
+            state.score = 0;
+            state.shuffles = 3;
+            state.shuffleMilestone = 10000;
+            state.dangerTimer = 0;
+            state.nextOrbLevel = getNextLevel();
+            state.isPlaying = true;
+            state.canShoot = true;
+            state.isAiming = false;
+            dangerOverlay.classList.add('hidden');
+            
+            updateHUD();
+            
+            // Spawn initial core orb in middle
+            state.orbs.push(new Orb(state.centerX, state.centerY, 0, true));
+        }
+
+        function endGame() {
+            state.isPlaying = false;
+            state.isAiming = false;
+            sfx.playGameOver();
+            
+            // Save Highscore
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('orbitalHighScore', state.highScore);
+            }
+
+            document.getElementById('finalScore').innerText = state.score;
+            document.getElementById('highScore').innerText = state.highScore;
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('bottomControls').classList.add('hidden');
+            dangerOverlay.classList.add('hidden');
+        }
+
+        // Event Listeners for UI
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        // Start render loop immediately to draw background
+        requestAnimationFrame(render);
+
+    </script>
+</body>
+</html>
