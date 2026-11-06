@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SOLITAIRE - クロンダイク</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --card-aspect: 1.42;
+            --card-radius: clamp(5px, 1.2vw, 10px);
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: radial-gradient(circle at 50% 35%, #166534 0%, #064e3b 65%, #022c22 100%);
+            color: #ffffff;
+            touch-action: none;
+        }
+
+        /* テーマカラー4色（クラシックグリーン、ディープフォレスト、オーシャンブルー、ロイヤルパープル） */
+        body.theme-emerald {
+            background: radial-gradient(circle at 50% 35%, #166534 0%, #064e3b 65%, #022c22 100%);
+        }
+        body.theme-forest {
+            background: radial-gradient(circle at 50% 35%, #064e3b 0%, #022c22 60%, #011510 100%);
+        }
+        body.theme-ocean {
+            background: radial-gradient(circle at 50% 35%, #1e40af 0%, #1e3a8a 60%, #0f172a 100%);
+        }
+        body.theme-royal {
+            background: radial-gradient(circle at 50% 35%, #581c87 0%, #3b0764 60%, #1e1b4b 100%);
+        }
+
+        /* フェルトの質感オーバーレイ */
+        .felt-texture::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.04;
+            background-image: radial-gradient(#ffffff 1px, transparent 1px);
+            background-size: 16px 16px;
+            z-index: 0;
+        }
+
+        /* カードスロット（空枠）の共通デザイン */
+        .slot-base {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1 / var(--card-aspect);
+            border-radius: var(--card-radius);
+            border: 1.5px solid rgba(255, 255, 255, 0.14);
+            background: rgba(0, 0, 0, 0.18);
+            box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .slot-base.highlight-drop {
+            border-color: #fde047;
+            background: rgba(253, 224, 71, 0.16);
+            box-shadow: 0 0 16px rgba(253, 224, 71, 0.35);
+        }
+
+        /* トランプカード本体 */
+        .playing-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            aspect-ratio: 1 / var(--card-aspect);
+            border-radius: var(--card-radius);
+            background: #ffffff;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            cursor: grab;
+            transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), left 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.18s ease;
+            will-change: transform, top, left;
+            overflow: hidden;
+        }
+
+        .playing-card:active {
+            cursor: grabbing;
+        }
+
+        /* 裏向きカードのデザイン（シンプルなチェック柄のみ） */
+        .playing-card.face-down {
+            background: #ffffff;
+            padding: clamp(2px, 0.5vw, 4px);
+            cursor: default;
+        }
+
+        .card-back-pattern {
+            width: 100%;
+            height: 100%;
+            border-radius: calc(var(--card-radius) - 2px);
+            background-color: #1d4ed8;
+            background-image: 
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.14) 0px, rgba(255,255,255,0.14) 2px, transparent 2px, transparent 6px),
+                repeating-linear-gradient(-45deg, rgba(255,255,255,0.14) 0px, rgba(255,255,255,0.14) 2px, transparent 2px, transparent 6px);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+        }
+
+        /* カードの色 */
+        .card-red {
+            color: #dc2626;
+        }
+        .card-black {
+            color: #0f172a;
+        }
+
+        /* ヒント発光エフェクト */
+        @keyframes pulse-hint {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.85), 0 0 20px 6px rgba(250, 204, 21, 0.75);
+                transform: translateY(-4px) scale(1.03);
+            }
+            50% {
+                box-shadow: 0 0 0 8px rgba(250, 204, 21, 0), 0 0 26px 10px rgba(250, 204, 21, 0.9);
+                transform: translateY(-7px) scale(1.05);
+            }
+        }
+
+        .hint-glow {
+            animation: pulse-hint 1.1s infinite ease-in-out !important;
+            z-index: 999 !important;
+            border: 2px solid #eab308 !important;
+        }
+
+        /* ドラッグ中・飛行アニメーション中レイヤー */
+        #drag-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* グラスモーフィズムボタン */
+        .glass-btn {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            transition: all 0.15s ease;
+        }
+        .glass-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        .glass-btn:active:not(:disabled) {
+            transform: translateY(1px) scale(0.97);
+        }
+        .glass-btn:disabled {
+            opacity: 0.35;
+            cursor: not-allowed;
+        }
+
+        /* オープニング画面のカード浮遊アニメーション */
+        @keyframes float-slow {
+            0%, 100% { transform: translateY(0px) rotate(-8deg); }
+            50% { transform: translateY(-8px) rotate(-5deg); }
+        }
+        @keyframes float-slow-reverse {
+            0%, 100% { transform: translateY(0px) rotate(8deg); }
+            50% { transform: translateY(-8px) rotate(11deg); }
+        }
+        .float-card-1 { animation: float-slow 4s ease-in-out infinite; }
+        .float-card-2 { animation: float-slow-reverse 4.5s ease-in-out infinite; }
+
+        /* スマホ縦画面からPC横長画面まで見切れないように盤面幅を自動調整 */
+        #board-grid {
+            width: 100%;
+            max-width: min(100%, 88vh);
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body class="theme-emerald felt-texture flex flex-col justify-between select-none">
+
+    <!-- オープニング画面（シンプルなテーマカラー背景で表示） -->
+    <div id="opening-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 felt-texture" style="background: inherit;">
+        <div class="absolute inset-0 bg-black/20 pointer-events-none"></div>
+
+        <div class="relative z-10 max-w-xs sm:max-w-sm w-full flex flex-col items-center text-center">
+            <!-- 象徴的なミニマルカードアイコン -->
+            <div class="relative w-28 h-28 mb-6 flex items-center justify-center">
+                <div class="float-card-1 absolute -left-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-2 text-slate-900">
+                    <div class="text-left font-black text-xs leading-none">A<br>♠</div>
+                    <div class="text-2xl self-center">♠</div>
+                    <div class="w-full h-1"></div>
+                </div>
+                <div class="float-card-2 absolute -right-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-2 text-red-600">
+                    <div class="text-left font-black text-xs leading-none">K<br>♥</div>
+                    <div class="text-2xl self-center">♥</div>
+                    <div class="w-full h-1"></div>
+                </div>
+            </div>
+
+            <h1 class="text-4xl sm:text-5xl font-black tracking-widest text-white drop-shadow-md mb-1">SOLITAIRE</h1>
+            <p class="text-[11px] tracking-[0.28em] uppercase text-white/60 font-semibold mb-10">Klondike Patience</p>
+
+            <!-- モード選択ボタン -->
+            <div class="w-full space-y-3.5">
+                <button id="open-start-1" class="w-full py-4 px-6 rounded-2xl bg-white text-slate-900 hover:bg-emerald-50 font-black text-base shadow-xl transition transform active:scale-95 flex items-center justify-between group">
+                    <span class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-black">1</span>
+                        <span>1枚めくりで始める</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-right text-slate-400 group-hover:translate-x-1 transition"></i>
+                </button>
+
+                <button id="open-start-3" class="w-full py-4 px-6 rounded-2xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-black text-base shadow-xl backdrop-blur-md transition transform active:scale-95 flex items-center justify-between group">
+                    <span class="flex items-center gap-3">
+                        <span class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-xs font-black">3</span>
+                        <span>3枚めくりで始める</span>
+                    </span>
+                    <i class="fa-solid fa-chevron-right text-white/60 group-hover:translate-x-1 transition"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- トップバー：スコア・タイム・1手戻す・ヒント・メニュー -->
+    <header id="game-header" class="invisible relative z-20 w-full max-w-5xl mx-auto px-3 pt-2 pb-1 flex items-center justify-between">
+        <!-- ステータス表示 -->
+        <div class="flex items-center gap-4 sm:gap-6 bg-black/25 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10">
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] uppercase tracking-wider text-white/55 font-bold">SCORE</span>
+                <span id="score-display" class="text-xs sm:text-sm font-extrabold tabular-nums">0</span>
+            </div>
+            <div class="w-[1px] h-3 bg-white/15"></div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] uppercase tracking-wider text-white/55 font-bold">MOVES</span>
+                <span id="moves-display" class="text-xs sm:text-sm font-extrabold tabular-nums">0</span>
+            </div>
+            <div class="w-[1px] h-3 bg-white/15"></div>
+            <div class="flex items-center gap-1.5">
+                <span class="text-[10px] uppercase tracking-wider text-white/55 font-bold">TIME</span>
+                <span id="time-display" class="text-xs sm:text-sm font-extrabold tabular-nums">00:00</span>
+            </div>
+        </div>
+
+        <!-- アクションボタン（戻す・ヒント・メニュー） -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <button id="btn-undo" disabled class="glass-btn w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white shadow-sm" title="1手戻す">
+                <i class="fa-solid fa-rotate-left text-xs sm:text-sm"></i>
+            </button>
+            <button id="btn-quick-hint" class="glass-btn w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-amber-300 shadow-sm" title="ヒント">
+                <i class="fa-solid fa-lightbulb text-xs sm:text-sm"></i>
+            </button>
+            <button id="btn-menu" class="glass-btn px-3.5 h-9 sm:h-10 rounded-full flex items-center gap-1.5 text-white font-bold text-xs shadow-sm">
+                <i class="fa-solid fa-bars"></i>
+                <span class="hidden sm:inline">メニュー</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- メインゲームボードエリア -->
+    <main id="board-wrapper" class="invisible relative flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pt-1 sm:pt-2 pb-2 flex flex-col justify-start overflow-hidden z-10">
+        
+        <!-- 通知トースト（手詰まり通知など） -->
+        <div id="toast-message" class="pointer-events-none fixed top-14 left-1/2 -translate-x-1/2 z-50 opacity-0 -translate-y-2 transition-all duration-300">
+            <div class="bg-slate-950/90 text-white border border-white/15 px-5 py-2.5 rounded-full shadow-2xl backdrop-blur-md text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap">
+                <i class="fa-solid fa-circle-info text-amber-400"></i>
+                <span id="toast-text">もう動かせるカードがありません</span>
+            </div>
+        </div>
+
+        <!-- オートコンプリートバナー（全カード表向き時に出現） -->
+        <div id="autocomplete-banner" class="hidden absolute bottom-5 left-1/2 -translate-x-1/2 z-40">
+            <button id="btn-autocomplete" class="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500 text-slate-950 font-black px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 text-xs sm:text-sm hover:scale-105 active:scale-95 transition transform border-2 border-white">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>オートコンプリート</span>
+            </button>
+        </div>
+
+        <!-- 7列グリッド（上段：山札・捨て札・組札4つ / 下段：場札7列） -->
+        <div id="board-grid" class="grid grid-cols-7 gap-1.5 sm:gap-3 md:gap-4 w-full">
+            
+            <!-- 上段左1：山札 (Stock) -->
+            <div class="col-span-1">
+                <div id="stock-slot" class="slot-base cursor-pointer group" title="山札をめくる">
+                    <div class="flex flex-col items-center justify-center text-white/35 group-hover:text-white/70 transition pointer-events-none">
+                        <i class="fa-solid fa-rotate-right text-base sm:text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 上段左2：捨て札 (Waste) -->
+            <div class="col-span-1">
+                <div id="waste-slot" class="slot-base border-transparent bg-transparent shadow-none"></div>
+            </div>
+
+            <!-- 上段左3：スペーサー -->
+            <div class="col-span-1 pointer-events-none"></div>
+
+            <!-- 上段右4つ：組札 (Foundations 0-3: ♠, ♥, ♣, ♦ 専用枠) -->
+            <div class="col-span-1">
+                <div id="foundation-0" data-foundation="0" data-suit="spades" class="slot-base foundation-slot">
+                    <span class="text-white/25 text-lg sm:text-2xl pointer-events-none">♠</span>
+                </div>
+            </div>
+            <div class="col-span-1">
+                <div id="foundation-1" data-foundation="1" data-suit="hearts" class="slot-base foundation-slot">
+                    <span class="text-white/25 text-lg sm:text-2xl pointer-events-none">♥</span>
+                </div>
+            </div>
+            <div class="col-span-1">
+                <div id="foundation-2" data-foundation="2" data-suit="clubs" class="slot-base foundation-slot">
+                    <span class="text-white/25 text-lg sm:text-2xl pointer-events-none">♣</span>
+                </div>
+            </div>
+            <div class="col-span-1">
+                <div id="foundation-3" data-foundation="3" data-suit="diamonds" class="slot-base foundation-slot">
+                    <span class="text-white/25 text-lg sm:text-2xl pointer-events-none">♦</span>
+                </div>
+            </div>
+
+            <!-- 下段：場札7列 (Tableau 0-6: 空き枠は文字なしのシンプルなグレースロット) -->
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-0" data-tableau="0" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-1" data-tableau="1" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-2" data-tableau="2" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-3" data-tableau="3" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-4" data-tableau="4" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-5" data-tableau="5" class="slot-base tableau-slot"></div>
+            </div>
+            <div class="col-span-1 mt-1 sm:mt-2">
+                <div id="tableau-6" data-tableau="6" class="slot-base tableau-slot"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- ドラッグ＆飛行アニメーション追従レイヤー -->
+    <div id="drag-layer"></div>
+
+    <!-- クリア祝賀アニメーション用キャンバス -->
+    <canvas id="celebration-canvas" class="fixed inset-0 pointer-events-none z-40 hidden"></canvas>
+
+    <!-- 統合メニューポップアップ -->
+    <div id="modal-menu" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900/95 border border-white/15 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-white">
+            <!-- ヘッダー＆現在のモード表示 -->
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2.5">
+                    <span class="text-base font-black tracking-wide">MENU</span>
+                    <span id="menu-mode-badge" class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        1枚めくり
+                    </span>
+                </div>
+                <button id="close-menu-modal" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- クイックアクション（ヒント・最初からやり直す） -->
+            <div class="grid grid-cols-2 gap-2.5 mb-4">
+                <button id="menu-btn-hint" class="py-3.5 px-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 flex flex-col items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-lightbulb text-amber-300 text-base"></i>
+                    <span class="text-xs font-bold">ヒントを見る</span>
+                </button>
+                <button id="menu-btn-restart" class="py-3.5 px-3 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 flex flex-col items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-arrows-rotate text-sky-300 text-base"></i>
+                    <span class="text-xs font-bold">最初からやり直す</span>
+                </button>
+            </div>
+
+            <!-- 環境設定（サウンド＆テーマカラー4色） -->
+            <div class="space-y-3 bg-black/30 p-3.5 rounded-2xl border border-white/10 mb-4">
+                <!-- サウンド -->
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        <i id="sound-icon" class="fa-solid fa-volume-high text-emerald-400 w-4 text-center"></i>
+                        <span>サウンド効果音</span>
+                    </span>
+                    <button id="btn-sound" class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-slate-950 transition">
+                        ON
+                    </button>
+                </div>
+
+                <div class="h-[1px] bg-white/10"></div>
+
+                <!-- テーマカラー（クラシックグリーン、深緑、ブルー、パープル） -->
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-200 flex items-center gap-2">
+                        <i class="fa-solid fa-palette text-sky-400 w-4 text-center"></i>
+                        <span>テーマ</span>
+                    </span>
+                    <div class="flex items-center gap-2.5">
+                        <button data-theme-idx="0" class="theme-swatch w-6 h-6 rounded-full bg-[#166534] ring-2 ring-white transition transform hover:scale-110" title="クラシックグリーン"></button>
+                        <button data-theme-idx="1" class="theme-swatch w-6 h-6 rounded-full bg-[#022c22] ring-1 ring-white/30 transition transform hover:scale-110" title="ディープフォレスト（深緑）"></button>
+                        <button data-theme-idx="2" class="theme-swatch w-6 h-6 rounded-full bg-[#1e40af] ring-1 ring-white/30 transition transform hover:scale-110" title="オーシャンブルー"></button>
+                        <button data-theme-idx="3" class="theme-swatch w-6 h-6 rounded-full bg-[#581c87] ring-1 ring-white/30 transition transform hover:scale-110" title="ロイヤルパープル"></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ルール説明＆タイトルへ戻る -->
+            <div class="flex items-center justify-between gap-2.5">
+                <button id="btn-help" class="flex-1 py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-regular fa-circle-question"></i>
+                    <span>ルール</span>
+                </button>
+                <button id="btn-to-title" class="flex-1 py-3 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition">
+                    <i class="fa-solid fa-house"></i>
+                    <span>タイトルへ</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 確認ポップアップモーダル（最初からやり直す・タイトルへ戻る時） -->
+    <div id="modal-confirm" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-center">
+            <div class="w-11 h-11 rounded-full bg-amber-400/15 text-amber-300 flex items-center justify-center mx-auto mb-3 text-lg">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 id="confirm-title" class="text-sm font-black text-white mb-2">確認</h3>
+            <p id="confirm-desc" class="text-xs text-slate-300 leading-relaxed mb-5">現在のゲームの進行状況は失われます。よろしいですか？</p>
+            <div class="grid grid-cols-2 gap-2.5">
+                <button id="btn-confirm-cancel" class="py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-slate-200 font-bold text-xs transition">
+                    キャンセル
+                </button>
+                <button id="btn-confirm-ok" class="py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold text-xs transition">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ルール説明モーダル -->
+    <div id="modal-help" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900 border border-white/15 rounded-3xl max-w-sm w-full p-6 shadow-2xl text-white">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-base font-black tracking-wide">HOW TO PLAY</h2>
+                <button id="close-help-modal" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
+                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+                    <p class="font-bold text-white mb-1">1. 組札（右上4枠：♠ ♥ ♣ ♦）</p>
+                    <p>それぞれのマークの枠に <strong>A → 2 → 3 ... → K</strong> の順番で全てのカードを重ねるとクリアです。</p>
+                </div>
+                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+                    <p class="font-bold text-white mb-1">2. 場札（下段7列）</p>
+                    <p><strong>赤と黒を交互に</strong>、数字が <strong>大 → 小（K → Q → J...）</strong> になるように並べます。空いた列には <strong>K</strong> を置けます。</p>
+                </div>
+                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+                    <p class="font-bold text-white mb-1">3. 快適操作</p>
+                    <p>カードをタップするだけで最適な場所へ滑らかに移動します。ドラッグ＆ドロップにも対応しています。</p>
+                </div>
+            </div>
+            <button id="ok-help-modal" class="mt-5 w-full bg-white text-slate-950 font-black py-3 rounded-2xl transition text-xs hover:bg-slate-100">
+                閉じる
+            </button>
+        </div>
+    </div>
+
+    <!-- ゲームクリアモーダル -->
+    <div id="modal-win" class="fixed inset-0 bg-black/65 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-slate-900/95 border border-amber-400/40 rounded-3xl max-w-xs w-full p-6 shadow-2xl text-center">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-gradient-to-br from-amber-300 to-amber-500 flex items-center justify-center shadow-lg shadow-amber-500/30 text-slate-950 text-2xl">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white tracking-wider mb-1">CLEAR!</h2>
+            <p class="text-slate-400 text-xs mb-5">すべてのカードを揃えました</p>
+
+            <div class="grid grid-cols-3 gap-2 bg-black/40 p-3 rounded-2xl border border-white/10 mb-5">
+                <div>
+                    <div class="text-[10px] text-slate-400 font-semibold">SCORE</div>
+                    <div id="win-score" class="text-sm font-black text-amber-300">0</div>
+                </div>
+                <div class="border-x border-white/10">
+                    <div class="text-[10px] text-slate-400 font-semibold">MOVES</div>
+                    <div id="win-moves" class="text-sm font-black text-white">0</div>
+                </div>
+                <div>
+                    <div class="text-[10px] text-slate-400 font-semibold">TIME</div>
+                    <div id="win-time" class="text-sm font-black text-emerald-300">00:00</div>
+                </div>
+            </div>
+
+            <button id="btn-play-again" class="w-full bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-slate-950 font-black py-3.5 rounded-2xl shadow-lg transition transform active:scale-95 text-sm">
+                もう一度遊ぶ
+            </button>
+        </div>
+    </div>
+
+    <!-- ゲームロジック＆サウンド・アニメーションスクリプト -->
+    <script>
+        /**
+         * Web Audio API による効果音シンセサイザー（外部音声ファイル不要）
+         */
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playTone(freq, type = 'sine', duration = 0.08, volume = 0.12, slideFreq = null) {
+                if (!this.enabled) return;
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    if (slideFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+                    }
+
+                    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    // オーディオ制限時は無視
+                }
+            }
+
+            cardFlip() {
+                this.playTone(320, 'triangle', 0.06, 0.1, 520);
+            }
+
+            cardPlace() {
+                this.playTone(220, 'sine', 0.07, 0.14, 150);
+            }
+
+            foundationPlace(rank = 1) {
+                const baseFreq = 440 + (rank * 35);
+                this.playTone(baseFreq, 'triangle', 0.14, 0.16, baseFreq * 1.25);
+            }
+
+            error() {
+                this.playTone(160, 'sawtooth', 0.12, 0.08, 120);
+            }
+
+            winFanfare() {
+                if (!this.enabled) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50, 783.99, 1046.50];
+                const delays = [0, 120, 240, 360, 520, 660];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.24, 0.18), delays[idx]);
+                });
+            }
+        }
+
+        const sound = new SoundEffects();
+
+        /**
+         * ソリティア（クロンダイク）メインクラス
+         */
+        class SolitaireGame {
+            constructor() {
+                this.suits = [
+                    { id: 'spades', symbol: '♠', color: 'black' },
+                    { id: 'hearts', symbol: '♥', color: 'red' },
+                    { id: 'clubs', symbol: '♣', color: 'black' },
+                    { id: 'diamonds', symbol: '♦', color: 'red' }
+                ];
+                // 組札の各枠に対応するマーク（左から ♠, ♥, ♣, ♦）
+                this.foundationSuits = ['spades', 'hearts', 'clubs', 'diamonds'];
+                this.rankLabels = {
+                    1: 'A', 2: '2', 3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
+                    8: '8', 9: '9', 10: '10', 11: 'J', 12: 'Q', 13: 'K'
+                };
+
+                this.drawCount = 1; // 1枚めくり or 3枚めくり
+                this.stock = [];
+                this.waste = [];
+                this.foundations = [[], [], [], []];
+                this.tableau = [[], [], [], [], [], [], []];
+                this.initialDeckSnapshot = [];
+
+                this.score = 0;
+                this.moves = 0;
+                this.seconds = 0;
+                this.timerInterval = null;
+                this.timerRunning = false;
+                this.history = [];
+                this.isAutoCompleting = false;
+                this.isGameWon = false;
+                this.isAnimatingMove = false;
+                this.toastTimeout = null;
+                this.pendingConfirmAction = null;
+
+                this.themes = ['theme-emerald', 'theme-forest', 'theme-ocean', 'theme-royal'];
+                this.currentThemeIndex = 0;
+
+                this.dragState = null;
+                this.celebrationAnimId = null;
+
+                this.bindEvents();
+            }
+
+            /**
+             * トースト通知を表示
+             */
+            showToast(message) {
+                const toast = document.getElementById('toast-message');
+                const text = document.getElementById('toast-text');
+                if (!toast || !text) return;
+
+                text.textContent = message;
+                toast.classList.remove('opacity-0', '-translate-y-2');
+                toast.classList.add('opacity-100', 'translate-y-0');
+
+                if (this.toastTimeout) clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    toast.classList.remove('opacity-100', 'translate-y-0');
+                    toast.classList.add('opacity-0', '-translate-y-2');
+                }, 2200);
+            }
+
+            /**
+             * 確認ダイアログを表示
+             */
+            askConfirm(title, desc, onConfirm) {
+                document.getElementById('confirm-title').textContent = title;
+                document.getElementById('confirm-desc').textContent = desc;
+                this.pendingConfirmAction = onConfirm;
+                document.getElementById('modal-confirm').classList.remove('hidden');
+            }
+
+            /**
+             * オープニング画面の表示・非表示切替（背後のカードを隠してシンプルに表示）
+             */
+            showOpeningScreen() {
+                this.stopTimer();
+                this.stopCelebration();
+                document.getElementById('board-wrapper').classList.add('invisible');
+                document.getElementById('game-header').classList.add('invisible');
+                document.getElementById('opening-screen').classList.remove('hidden');
+            }
+
+            hideOpeningScreen() {
+                document.getElementById('opening-screen').classList.add('hidden');
+                document.getElementById('board-wrapper').classList.remove('invisible');
+                document.getElementById('game-header').classList.remove('invisible');
+            }
+
+            /**
+             * イベントリスナーの登録
+             */
+            bindEvents() {
+                window.addEventListener('resize', () => {
+                    if (!this.isAnimatingMove && this.initialDeckSnapshot.length > 0) {
+                        this.renderBoard();
+                    }
+                    this.resizeCelebrationCanvas();
+                });
+
+                // オープニング画面のモード選択ボタン
+                document.getElementById('open-start-1').addEventListener('click', () => {
+                    this.hideOpeningScreen();
+                    this.startNewGame(1, true);
+                });
+                document.getElementById('open-start-3').addEventListener('click', () => {
+                    this.hideOpeningScreen();
+                    this.startNewGame(3, true);
+                });
+
+                // 山札クリック
+                document.getElementById('stock-slot').addEventListener('click', (e) => {
+                    if (e.target.closest('.playing-card')) return;
+                    this.drawFromStock();
+                });
+
+                // ヘッダーボタン
+                document.getElementById('btn-undo').addEventListener('click', () => this.undo());
+                document.getElementById('btn-quick-hint').addEventListener('click', () => this.showHint());
+                document.getElementById('btn-menu').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.remove('hidden');
+                });
+                document.getElementById('btn-autocomplete').addEventListener('click', () => this.runAutoComplete());
+
+                // 統合メニュー内の操作
+                document.getElementById('close-menu-modal').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.add('hidden');
+                });
+                document.getElementById('modal-menu').addEventListener('click', (e) => {
+                    if (e.target.id === 'modal-menu') {
+                        document.getElementById('modal-menu').classList.add('hidden');
+                    }
+                });
+
+                document.getElementById('menu-btn-hint').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.add('hidden');
+                    this.showHint();
+                });
+
+                // 最初からやり直す（確認ポップアップ付き）
+                document.getElementById('menu-btn-restart').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.add('hidden');
+                    if (this.moves > 0 && !this.isGameWon) {
+                        this.askConfirm(
+                            '最初からやり直す',
+                            '現在のゲームの進行状況は失われますが、最初からやり直しますか？',
+                            () => this.restartCurrentDeal()
+                        );
+                    } else {
+                        this.restartCurrentDeal();
+                    }
+                });
+
+                // タイトルへ戻る（確認ポップアップ付き）
+                document.getElementById('btn-to-title').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.add('hidden');
+                    if (this.moves > 0 && !this.isGameWon) {
+                        this.askConfirm(
+                            'タイトル画面へ戻る',
+                            '現在のゲームの進行状況は失われますが、タイトル画面へ戻りますか？',
+                            () => this.showOpeningScreen()
+                        );
+                    } else {
+                        this.showOpeningScreen();
+                    }
+                });
+
+                // 確認モーダルのボタン
+                document.getElementById('btn-confirm-cancel').addEventListener('click', () => {
+                    document.getElementById('modal-confirm').classList.add('hidden');
+                    this.pendingConfirmAction = null;
+                });
+                document.getElementById('btn-confirm-ok').addEventListener('click', () => {
+                    document.getElementById('modal-confirm').classList.add('hidden');
+                    if (typeof this.pendingConfirmAction === 'function') {
+                        const fn = this.pendingConfirmAction;
+                        this.pendingConfirmAction = null;
+                        fn();
+                    }
+                });
+
+                // ヘルプモーダル
+                document.getElementById('btn-help').addEventListener('click', () => {
+                    document.getElementById('modal-menu').classList.add('hidden');
+                    document.getElementById('modal-help').classList.remove('hidden');
+                });
+                document.getElementById('close-help-modal').addEventListener('click', () => {
+                    document.getElementById('modal-help').classList.add('hidden');
+                });
+                document.getElementById('ok-help-modal').addEventListener('click', () => {
+                    document.getElementById('modal-help').classList.add('hidden');
+                });
+
+                // クリア画面の「もう一度遊ぶ」
+                document.getElementById('btn-play-again').addEventListener('click', () => {
+                    document.getElementById('modal-win').classList.add('hidden');
+                    this.stopCelebration();
+                    this.showOpeningScreen();
+                });
+
+                // サウンド切替
+                document.getElementById('btn-sound').addEventListener('click', () => {
+                    sound.enabled = !sound.enabled;
+                    const icon = document.getElementById('sound-icon');
+                    const btn = document.getElementById('btn-sound');
+                    if (sound.enabled) {
+                        icon.className = 'fa-solid fa-volume-high text-emerald-400 w-4 text-center';
+                        btn.textContent = 'ON';
+                        btn.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500 text-slate-950 transition';
+                        sound.cardFlip();
+                    } else {
+                        icon.className = 'fa-solid fa-volume-xmark text-rose-400 w-4 text-center';
+                        btn.textContent = 'OFF';
+                        btn.className = 'px-3 py-1 rounded-full text-xs font-extrabold bg-slate-700 text-slate-300 transition';
+                    }
+                });
+
+                // テーマカラー切替（スウォッチ選択）
+                document.querySelectorAll('.theme-swatch').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const idx = parseInt(btn.dataset.themeIdx, 10);
+                        this.setTheme(idx);
+                        sound.cardFlip();
+                    });
+                });
+
+                // ポインターイベント（ドラッグ＆ドロップとタップ自動移動の両立）
+                window.addEventListener('pointermove', (e) => this.onPointerMove(e));
+                window.addEventListener('pointerup', (e) => this.onPointerUp(e));
+                window.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+            }
+
+            /**
+             * テーマカラーの変更
+             */
+            setTheme(index) {
+                this.currentThemeIndex = index;
+                document.body.classList.remove(...this.themes);
+                document.body.classList.add(this.themes[this.currentThemeIndex]);
+
+                document.querySelectorAll('.theme-swatch').forEach((swatch, i) => {
+                    if (i === index) {
+                        swatch.classList.remove('ring-1', 'ring-white/30');
+                        swatch.classList.add('ring-2', 'ring-white');
+                    } else {
+                        swatch.classList.remove('ring-2', 'ring-white');
+                        swatch.classList.add('ring-1', 'ring-white/30');
+                    }
+                });
+            }
+
+            /**
+             * 新しいゲームの開始
+             */
+            startNewGame(drawMode = null, playDealSound = true) {
+                if (drawMode !== null) {
+                    this.drawCount = drawMode;
+                }
+
+                // メニュー内のモードバッジを更新
+                const badge = document.getElementById('menu-mode-badge');
+                if (badge) {
+                    badge.textContent = `${this.drawCount}枚めくり`;
+                }
+
+                this.stopCelebration();
+                document.getElementById('modal-win').classList.add('hidden');
+                document.getElementById('autocomplete-banner').classList.add('hidden');
+
+                // 52枚のデッキ生成＆シャッフル
+                const deck = [];
+                for (const suit of this.suits) {
+                    for (let rank = 1; rank <= 13; rank++) {
+                        deck.push({
+                            id: `${suit.id}-${rank}`,
+                            suit: suit.id,
+                            symbol: suit.symbol,
+                            color: suit.color,
+                            rank: rank,
+                            label: this.rankLabels[rank],
+                            faceUp: false
+                        });
+                    }
+                }
+
+                for (let i = deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [deck[i], deck[j]] = [deck[j], deck[i]];
+                }
+
+                this.initialDeckSnapshot = JSON.parse(JSON.stringify(deck));
+                this.dealFromSnapshot(playDealSound);
+            }
+
+            /**
+             * 同じ配牌で最初からやり直す
+             */
+            restartCurrentDeal() {
+                if (!this.initialDeckSnapshot || this.initialDeckSnapshot.length === 0) return;
+                this.stopCelebration();
+                document.getElementById('modal-win').classList.add('hidden');
+                document.getElementById('autocomplete-banner').classList.add('hidden');
+                this.dealFromSnapshot(true);
+            }
+
+            /**
+             * デッキスナップショットから盤面を構築
+             */
+            dealFromSnapshot(playSound = true) {
+                const deck = JSON.parse(JSON.stringify(this.initialDeckSnapshot));
+
+                this.stock = [];
+                this.waste = [];
+                this.foundations = [[], [], [], []];
+                this.tableau = [[], [], [], [], [], [], []];
+
+                // 場札7列へ配布 (1枚〜7枚)
+                for (let col = 0; col < 7; col++) {
+                    for (let row = 0; row <= col; row++) {
+                        const card = deck.pop();
+                        card.faceUp = (row === col);
+                        this.tableau[col].push(card);
+                    }
+                }
+
+                // 残りを山札へ
+                while (deck.length > 0) {
+                    const card = deck.pop();
+                    card.faceUp = false;
+                    this.stock.push(card);
+                }
+
+                this.score = 0;
+                this.moves = 0;
+                this.seconds = 0;
+                this.history = [];
+                this.isAutoCompleting = false;
+                this.isGameWon = false;
+                this.isAnimatingMove = false;
+
+                this.stopTimer();
+                this.updateStatsUI();
+                this.renderBoard();
+
+                if (playSound) {
+                    sound.cardFlip();
+                }
+            }
+
+            /**
+             * タイマー制御
+             */
+            startTimerIfNeeded() {
+                if (this.timerRunning || this.isGameWon) return;
+                this.timerRunning = true;
+                this.timerInterval = setInterval(() => {
+                    this.seconds++;
+                    this.updateStatsUI();
+                }, 1000);
+            }
+
+            stopTimer() {
+                this.timerRunning = false;
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            formatTime(sec) {
+                const m = Math.floor(sec / 60).toString().padStart(2, '0');
+                const s = (sec % 60).toString().padStart(2, '0');
+                return `${m}:${s}`;
+            }
+
+            /**
+             * 履歴保存とUndo（1手戻す）
+             */
+            saveHistory() {
+                const snapshot = {
+                    stock: JSON.parse(JSON.stringify(this.stock)),
+                    waste: JSON.parse(JSON.stringify(this.waste)),
+                    foundations: JSON.parse(JSON.stringify(this.foundations)),
+                    tableau: JSON.parse(JSON.stringify(this.tableau)),
+                    score: this.score,
+                    moves: this.moves
+                };
+                this.history.push(snapshot);
+                if (this.history.length > 100) {
+                    this.history.shift();
+                }
+                this.updateStatsUI();
+            }
+
+            undo() {
+                if (this.history.length === 0 || this.isAutoCompleting || this.isGameWon || this.isAnimatingMove) return;
+                const prev = this.history.pop();
+                this.stock = prev.stock;
+                this.waste = prev.waste;
+                this.foundations = prev.foundations;
+                this.tableau = prev.tableau;
+                this.score = Math.max(0, prev.score - 5);
+                this.moves = prev.moves + 1;
+
+                sound.cardFlip();
+                this.updateStatsUI();
+                this.renderBoard();
+            }
+
+            /**
+             * 山札（Stock）をめくる（滑らかなアニメーション付き）
+             */
+            drawFromStock() {
+                if (this.isAutoCompleting || this.isGameWon || this.isAnimatingMove) return;
+                this.startTimerIfNeeded();
+
+                if (this.stock.length === 0 && this.waste.length === 0) return;
+
+                this.saveHistory();
+
+                const stockSlot = document.getElementById('stock-slot');
+                const wasteSlot = document.getElementById('waste-slot');
+                const stockRect = stockSlot.getBoundingClientRect();
+                const wasteRect = wasteSlot.getBoundingClientRect();
+                const dragLayer = document.getElementById('drag-layer');
+
+                if (this.stock.length > 0) {
+                    this.isAnimatingMove = true;
+                    const count = Math.min(this.drawCount, this.stock.length);
+                    const drawnCards = [];
+                    for (let i = 0; i < count; i++) {
+                        const card = this.stock.pop();
+                        card.faceUp = true;
+                        this.waste.push(card);
+                        drawnCards.push(card);
+                    }
+                    sound.cardFlip();
+                    this.moves++;
+                    this.updateStatsUI();
+
+                    // 飛行アニメーションの準備
+                    dragLayer.innerHTML = '';
+                    dragLayer.style.transition = 'none';
+                    dragLayer.style.width = `${stockRect.width}px`;
+                    dragLayer.style.transform = `translate3d(${stockRect.left}px, ${stockRect.top}px, 0) scale(0.96)`;
+
+                    const cloneEl = this.createCardElement(drawnCards[drawnCards.length - 1], false);
+                    cloneEl.style.boxShadow = '0 12px 24px rgba(0, 0, 0, 0.4)';
+                    dragLayer.appendChild(cloneEl);
+
+                    this.renderBoard();
+
+                    // 移動先の最新カードをアニメーション完了まで隠す
+                    const latestId = drawnCards[drawnCards.length - 1].id;
+                    const destEl = document.querySelector(`[data-card-id="${latestId}"]`);
+                    const destRect = destEl ? destEl.getBoundingClientRect() : wasteRect;
+                    if (destEl) destEl.style.opacity = '0';
+
+                    void dragLayer.offsetWidth;
+                    dragLayer.style.transition = 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)';
+                    dragLayer.style.transform = `translate3d(${destRect.left}px, ${destRect.top}px, 0) scale(1)`;
+
+                    setTimeout(() => {
+                        if (destEl) destEl.style.opacity = '1';
+                        dragLayer.style.transition = 'none';
+                        dragLayer.innerHTML = '';
+                        this.isAnimatingMove = false;
+                        this.updateStatsUI();
+                    }, 205);
+                } else {
+                    // 捨て札を山札に戻すアニメーション
+                    this.isAnimatingMove = true;
+                    while (this.waste.length > 0) {
+                        const card = this.waste.pop();
+                        card.faceUp = false;
+                        this.stock.push(card);
+                    }
+                    if (this.drawCount === 1) {
+                        this.score = Math.max(0, this.score - 20);
+                    }
+                    sound.cardFlip();
+                    this.moves++;
+                    this.updateStatsUI();
+
+                    dragLayer.innerHTML = '';
+                    dragLayer.style.transition = 'none';
+                    dragLayer.style.width = `${wasteRect.width}px`;
+                    dragLayer.style.transform = `translate3d(${wasteRect.left}px, ${wasteRect.top}px, 0)`;
+
+                    const backCard = this.createCardElement({ id: 'temp-back', faceUp: false, color: 'black' }, false);
+                    dragLayer.appendChild(backCard);
+
+                    this.renderBoard();
+                    const topStockEl = stockSlot.querySelector('.playing-card');
+                    if (topStockEl) topStockEl.style.opacity = '0';
+
+                    void dragLayer.offsetWidth;
+                    dragLayer.style.transition = 'transform 0.2s cubic-bezier(0.22, 1, 0.36, 1)';
+                    dragLayer.style.transform = `translate3d(${stockRect.left}px, ${stockRect.top}px, 0)`;
+
+                    setTimeout(() => {
+                        if (topStockEl) topStockEl.style.opacity = '1';
+                        dragLayer.style.transition = 'none';
+                        dragLayer.innerHTML = '';
+                        this.isAnimatingMove = false;
+                        this.updateStatsUI();
+                    }, 205);
+                }
+            }
+
+            /**
+             * カードIDから現在どの場所にあるか検索
+             */
+            findCardLocation(cardId) {
+                // 捨て札 (Waste)
+                const wasteIdx = this.waste.findIndex(c => c.id === cardId);
+                if (wasteIdx !== -1) {
+                    return {
+                        zone: 'waste',
+                        pileIndex: 0,
+                        cardIndex: wasteIdx,
+                        card: this.waste[wasteIdx],
+                        isTop: wasteIdx === this.waste.length - 1,
+                        movingCards: [this.waste[wasteIdx]]
+                    };
+                }
+
+                // 組札 (Foundations)
+                for (let f = 0; f < 4; f++) {
+                    const fIdx = this.foundations[f].findIndex(c => c.id === cardId);
+                    if (fIdx !== -1) {
+                        return {
+                            zone: 'foundation',
+                            pileIndex: f,
+                            cardIndex: fIdx,
+                            card: this.foundations[f][fIdx],
+                            isTop: fIdx === this.foundations[f].length - 1,
+                            movingCards: [this.foundations[f][fIdx]]
+                        };
+                    }
+                }
+
+                // 場札 (Tableau)
+                for (let t = 0; t < 7; t++) {
+                    const tIdx = this.tableau[t].findIndex(c => c.id === cardId);
+                    if (tIdx !== -1) {
+                        return {
+                            zone: 'tableau',
+                            pileIndex: t,
+                            cardIndex: tIdx,
+                            card: this.tableau[t][tIdx],
+                            isTop: tIdx === this.tableau[t].length - 1,
+                            movingCards: this.tableau[t].slice(tIdx)
+                        };
+                    }
+                }
+
+                return null;
+            }
+
+            /**
+             * 組札（Foundation）にカードを置けるか判定（各枠の記号♠♥♣♦と一致する必要がある）
+             */
+            canMoveToFoundation(card, foundationIndex) {
+                const requiredSuit = this.foundationSuits[foundationIndex];
+                if (card.suit !== requiredSuit) return false;
+
+                const pile = this.foundations[foundationIndex];
+                if (pile.length === 0) {
+                    return card.rank === 1; // そのマークのAのみ置ける
+                }
+                const topCard = pile[pile.length - 1];
+                return topCard.suit === card.suit && card.rank === topCard.rank + 1;
+            }
+
+            /**
+             * 場札（Tableau）にカードを置けるか判定
+             */
+            canMoveToTableau(card, tableauIndex) {
+                const pile = this.tableau[tableauIndex];
+                if (pile.length === 0) {
+                    return card.rank === 13; // 空列にはKのみ置ける
+                }
+                const topCard = pile[pile.length - 1];
+                if (!topCard.faceUp) return false;
+                return topCard.color !== card.color && topCard.rank === card.rank + 1;
+            }
+
+            /**
+             * カード移動の実行（アニメーション有無対応）
+             */
+            executeMove(sourceLoc, targetZone, targetIndex, animate = false) {
+                if (!sourceLoc || this.isAnimatingMove) return false;
+
+                const movingCards = sourceLoc.movingCards;
+                const leadCard = movingCards[0];
+
+                // ルール検証
+                if (targetZone === 'foundation') {
+                    if (movingCards.length !== 1) return false;
+                    if (!this.canMoveToFoundation(leadCard, targetIndex)) return false;
+                } else if (targetZone === 'tableau') {
+                    if (sourceLoc.zone === 'tableau' && sourceLoc.pileIndex === targetIndex) return false;
+                    if (!this.canMoveToTableau(leadCard, targetIndex)) return false;
+                } else {
+                    return false;
+                }
+
+                // アニメーション用に移動前のDOM座標を取得
+                let startRect = null;
+                let cardOffsets = [];
+                if (animate) {
+                    const firstEl = document.querySelector(`[data-card-id="${leadCard.id}"]`);
+                    if (firstEl) {
+                        startRect = firstEl.getBoundingClientRect();
+                        movingCards.forEach(c => {
+                            const el = document.querySelector(`[data-card-id="${c.id}"]`);
+                            const r = el ? el.getBoundingClientRect() : startRect;
+                            cardOffsets.push(r.top - startRect.top);
+                        });
+                    }
+                }
+
+                this.startTimerIfNeeded();
+                this.saveHistory();
+
+                // 元の場所からカードを取り除く
+                if (sourceLoc.zone === 'waste') {
+                    this.waste.pop();
+                } else if (sourceLoc.zone === 'foundation') {
+                    this.foundations[sourceLoc.pileIndex].pop();
+                } else if (sourceLoc.zone === 'tableau') {
+                    this.tableau[sourceLoc.pileIndex].splice(sourceLoc.cardIndex);
+                    const remainPile = this.tableau[sourceLoc.pileIndex];
+                    if (remainPile.length > 0 && !remainPile[remainPile.length - 1].faceUp) {
+                        remainPile[remainPile.length - 1].faceUp = true;
+                        this.score += 5;
+                    }
+                }
+
+                // 移動先へカードを追加＆スコア計算
+                if (targetZone === 'foundation') {
+                    this.foundations[targetIndex].push(leadCard);
+                    this.score += 10;
+                    sound.foundationPlace(leadCard.rank);
+                } else if (targetZone === 'tableau') {
+                    this.tableau[targetIndex].push(...movingCards);
+                    if (sourceLoc.zone === 'waste') {
+                        this.score += 5;
+                    } else if (sourceLoc.zone === 'foundation') {
+                        this.score = Math.max(0, this.score - 10);
+                    }
+                    sound.cardPlace();
+                }
+
+                this.moves++;
+                this.updateStatsUI();
+
+                // タップ移動時などの滑らかな飛行アニメーション
+                if (animate && startRect) {
+                    this.isAnimatingMove = true;
+                    const dragLayer = document.getElementById('drag-layer');
+                    dragLayer.innerHTML = '';
+                    dragLayer.style.transition = 'none';
+                    dragLayer.style.width = `${startRect.width}px`;
+                    dragLayer.style.transform = `translate3d(${startRect.left}px, ${startRect.top}px, 0)`;
+
+                    movingCards.forEach((c, idx) => {
+                        const cloneEl = this.createCardElement(c, false);
+                        cloneEl.style.top = `${cardOffsets[idx] || idx * 20}px`;
+                        cloneEl.style.boxShadow = '0 16px 32px rgba(0, 0, 0, 0.45)';
+                        dragLayer.appendChild(cloneEl);
+                    });
+
+                    // 新しい盤面を描画し、移動先のカードを一時的に非表示にする
+                    this.renderBoard();
+
+                    const destEl = document.querySelector(`[data-card-id="${leadCard.id}"]`);
+                    const destRect = destEl ? destEl.getBoundingClientRect() : startRect;
+
+                    movingCards.forEach(c => {
+                        const el = document.querySelector(`[data-card-id="${c.id}"]`);
+                        if (el) el.style.opacity = '0';
+                    });
+
+                    // 強制リフロー後に目的地へトランジション
+                    void dragLayer.offsetWidth;
+                    dragLayer.style.transition = 'transform 0.23s cubic-bezier(0.22, 1, 0.36, 1)';
+                    dragLayer.style.transform = `translate3d(${destRect.left}px, ${destRect.top}px, 0)`;
+
+                    setTimeout(() => {
+                        movingCards.forEach(c => {
+                            const el = document.querySelector(`[data-card-id="${c.id}"]`);
+                            if (el) el.style.opacity = '1';
+                        });
+                        dragLayer.style.transition = 'none';
+                        dragLayer.innerHTML = '';
+                        this.isAnimatingMove = false;
+                        this.checkGameStatus();
+                    }, 235);
+                } else {
+                    this.renderBoard();
+                }
+
+                return true;
+            }
+
+            /**
+             * タップ時のスマート自動移動（滑らかな飛行アニメーション付き）
+             */
+            tryAutoMoveCard(cardId) {
+                if (this.isAutoCompleting || this.isGameWon || this.isAnimatingMove) return false;
+                const loc = this.findCardLocation(cardId);
+                if (!loc || !loc.card.faceUp) return false;
+
+                // 1. 1枚のカード（一番上）なら、該当するマークの組札（Foundation）への移動を最優先チェック
+                if (loc.isTop && loc.zone !== 'foundation') {
+                    for (let f = 0; f < 4; f++) {
+                        if (this.canMoveToFoundation(loc.card, f)) {
+                            return this.executeMove(loc, 'foundation', f, true);
+                        }
+                    }
+                }
+
+                // 2. 場札（Tableau）への移動をチェック（すでにカードがある列を優先）
+                const nonEmptyCols = [];
+                const emptyCols = [];
+                for (let t = 0; t < 7; t++) {
+                    if (loc.zone === 'tableau' && loc.pileIndex === t) continue;
+                    if (this.tableau[t].length > 0) nonEmptyCols.push(t);
+                    else emptyCols.push(t);
+                }
+
+                for (const t of [...nonEmptyCols, ...emptyCols]) {
+                    if (this.canMoveToTableau(loc.card, t)) {
+                        return this.executeMove(loc, 'tableau', t, true);
+                    }
+                }
+
+                // どこにも動かせない場合は軽く揺らす
+                const cardEl = document.querySelector(`[data-card-id="${cardId}"]`);
+                if (cardEl) {
+                    sound.error();
+                    cardEl.style.transform = 'translateX(-5px)';
+                    setTimeout(() => { cardEl.style.transform = 'translateX(5px)'; }, 60);
+                    setTimeout(() => { cardEl.style.transform = ''; }, 120);
+                }
+                return false;
+            }
+
+            /**
+             * ポインターダウン（ドラッグ開始またはタップ判定準備）
+             */
+            onCardPointerDown(e, cardId) {
+                if (this.isAutoCompleting || this.isGameWon || this.isAnimatingMove) return;
+                if (e.button !== undefined && e.button !== 0) return;
+
+                const loc = this.findCardLocation(cardId);
+                if (!loc) return;
+
+                // 山札のカードをクリックした場合は山札をめくる
+                if (loc.zone === 'stock') {
+                    this.drawFromStock();
+                    return;
+                }
+
+                if (!loc.card.faceUp) return;
+
+                // 捨て札と組札は一番上のカードのみ操作可能
+                if ((loc.zone === 'waste' || loc.zone === 'foundation') && !loc.isTop) return;
+
+                e.stopPropagation();
+
+                const cardEl = e.currentTarget;
+                const rect = cardEl.getBoundingClientRect();
+
+                this.dragState = {
+                    cardId: cardId,
+                    loc: loc,
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    offsetX: e.clientX - rect.left,
+                    offsetY: e.clientY - rect.top,
+                    cardWidth: rect.width,
+                    cardHeight: rect.height,
+                    isDragging: false,
+                    originalElements: []
+                };
+            }
+
+            /**
+             * ポインター移動（ドラッグ中のカード追従）
+             */
+            onPointerMove(e) {
+                if (!this.dragState) return;
+
+                const dx = e.clientX - this.dragState.startX;
+                const dy = e.clientY - this.dragState.startY;
+                const dist = Math.hypot(dx, dy);
+
+                // 6px以上動いたらドラッグ開始
+                if (!this.dragState.isDragging && dist > 6) {
+                    this.dragState.isDragging = true;
+                    this.initDragVisuals();
+                }
+
+                if (this.dragState.isDragging) {
+                    const dragLayer = document.getElementById('drag-layer');
+                    const x = e.clientX - this.dragState.offsetX;
+                    const y = e.clientY - this.dragState.offsetY;
+                    dragLayer.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+
+                    this.highlightDropTarget(e.clientX, e.clientY);
+                }
+            }
+
+            /**
+             * ドラッグ用フローティングカードの生成
+             */
+            initDragVisuals() {
+                const dragLayer = document.getElementById('drag-layer');
+                dragLayer.innerHTML = '';
+                dragLayer.style.transition = 'none';
+                dragLayer.style.width = `${this.dragState.cardWidth}px`;
+
+                const movingCards = this.dragState.loc.movingCards;
+                const stackOffset = Math.min(26, this.dragState.cardHeight * 0.22);
+
+                movingCards.forEach((card, idx) => {
+                    const origEl = document.querySelector(`[data-card-id="${card.id}"]`);
+                    if (origEl) {
+                        origEl.style.opacity = '0';
+                        this.dragState.originalElements.push(origEl);
+                    }
+
+                    const cloneEl = this.createCardElement(card, false);
+                    cloneEl.style.top = `${idx * stackOffset}px`;
+                    cloneEl.style.boxShadow = '0 16px 30px rgba(0, 0, 0, 0.45)';
+                    dragLayer.appendChild(cloneEl);
+                });
+            }
+
+            /**
+             * ドラッグ中のドロップ可能スロットのハイライト
+             */
+            highlightDropTarget(clientX, clientY) {
+                document.querySelectorAll('.slot-base').forEach(el => el.classList.remove('highlight-drop'));
+                const target = this.findBestDropTarget(clientX, clientY);
+                if (target && target.element) {
+                    target.element.classList.add('highlight-drop');
+                }
+            }
+
+            /**
+             * ドロップ先の判定
+             */
+            findBestDropTarget(clientX, clientY) {
+                const leadCard = this.dragState.loc.movingCards[0];
+                const isSingle = this.dragState.loc.movingCards.length === 1;
+
+                // 1. 組札（Foundation）の判定
+                if (isSingle) {
+                    for (let f = 0; f < 4; f++) {
+                        const slotEl = document.getElementById(`foundation-${f}`);
+                        const r = slotEl.getBoundingClientRect();
+                        if (clientX >= r.left - 12 && clientX <= r.right + 12 && clientY >= r.top - 12 && clientY <= r.bottom + 12) {
+                            if (this.canMoveToFoundation(leadCard, f)) {
+                                return { zone: 'foundation', index: f, element: slotEl };
+                            }
+                        }
+                    }
+                }
+
+                // 2. 場札（Tableau）の判定
+                for (let t = 0; t < 7; t++) {
+                    if (this.dragState.loc.zone === 'tableau' && this.dragState.loc.pileIndex === t) continue;
+                    const slotEl = document.getElementById(`tableau-${t}`);
+                    const r = slotEl.getBoundingClientRect();
+                    if (clientX >= r.left - 10 && clientX <= r.right + 10 && clientY >= r.top - 10 && clientY <= window.innerHeight) {
+                        if (this.canMoveToTableau(leadCard, t)) {
+                            return { zone: 'tableau', index: t, element: slotEl };
+                        }
+                    }
+                }
+
+                return null;
+            }
+
+            /**
+             * ポインターアップ（ドロップ確定またはタップ自動移動）
+             */
+            onPointerUp(e) {
+                if (!this.dragState) return;
+
+                const state = this.dragState;
+                this.dragState = null;
+
+                document.querySelectorAll('.slot-base').forEach(el => el.classList.remove('highlight-drop'));
+                const dragLayer = document.getElementById('drag-layer');
+                dragLayer.innerHTML = '';
+
+                if (state.isDragging) {
+                    this.dragState = state;
+                    const dropTarget = this.findBestDropTarget(e.clientX, e.clientY);
+                    this.dragState = null;
+
+                    if (dropTarget) {
+                        this.executeMove(state.loc, dropTarget.zone, dropTarget.index, false);
+                    } else {
+                        state.originalElements.forEach(el => { el.style.opacity = '1'; });
+                    }
+                } else {
+                    // ドラッグではなくタップだった場合は飛行アニメーション付き自動移動
+                    this.tryAutoMoveCard(state.cardId);
+                }
+            }
+
+            /**
+             * 山札・捨て札の中に、組札または場札に出せるカードが存在するかチェック
+             */
+            hasPlayableCardInStockOrWaste() {
+                const allStockWaste = [...this.stock, ...this.waste];
+                if (allStockWaste.length === 0) return false;
+
+                for (const card of allStockWaste) {
+                    for (let f = 0; f < 4; f++) {
+                        if (this.canMoveToFoundation(card, f)) return true;
+                    }
+                    for (let t = 0; t < 7; t++) {
+                        if (this.canMoveToTableau(card, t)) return true;
+                    }
+                }
+                return false;
+            }
+
+            /**
+             * ヒントの検索とハイライト表示（手がない場合はトーストで通知）
+             */
+            showHint() {
+                if (this.isAutoCompleting || this.isGameWon || this.isAnimatingMove) return;
+
+                document.querySelectorAll('.hint-glow').forEach(el => el.classList.remove('hint-glow'));
+
+                // 1. 捨て札または場札の一番上から組札へ移動できるカード
+                if (this.waste.length > 0) {
+                    const topWaste = this.waste[this.waste.length - 1];
+                    for (let f = 0; f < 4; f++) {
+                        if (this.canMoveToFoundation(topWaste, f)) {
+                            this.highlightHintCard(topWaste.id);
+                            return;
+                        }
+                    }
+                }
+
+                for (let t = 0; t < 7; t++) {
+                    const pile = this.tableau[t];
+                    if (pile.length > 0) {
+                        const topCard = pile[pile.length - 1];
+                        for (let f = 0; f < 4; f++) {
+                            if (this.canMoveToFoundation(topCard, f)) {
+                                this.highlightHintCard(topCard.id);
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                // 2. 場札の中で裏向きカードをめくれる移動、または意味のある移動
+                for (let t = 0; t < 7; t++) {
+                    const pile = this.tableau[t];
+                    const firstFaceUpIdx = pile.findIndex(c => c.faceUp);
+                    if (firstFaceUpIdx === -1) continue;
+
+                    const leadCard = pile[firstFaceUpIdx];
+                    if (firstFaceUpIdx === 0 && leadCard.rank === 13) continue;
+
+                    for (let dest = 0; dest < 7; dest++) {
+                        if (t === dest) continue;
+                        if (this.canMoveToTableau(leadCard, dest)) {
+                            this.highlightHintCard(leadCard.id);
+                            return;
+                        }
+                    }
+                }
+
+                // 3. 捨て札から場札への移動
+                if (this.waste.length > 0) {
+                    const topWaste = this.waste[this.waste.length - 1];
+                    for (let dest = 0; dest < 7; dest++) {
+                        if (this.canMoveToTableau(topWaste, dest)) {
+                            this.highlightHintCard(topWaste.id);
+                            return;
+                        }
+                    }
+                }
+
+                // 4. 山札・捨て札をめくれば出せるカードが残っている場合のみ山札をハイライト
+                if (this.hasPlayableCardInStockOrWaste() && (this.stock.length > 0 || this.waste.length > 1)) {
+                    const stockSlot = document.getElementById('stock-slot');
+                    stockSlot.classList.add('hint-glow');
+                    sound.cardFlip();
+                    setTimeout(() => stockSlot.classList.remove('hint-glow'), 1800);
+                    return;
+                }
+
+                // 5. どこにも有効な手がない場合
+                sound.error();
+                this.showToast('もう動かせるカードがありません');
+            }
+
+            highlightHintCard(cardId) {
+                const el = document.querySelector(`[data-card-id="${cardId}"]`);
+                if (el) {
+                    sound.cardFlip();
+                    el.classList.add('hint-glow');
+                    setTimeout(() => el.classList.remove('hint-glow'), 1800);
+                }
+            }
+
+            /**
+             * オートコンプリート可能かどうかの判定と実行
+             */
+            checkGameStatus() {
+                // 全52枚が組札に揃ったかチェック
+                const totalFoundations = this.foundations.reduce((sum, pile) => sum + pile.length, 0);
+                if (totalFoundations === 52 && !this.isGameWon) {
+                    this.handleGameWin();
+                    return;
+                }
+
+                // 山札と捨て札が空で、場札の裏向きカードが0枚ならオートコンプリートボタンを表示
+                const hasFaceDownInTableau = this.tableau.some(pile => pile.some(c => !c.faceUp));
+                const canAutoComplete = !hasFaceDownInTableau && this.stock.length === 0 && this.waste.length === 0 && totalFoundations < 52;
+
+                const banner = document.getElementById('autocomplete-banner');
+                if (canAutoComplete && !this.isAutoCompleting) {
+                    banner.classList.remove('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                }
+            }
+
+            /**
+             * オートコンプリート（自動クリア）の連続アニメーション実行
+             */
+            runAutoComplete() {
+                if (this.isAutoCompleting || this.isGameWon) return;
+                this.isAutoCompleting = true;
+                document.getElementById('autocomplete-banner').classList.add('hidden');
+
+                const step = () => {
+                    if (this.isGameWon) return;
+
+                    let moved = false;
+                    for (let t = 0; t < 7; t++) {
+                        const pile = this.tableau[t];
+                        if (pile.length === 0) continue;
+                        const topCard = pile[pile.length - 1];
+                        for (let f = 0; f < 4; f++) {
+                            if (this.canMoveToFoundation(topCard, f)) {
+                                const loc = this.findCardLocation(topCard.id);
+                                this.executeMove(loc, 'foundation', f, true);
+                                moved = true;
+                                break;
+                            }
+                        }
+                        if (moved) break;
+                    }
+
+                    const totalFoundations = this.foundations.reduce((sum, pile) => sum + pile.length, 0);
+                    if (totalFoundations < 52 && moved) {
+                        setTimeout(step, 250);
+                    } else {
+                        this.isAutoCompleting = false;
+                        this.checkGameStatus();
+                    }
+                };
+
+                step();
+            }
+
+            /**
+             * ゲームクリア時の処理
+             */
+            handleGameWin() {
+                this.isGameWon = true;
+                this.isAutoCompleting = false;
+                this.stopTimer();
+
+                // タイムボーナス加算
+                const timeBonus = Math.max(0, 700 - this.seconds * 2);
+                this.score += timeBonus;
+                this.updateStatsUI();
+
+                sound.winFanfare();
+                this.startCelebration();
+
+                document.getElementById('win-score').textContent = this.score;
+                document.getElementById('win-moves').textContent = this.moves;
+                document.getElementById('win-time').textContent = this.formatTime(this.seconds);
+
+                setTimeout(() => {
+                    document.getElementById('modal-win').classList.remove('hidden');
+                }, 900);
+            }
+
+            /**
+             * 統計表示UIの更新
+             */
+            updateStatsUI() {
+                document.getElementById('score-display').textContent = this.score;
+                document.getElementById('moves-display').textContent = this.moves;
+                document.getElementById('time-display').textContent = this.formatTime(this.seconds);
+                document.getElementById('btn-undo').disabled = (this.history.length === 0 || this.isAutoCompleting || this.isGameWon);
+            }
+
+            /**
+             * カード1枚のDOM要素を生成
+             */
+            createCardElement(card, attachEvents = true) {
+                const el = document.createElement('div');
+                el.className = `playing-card ${card.faceUp ? '' : 'face-down'} ${card.color === 'red' ? 'card-red' : 'card-black'}`;
+                el.dataset.cardId = card.id;
+
+                if (!card.faceUp) {
+                    const back = document.createElement('div');
+                    back.className = 'card-back-pattern';
+                    el.appendChild(back);
+                } else {
+                    el.innerHTML = `
+                        <div class="w-full h-full flex flex-col justify-between p-1 sm:p-1.5 md:p-2 pointer-events-none select-none">
+                            <div class="flex items-center justify-between leading-none">
+                                <span class="font-black tracking-tighter text-[12px] sm:text-sm md:text-base">${card.label}</span>
+                                <span class="text-[11px] sm:text-xs md:text-sm">${card.symbol}</span>
+                            </div>
+                            <div class="flex items-center justify-center my-auto">
+                                <span class="text-xl sm:text-3xl md:text-4xl leading-none drop-shadow-sm">${card.symbol}</span>
+                            </div>
+                            <div class="hidden sm:flex items-center justify-between leading-none rotate-180 opacity-80">
+                                <span class="font-black tracking-tighter text-[11px] md:text-xs">${card.label}</span>
+                                <span class="text-[10px] md:text-xs">${card.symbol}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (attachEvents) {
+                    el.addEventListener('pointerdown', (e) => this.onCardPointerDown(e, card.id));
+                }
+
+                return el;
+            }
+
+            /**
+             * 盤面全体のレンダリング（どんな画面サイズでも見切れないよう自動レイアウト）
+             */
+            renderBoard() {
+                const stockSlot = document.getElementById('stock-slot');
+                const wasteSlot = document.getElementById('waste-slot');
+                const slotWidth = stockSlot.getBoundingClientRect().width || 50;
+
+                // 1. 山札 (Stock)
+                stockSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
+                if (this.stock.length > 0) {
+                    const topStockCard = this.stock[this.stock.length - 1];
+                    const cardEl = this.createCardElement(topStockCard, false);
+                    cardEl.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.drawFromStock();
+                    });
+                    stockSlot.appendChild(cardEl);
+                }
+
+                // 2. 捨て札 (Waste)
+                wasteSlot.innerHTML = '';
+                const visibleWaste = this.waste.slice(-3);
+                const wasteSpread = Math.min(18, slotWidth * 0.25);
+                visibleWaste.forEach((card, idx) => {
+                    const isTop = (idx === visibleWaste.length - 1);
+                    const cardEl = this.createCardElement(card, isTop);
+                    cardEl.style.left = `${idx * wasteSpread}px`;
+                    cardEl.style.zIndex = idx + 1;
+                    wasteSlot.appendChild(cardEl);
+                });
+
+                // 3. 組札 (Foundations 0-3)
+                for (let f = 0; f < 4; f++) {
+                    const fSlot = document.getElementById(`foundation-${f}`);
+                    fSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
+                    const pile = this.foundations[f];
+                    if (pile.length > 0) {
+                        const topCard = pile[pile.length - 1];
+                        const cardEl = this.createCardElement(topCard, true);
+                        fSlot.appendChild(cardEl);
+                    }
+                }
+
+                // 4. 場札 (Tableau 7列) - スマホ画面でも下が見切れないよう高さを動的計算
+                const boardWrapper = document.getElementById('board-wrapper');
+                const wrapperRect = boardWrapper.getBoundingClientRect();
+                const tableauTopElement = document.getElementById('tableau-0');
+                const tableauTopRect = tableauTopElement.getBoundingClientRect();
+
+                const cardHeight = tableauTopRect.height || (slotWidth * 1.42);
+                const bottomBoundary = Math.min(window.innerHeight, wrapperRect.bottom || window.innerHeight);
+                const availableHeight = Math.max(85, bottomBoundary - tableauTopRect.top - cardHeight - 14);
+
+                for (let t = 0; t < 7; t++) {
+                    const tSlot = document.getElementById(`tableau-${t}`);
+                    tSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
+
+                    const pile = this.tableau[t];
+                    if (pile.length === 0) continue;
+
+                    const faceDownCount = pile.filter(c => !c.faceUp).length;
+                    const faceUpCount = pile.length - faceDownCount;
+
+                    let downOffset = Math.max(5, Math.min(14, cardHeight * 0.11));
+                    let upOffset = Math.max(15, Math.min(28, cardHeight * 0.24));
+
+                    // 列が長くなって画面下からはみ出る場合は自動で間隔を圧縮して確実に収める
+                    const totalNeeded = (faceDownCount * downOffset) + (Math.max(0, faceUpCount - 1) * upOffset);
+                    if (totalNeeded > availableHeight && totalNeeded > 0) {
+                        const scale = availableHeight / totalNeeded;
+                        downOffset = Math.max(3, downOffset * scale);
+                        upOffset = Math.max(10, upOffset * scale);
+                    }
+
+                    let currentTop = 0;
+                    pile.forEach((card, idx) => {
+                        const cardEl = this.createCardElement(card, card.faceUp);
+                        cardEl.style.top = `${currentTop}px`;
+                        cardEl.style.zIndex = idx + 1;
+                        tSlot.appendChild(cardEl);
+
+                        currentTop += card.faceUp ? upOffset : downOffset;
+                    });
+                }
+
+                this.checkGameStatus();
+            }
+
+            /**
+             * クリア時の華やかな紙吹雪アニメーション
+             */
+            resizeCelebrationCanvas() {
+                const canvas = document.getElementById('celebration-canvas');
+                if (!canvas) return;
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+
+            startCelebration() {
+                const canvas = document.getElementById('celebration-canvas');
+                canvas.classList.remove('hidden');
+                this.resizeCelebrationCanvas();
+                const ctx = canvas.getContext('2d');
+
+                const colors = ['#facc15', '#34d399', '#60a5fa', '#f472b6', '#ffffff', '#fb923c'];
+                const particles = Array.from({ length: 110 }, () => ({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * -canvas.height,
+                    w: Math.random() * 9 + 5,
+                    h: Math.random() * 14 + 6,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    vy: Math.random() * 3.5 + 2,
+                    vx: (Math.random() - 0.5) * 2.5,
+                    angle: Math.random() * Math.PI * 2,
+                    spin: (Math.random() - 0.5) * 0.15
+                }));
+
+                const animate = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    particles.forEach(p => {
+                        p.x += p.vx;
+                        p.y += p.vy;
+                        p.angle += p.spin;
+                        if (p.y > canvas.height + 20) {
+                            p.y = -20;
+                            p.x = Math.random() * canvas.width;
+                        }
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(p.angle);
+                        ctx.fillStyle = p.color;
+                        ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+                        ctx.restore();
+                    });
+                    this.celebrationAnimId = requestAnimationFrame(animate);
+                };
+
+                animate();
+            }
+
+            stopCelebration() {
+                if (this.celebrationAnimId) {
+                    cancelAnimationFrame(this.celebrationAnimId);
+                    this.celebrationAnimId = null;
+                }
+                const canvas = document.getElementById('celebration-canvas');
+                if (canvas) {
+                    canvas.classList.add('hidden');
+                }
+            }
+        }
+
+        // 起動
+        window.onload = () => {
+            window.solitaireApp = new SolitaireGame();
+        };
+    </script>
+</body>
+</html>
