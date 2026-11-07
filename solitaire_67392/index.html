@@ -144,10 +144,11 @@
         }
 
         .hint-glow {
-            animation: pulse-hint 1.2s infinite ease-in-out !important;
-            z-index: 999 !important;
-            border: 2px solid #facc15 !important;
-        }
+    animation: pulse-hint 1.2s infinite ease-in-out !important;
+    z-index: 999 !important;
+    border-radius: var(--card-radius) !important; /* 角丸を合わせる */
+    /* border: 2px solid #facc15 !important; は削除（ガタつきの原因になるため） */
+}
 
         /* ドラッグ中・飛行アニメーション中レイヤー（iOS GPUレイヤー強制） */
         #drag-layer {
@@ -308,7 +309,7 @@
     </header>
 
     <!-- メインゲームボードエリア -->
-    <main id="board-wrapper" class="invisible relative flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pt-1 sm:pt-2 pb-2 flex flex-col justify-start overflow-hidden z-10">
+    <main id="board-wrapper" class="invisible relative flex-1 w-full max-w-5xl mx-auto px-2 sm:px-4 pt-4 sm:pt-6 pb-2 flex flex-col justify-start overflow-hidden z-10">
         
         <!-- 通知トースト（手詰まり通知など） -->
         <div id="toast-message" class="pointer-events-none fixed top-16 left-1/2 -translate-x-1/2 z-50 opacity-0 -translate-y-2 transition-all duration-300">
@@ -1436,9 +1437,10 @@
                 if (cardEl) {
                     sound.error();
                     const baseY = parseFloat(cardEl.dataset.baseY || '0');
-                    cardEl.style.transform = `translate3d(-5px, ${baseY}px, 0)`;
-                    setTimeout(() => { cardEl.style.transform = `translate3d(5px, ${baseY}px, 0)`; }, 60);
-                    setTimeout(() => { cardEl.style.transform = `translate3d(0px, ${baseY}px, 0)`; }, 120);
+const baseX = parseFloat(cardEl.dataset.baseX || '0'); // ← baseXを取得
+cardEl.style.transform = `translate3d(${baseX - 5}px, ${baseY}px, 0)`;
+setTimeout(() => { cardEl.style.transform = `translate3d(${baseX + 5}px, ${baseY}px, 0)`; }, 60);
+setTimeout(() => { cardEl.style.transform = `translate3d(${baseX}px, ${baseY}px, 0)`; }, 120);
                 }
                 return false;
             }
@@ -1691,12 +1693,16 @@
 
                 // 4. 山札・捨て札をめくれば出せるカードが残っている場合のみ山札をハイライト
                 if (this.hasPlayableCardInStockOrWaste() && (this.stock.length > 0 || this.waste.length > 1)) {
-                    const stockSlot = document.getElementById('stock-slot');
-                    stockSlot.classList.add('hint-glow');
-                    sound.cardFlip();
-                    setTimeout(() => stockSlot.classList.remove('hint-glow'), 1800);
-                    return;
-                }
+    const stockSlot = document.getElementById('stock-slot');
+    // カードがある場合は一番上のカードを、無い場合はスロット枠を対象にする
+    const topCardEl = stockSlot.querySelector('.playing-card');
+    const targetEl = topCardEl ? topCardEl : stockSlot;
+    
+    targetEl.classList.add('hint-glow');
+    sound.cardFlip();
+    setTimeout(() => targetEl.classList.remove('hint-glow'), 1800);
+    return;
+}
 
                 // 5. どこにも有効な手がない場合
                 sound.error();
@@ -1868,6 +1874,7 @@
                     const isTop = (idx === visibleWaste.length - 1);
                     const cardEl = this.createCardElement(card, isTop);
                     const offsetX = Math.round(idx * wasteSpread);
+                    cardEl.dataset.baseX = String(offsetX); // ← 追加
                     cardEl.dataset.baseY = '0';
                     cardEl.style.transform = `translate3d(${offsetX}px, 0px, 0)`;
                     cardEl.style.zIndex = idx + 1;
@@ -1922,8 +1929,9 @@
                     pile.forEach((card, idx) => {
                         const cardEl = this.createCardElement(card, card.faceUp);
                         const roundedY = Math.round(currentTop);
-                        cardEl.dataset.baseY = String(roundedY);
-                        cardEl.style.transform = `translate3d(0px, ${roundedY}px, 0)`;
+cardEl.dataset.baseX = '0'; // ← 追加
+cardEl.dataset.baseY = String(roundedY);
+cardEl.style.transform = `translate3d(0px, ${roundedY}px, 0)`;
                         cardEl.style.zIndex = idx + 1;
                         tSlot.appendChild(cardEl);
 
