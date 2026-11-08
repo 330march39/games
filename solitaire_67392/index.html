@@ -243,16 +243,28 @@
         <div class="relative z-10 max-w-xs sm:max-w-sm w-full flex flex-col items-center text-center">
             <!-- 象徴的なミニマルカードアイコン -->
             <div class="relative w-28 h-28 mb-6 flex items-center justify-center">
-                <div class="float-card-1 absolute -left-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-2 text-slate-900">
-                    <div class="text-left font-black text-xs leading-none">A<br>♠</div>
-                    <div class="text-2xl self-center">♠</div>
-                    <div class="w-full h-1"></div>
-                </div>
-                <div class="float-card-2 absolute -right-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-2 text-red-600">
-                    <div class="text-left font-black text-xs leading-none">K<br>♥</div>
-                    <div class="text-2xl self-center">♥</div>
-                    <div class="w-full h-1"></div>
-                </div>
+                <div class="float-card-1 absolute -left-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-slate-900">
+    <div class="flex items-center justify-between leading-none">
+        <span class="font-black text-sm">A</span>
+        <span class="text-xs">♠</span>
+    </div>
+    <div class="text-3xl self-center my-auto drop-shadow-sm">♠</div>
+    <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
+        <span class="font-black text-sm">A</span>
+        <span class="text-xs">♠</span>
+    </div>
+</div>
+<div class="float-card-2 absolute -right-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-red-600">
+    <div class="flex items-center justify-between leading-none">
+        <span class="font-black text-sm">K</span>
+        <span class="text-xs">♥</span>
+    </div>
+    <div class="text-3xl self-center my-auto drop-shadow-sm">♥</div>
+    <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
+        <span class="font-black text-sm">K</span>
+        <span class="text-xs">♥</span>
+    </div>
+</div>
             </div>
 
             <h1 class="text-4xl sm:text-5xl font-black tracking-widest text-white drop-shadow-md mb-1">SOLITAIRE</h1>
@@ -503,19 +515,19 @@
                 </button>
             </div>
             <div class="space-y-3 text-xs text-slate-300 leading-relaxed">
-                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p class="font-bold text-white mb-1">1. 組札（右上4枠：♠ ♥ ♣ ♦）</p>
-                    <p>それぞれのマークの枠に <strong>A → 2 → 3 ... → K</strong> の順番で全てのカードを重ねるとクリアです。</p>
-                </div>
-                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p class="font-bold text-white mb-1">2. 場札（下段7列）</p>
-                    <p><strong>赤と黒を交互に</strong>、数字が <strong>大 → 小（K → Q → J...）</strong> になるように並べます。空いた列には <strong>K</strong> を置けます。</p>
-                </div>
-                <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
-                    <p class="font-bold text-white mb-1">3. 快適操作</p>
-                    <p>カードをタップするだけで最適な場所へ滑らかに移動します。ドラッグ＆ドロップにも対応しています。</p>
-                </div>
-            </div>
+    <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+        <p class="font-bold text-white mb-1">1. クリアの条件</p>
+        <p>右上の4つの枠に、同じマークで <strong>A → 2 → 3 ... → K</strong> の順番で全てのカードを重ねればクリアです。</p>
+    </div>
+    <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+        <p class="font-bold text-white mb-1">2. カードの動かし方</p>
+        <p>下の列では、<strong>赤と黒のカードを交互に</strong>、数字が <strong>大 → 小（K → Q → J...）</strong> となるように重ねて移動できます。</p>
+    </div>
+    <div class="bg-white/5 p-3.5 rounded-2xl border border-white/10">
+        <p class="font-bold text-white mb-1">3. 空いた列のルール</p>
+        <p>カードが移動して空になった列には、<strong>K（キング）</strong> のカードだけを新しく置くことができます。</p>
+    </div>
+</div>
             <button id="ok-help-modal" class="btn-interactive mt-5 w-full bg-white text-slate-950 font-black py-3 rounded-2xl text-xs hover:bg-slate-100">
                 閉じる
             </button>
