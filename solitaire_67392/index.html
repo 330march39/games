@@ -1116,9 +1116,12 @@
                 this.saveHistory();
 
                 const stockSlot = document.getElementById('stock-slot');
-                const wasteSlot = document.getElementById('waste-slot');
-                const stockRect = stockSlot.getBoundingClientRect();
-                const wasteRect = wasteSlot.getBoundingClientRect();
+const wasteSlot = document.getElementById('waste-slot');
+// 枠線を含まない「実際のカードのサイズ」を正確に取得するように変更
+const startStockCardEl = stockSlot.querySelector('.playing-card');
+const startWasteCardEl = wasteSlot.querySelector('.playing-card');
+const stockRect = startStockCardEl ? startStockCardEl.getBoundingClientRect() : stockSlot.getBoundingClientRect();
+const wasteRect = startWasteCardEl ? startWasteCardEl.getBoundingClientRect() : wasteSlot.getBoundingClientRect();
                 const dragLayer = document.getElementById('drag-layer');
 
                 if (this.stock.length > 0) {
@@ -1189,15 +1192,18 @@
                     dragLayer.appendChild(backCard);
 
                     this.renderBoard();
-                    const topStockEl = stockSlot.querySelector('.playing-card');
-                    if (topStockEl) topStockEl.style.visibility = 'hidden';
+const topStockEl = stockSlot.querySelector('.playing-card');
+// 移動先の山札の正確な位置・サイズをターゲットとして再取得する
+const destRect = topStockEl ? topStockEl.getBoundingClientRect() : stockSlot.getBoundingClientRect();
 
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            dragLayer.style.transition = 'transform 0.19s cubic-bezier(0.22, 1, 0.36, 1)';
-                            dragLayer.style.transform = `translate3d(${stockRect.left}px, ${stockRect.top}px, 0)`;
-                        });
-                    });
+if (topStockEl) topStockEl.style.visibility = 'hidden';
+
+requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+        dragLayer.style.transition = 'transform 0.19s cubic-bezier(0.22, 1, 0.36, 1)';
+        dragLayer.style.transform = `translate3d(${destRect.left}px, ${destRect.top}px, 0)`; // destRect に変更
+    });
+});
 
                     setTimeout(() => {
                         if (topStockEl) topStockEl.style.visibility = 'visible';
@@ -1891,11 +1897,16 @@ for (let f = 0; f < 4; f++) {
     fSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
     const pile = this.foundations[f];
     
-    // 一番上だけでなく、重なっているカードを全て描画するように変更
     pile.forEach((card, idx) => {
         const cardEl = this.createCardElement(card, true);
         cardEl.dataset.baseY = '0';
-        cardEl.style.zIndex = idx + 1; // 順番通りに重ねる
+        cardEl.style.zIndex = idx + 1;
+        
+        // 追加：トップのカード以外は影を消して、重なりによる濃い影を防ぐ
+        if (idx < pile.length - 1) {
+            cardEl.style.boxShadow = 'none';
+        }
+        
         fSlot.appendChild(cardEl);
     });
 }
