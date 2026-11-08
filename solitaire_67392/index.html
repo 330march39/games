@@ -166,6 +166,11 @@
             -webkit-backface-visibility: hidden;
         }
 
+        /* ボタンのダブルタップズームを無効化（連続タップ時の拡大を防ぎ、反応を良くする） */
+button, .btn-interactive {
+    touch-action: manipulation !important;
+}
+
         /* グラスモーフィズムボタン（タップ時の心地よいバウンスアニメーション） */
         .glass-btn {
             background: rgba(255, 255, 255, 0.12);
@@ -237,59 +242,59 @@
 <body class="theme-emerald felt-texture flex flex-col justify-between select-none">
 
     <!-- オープニング画面（シンプルなテーマカラー背景で表示） -->
-    <div id="opening-screen" class="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 felt-texture transition-opacity duration-300" style="background: inherit;">
-        <div class="absolute inset-0 bg-black/25 pointer-events-none"></div>
-
-        <div class="relative z-10 max-w-xs sm:max-w-sm w-full flex flex-col items-center text-center">
-            <!-- 象徴的なミニマルカードアイコン -->
-            <div class="relative w-28 h-28 mb-6 flex items-center justify-center">
-                <div class="float-card-1 absolute -left-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-slate-900">
-    <div class="flex items-center justify-between leading-none">
-        <span class="font-black text-sm">A</span>
-        <span class="text-xs">♠</span>
-    </div>
-    <div class="text-3xl self-center my-auto drop-shadow-sm">♠</div>
-    <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
-        <span class="font-black text-sm">A</span>
-        <span class="text-xs">♠</span>
-    </div>
-</div>
-<div class="float-card-2 absolute -right-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-red-600">
-    <div class="flex items-center justify-between leading-none">
-        <span class="font-black text-sm">K</span>
-        <span class="text-xs">♥</span>
-    </div>
-    <div class="text-3xl self-center my-auto drop-shadow-sm">♥</div>
-    <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
-        <span class="font-black text-sm">K</span>
-        <span class="text-xs">♥</span>
-    </div>
-</div>
+<div class="relative z-10 w-full max-w-xs sm:max-w-sm landscape:max-w-2xl flex flex-col landscape:flex-row items-center justify-center gap-4 landscape:gap-14">
+    
+    <!-- 左側（縦画面では上部）：イラストとタイトル -->
+    <div class="flex flex-col items-center text-center">
+        <!-- 象徴的なミニマルカードアイコン -->
+        <div class="relative w-28 h-28 mb-4 landscape:mb-6 flex items-center justify-center">
+            <div class="float-card-1 absolute -left-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-slate-900">
+                <div class="flex items-center justify-between leading-none">
+                    <span class="font-black text-sm">A</span>
+                    <span class="text-xs">♠</span>
+                </div>
+                <div class="text-3xl self-center my-auto drop-shadow-sm">♠</div>
+                <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
+                    <span class="font-black text-sm">A</span>
+                    <span class="text-xs">♠</span>
+                </div>
             </div>
-
-            <h1 class="text-4xl sm:text-5xl font-black tracking-widest text-white drop-shadow-md mb-1">SOLITAIRE</h1>
-            <p class="text-[11px] tracking-[0.28em] uppercase text-white/60 font-semibold mb-10">Klondike Patience</p>
-
-            <!-- モード選択ボタン -->
-            <div class="w-full space-y-3.5">
-                <button id="open-start-1" class="btn-interactive w-full py-4 px-6 rounded-2xl bg-white text-slate-900 hover:bg-emerald-50 font-black text-base shadow-xl flex items-center justify-between group">
-                    <span class="flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-black">1</span>
-                        <span>1枚めくりで始める</span>
-                    </span>
-                    <i class="fa-solid fa-chevron-right text-slate-400 group-hover:translate-x-1 transition"></i>
-                </button>
-
-                <button id="open-start-3" class="btn-interactive w-full py-4 px-6 rounded-2xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-black text-base shadow-xl backdrop-blur-md flex items-center justify-between group">
-                    <span class="flex items-center gap-3">
-                        <span class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-xs font-black">3</span>
-                        <span>3枚めくりで始める</span>
-                    </span>
-                    <i class="fa-solid fa-chevron-right text-white/60 group-hover:translate-x-1 transition"></i>
-                </button>
+            <div class="float-card-2 absolute -right-1 w-16 h-24 rounded-xl bg-white shadow-2xl border border-black/10 flex flex-col justify-between p-1.5 text-red-600">
+                <div class="flex items-center justify-between leading-none">
+                    <span class="font-black text-sm">K</span>
+                    <span class="text-xs">♥</span>
+                </div>
+                <div class="text-3xl self-center my-auto drop-shadow-sm">♥</div>
+                <div class="flex items-center justify-between leading-none rotate-180 opacity-80">
+                    <span class="font-black text-sm">K</span>
+                    <span class="text-xs">♥</span>
+                </div>
             </div>
         </div>
+
+        <h1 class="text-4xl sm:text-5xl font-black tracking-widest text-white drop-shadow-md mb-1">SOLITAIRE</h1>
+        <p class="text-[11px] tracking-[0.28em] uppercase text-white/60 font-semibold mb-6 landscape:mb-0">Klondike Patience</p>
     </div>
+
+    <!-- 右側（縦画面では下部）：モード選択ボタン -->
+    <div class="w-full max-w-xs space-y-3.5">
+        <button id="open-start-1" class="btn-interactive w-full py-4 px-6 rounded-2xl bg-white text-slate-900 hover:bg-emerald-50 font-black text-base shadow-xl flex items-center justify-between group">
+            <span class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xs font-black">1</span>
+                <span>1枚めくりで始める</span>
+            </span>
+            <i class="fa-solid fa-chevron-right text-slate-400 group-hover:translate-x-1 transition"></i>
+        </button>
+
+        <button id="open-start-3" class="btn-interactive w-full py-4 px-6 rounded-2xl bg-white/15 hover:bg-white/25 text-white border border-white/25 font-black text-base shadow-xl backdrop-blur-md flex items-center justify-between group">
+            <span class="flex items-center gap-3">
+                <span class="w-8 h-8 rounded-xl bg-amber-400 text-slate-950 flex items-center justify-center text-xs font-black">3</span>
+                <span>3枚めくりで始める</span>
+            </span>
+            <i class="fa-solid fa-chevron-right text-white/60 group-hover:translate-x-1 transition"></i>
+        </button>
+    </div>
+</div>
 
     <!-- トップバー：MOVES・TIME・1手戻す・ヒント・メニュー（スマホでも押しやすい大きめ設計） -->
     <header id="game-header" class="invisible relative z-20 w-full max-w-5xl mx-auto px-2.5 sm:px-4 pt-2.5 pb-1.5 flex items-center justify-between gap-2">
