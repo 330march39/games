@@ -370,25 +370,25 @@
             </div>
 
             <!-- 下段：場札7列 (Tableau 0-6: 空き枠は文字なしのシンプルなグレースロット) -->
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-0" data-tableau="0" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-1" data-tableau="1" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-2" data-tableau="2" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-3" data-tableau="3" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-4" data-tableau="4" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-5" data-tableau="5" class="slot-base tableau-slot"></div>
             </div>
-            <div class="col-span-1 mt-1 sm:mt-2">
+            <div class="col-span-1 mt-4 sm:mt-6">
                 <div id="tableau-6" data-tableau="6" class="slot-base tableau-slot"></div>
             </div>
 
@@ -1139,6 +1139,7 @@
                     dragLayer.innerHTML = '';
                     dragLayer.style.transition = 'none';
                     dragLayer.style.width = `${stockRect.width}px`;
+                    dragLayer.style.height = `${stockRect.height}px`; /* ← これを追加 */
                     dragLayer.style.transform = `translate3d(${stockRect.left}px, ${stockRect.top}px, 0)`;
 
                     const cloneEl = this.createCardElement(drawnCards[drawnCards.length - 1], false);
@@ -1181,6 +1182,7 @@
                     dragLayer.innerHTML = '';
                     dragLayer.style.transition = 'none';
                     dragLayer.style.width = `${wasteRect.width}px`;
+                    dragLayer.style.height = `${wasteRect.height}px`; /* ← これを追加 */
                     dragLayer.style.transform = `translate3d(${wasteRect.left}px, ${wasteRect.top}px, 0)`;
 
                     const backCard = this.createCardElement({ id: 'temp-back', faceUp: false, color: 'black' }, false);
@@ -1355,6 +1357,7 @@
                     dragLayer.innerHTML = '';
                     dragLayer.style.transition = 'none';
                     dragLayer.style.width = `${startRect.width}px`;
+                    dragLayer.style.height = `${startRect.height}px`; /* ← これを追加 */
                     dragLayer.style.transform = `translate3d(${startRect.left}px, ${startRect.top}px, 0)`;
 
                     movingCards.forEach((c, idx) => {
@@ -1519,6 +1522,7 @@ setTimeout(() => { cardEl.style.transform = `translate3d(${baseX}px, ${baseY}px,
                 dragLayer.innerHTML = '';
                 dragLayer.style.transition = 'none';
                 dragLayer.style.width = `${this.dragState.cardWidth}px`;
+                dragLayer.style.height = `${this.dragState.cardHeight}px`; /* ← これを追加 */
 
                 const movingCards = this.dragState.loc.movingCards;
                 const stackOffset = Math.min(26, this.dragState.cardHeight * 0.22);
@@ -1882,17 +1886,19 @@ setTimeout(() => { cardEl.style.transform = `translate3d(${baseX}px, ${baseY}px,
                 });
 
                 // 3. 組札 (Foundations 0-3)
-                for (let f = 0; f < 4; f++) {
-                    const fSlot = document.getElementById(`foundation-${f}`);
-                    fSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
-                    const pile = this.foundations[f];
-                    if (pile.length > 0) {
-                        const topCard = pile[pile.length - 1];
-                        const cardEl = this.createCardElement(topCard, true);
-                        cardEl.dataset.baseY = '0';
-                        fSlot.appendChild(cardEl);
-                    }
-                }
+for (let f = 0; f < 4; f++) {
+    const fSlot = document.getElementById(`foundation-${f}`);
+    fSlot.querySelectorAll('.playing-card').forEach(el => el.remove());
+    const pile = this.foundations[f];
+    
+    // 一番上だけでなく、重なっているカードを全て描画するように変更
+    pile.forEach((card, idx) => {
+        const cardEl = this.createCardElement(card, true);
+        cardEl.dataset.baseY = '0';
+        cardEl.style.zIndex = idx + 1; // 順番通りに重ねる
+        fSlot.appendChild(cardEl);
+    });
+}
 
                 // 4. 場札 (Tableau 7列) - iOSでガタつかないようtopではなくtranslate3dで配置
                 const boardWrapper = document.getElementById('board-wrapper');
