@@ -90,7 +90,7 @@
             top: 0;
             left: 0;
             width: 100%;
-            aspect-ratio: 1 / var(--card-aspect);
+            height: 100%; /* ← 追加：親要素（スロットやアニメーション枠）の高さに完全一致させる */
             border-radius: var(--card-radius);
             background: #ffffff;
             box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.2);
