@@ -23,6 +23,7 @@
             -webkit-tap-highlight-color: transparent;
             user-select: none;
             -webkit-user-select: none;
+            touch-action: none !important; /* ← 追加：文字を含めた全要素でのズームやスクロールを完全無効化 */
         }
 
         html, body {
@@ -2049,6 +2050,11 @@ cardEl.style.transform = `translate3d(0px, ${roundedY}px, 0)`;
         // 起動
         window.onload = () => {
             window.solitaireApp = new SolitaireGame();
+
+            // iOS Safari特有のお節介機能（スマートズーム）を強制的にブロック
+            document.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+            }, { passive: false });
         };
     </script>
 </body>
