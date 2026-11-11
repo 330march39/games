@@ -63,7 +63,8 @@
 
         /* スマホ横画面およびPC画面のレイアウト (盤面左、ヘッダーと手札が右) */
         @media (orientation: landscape) and (max-height: 600px), (min-width: 900px) {
-            body:not(.tabletop-active) #screen-game {
+            /* ↓ :not(.hidden) を追加します */
+            body:not(.tabletop-active) #screen-game:not(.hidden) {
                 display: grid;
                 grid-template-columns: 1fr 340px; /* 左: 盤面 / 右: 操作パネル(固定幅) */
                 grid-template-rows: auto 1fr;
@@ -1920,6 +1921,8 @@
 
             // P1とP2で完全に同一のボタンデザイン＆ラベル構造に統一
             const rerollBtn = document.getElementById(domIds.rerollBtnId);
+            // ↓この1行を追加して中身を描画します
+            rerollBtn.innerHTML = `<i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>`;
             if (sp >= 30 && canControl) {
                 rerollBtn.disabled = false;
                 rerollBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 whitespace-nowrap cursor-pointer';
@@ -1929,6 +1932,8 @@
             }
 
             const ultBtn = document.getElementById(domIds.ultBtnId);
+            // ↓この1行を追加して中身を描画します
+            ultBtn.innerHTML = `<i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>`;
             if (sp >= 100 && canControl) {
                 ultBtn.disabled = false;
                 ultBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-amber-300 via-yellow-300 to-pink-400 text-slate-950 shadow-[0_0_12px_rgba(250,204,21,0.9)] animate-pulse whitespace-nowrap cursor-pointer';
