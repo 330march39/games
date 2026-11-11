@@ -894,6 +894,14 @@
             lose:  { url: 'MusMus-JGL-006.mp3', loop: false }
         };
         const bgmBuffers = {};
+        // 🌟【ここから追加】SE用のファイル定義
+const seFiles = {
+    lockon: { url: '決定ボタンを押す20.mp3' },
+    special: { url: '決定ボタンを押す16.mp3' },
+    thunder: { url: '雷魔法1.mp3' }
+};
+const seBuffers = {};
+        
         let currentBgmSource = null;
         let currentBgmType = null;
         let bgmGainNode = null;
@@ -922,6 +930,16 @@
                         })
                         .catch(e => console.log('BGMロード失敗:', e));
                 }
+                // 🌟【ここから追加】SE（MP3）の読み込み
+        for (const [type, data] of Object.entries(seFiles)) {
+            fetch(data.url)
+                .then(response => response.arrayBuffer())
+                .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+                .then(audioBuffer => {
+                    seBuffers[type] = audioBuffer;
+                })
+                .catch(e => console.log('SEロード失敗:', e));
+        }
             }
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
@@ -990,6 +1008,21 @@
             try {
                 initAudio();
                 const now = audioCtx.currentTime;
+
+                // 🌟【ここから追加】MP3ファイルを再生する処理
+        if (type === 'lockon_mp3' || type === 'special_mp3' || type === 'thunder_mp3') {
+            const bufferKey = type.replace('_mp3', ''); // '_mp3' を取り除いてキーにする
+            if (seBuffers[bufferKey]) {
+                const source = audioCtx.createBufferSource();
+                source.buffer = seBuffers[bufferKey];
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.6; // SEの音量（0.0〜1.0で調整可能）
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start(0);
+                return; // MP3を鳴らしたらここで終了
+            }
+        }
 
                 if (type === 'pickup') {
                     const osc = audioCtx.createOscillator();
@@ -2366,7 +2399,7 @@ function flyBonusToDeck(r, c, type, playerColor) {
 
             // 2. 特殊コマ（ボム・矢印）の場合は、文字を出さずにロックオン照準＆サウンドで「ため」を作って視覚フィードバック
             if (usedPiece.id !== 'NORMAL') {
-                playSE('lockon');
+                playSE('lockon_mp3'); // ←変更: 決定ボタンを押す20.mp3 が鳴る
 
                 // 効果範囲のセルを赤くロックオン点滅させる
                 extraFlips.forEach(([tr, tc]) => {
@@ -2380,7 +2413,7 @@ function flyBonusToDeck(r, c, type, playerColor) {
 
                 await sleep(560);
 
-                playSE('laser');
+                playSE('special_mp3'); // ←変更: 決定ボタンを押す16.mp3 が鳴る
                 triggerScreenShake();
                 showVisualSkillEffect(r, c, usedPiece);
             } else {
@@ -2550,7 +2583,7 @@ function flyBonusToDeck(r, c, type, playerColor) {
                 const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
                 if (tCell) tCell.classList.add('special-lockon');
             });
-            playSE('lockon');
+            playSE('lockon_mp3'); // ←変更: 決定ボタンを押す20.mp3 が鳴る
             await sleep(500);
 
             const flipObjects = [];
@@ -2566,7 +2599,7 @@ function flyBonusToDeck(r, c, type, playerColor) {
                 }
             });
 
-            playSE('laser');
+            playSE('thunder_mp3'); // ←変更: 雷魔法1.mp3 が鳴る
             triggerScreenShake();
             renderAll(flipObjects);
 
