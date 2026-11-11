@@ -50,25 +50,78 @@
             box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25);
         }
 
-        /* 盤面サイズ計算（スマホ縦・対面モード・PC横ワイドすべてに最適化） */
         .board-wrapper {
-            /* 修正前より最大サイズ（600px）と割合（92vw, 55dvh）を大きくしました */
             width: min(92vw, 55dvh, 600px);
             height: min(92vw, 55dvh, 600px);
             transition: width 0.25s ease, height 0.25s ease;
-            margin: auto; /* 盤面を中央に保つ */
+            margin: auto;
         }
-        /* 1台で2人対戦（上下デッキ＋左回転ヘッダー） */
         body.tabletop-active .board-wrapper {
             width: min(72vw, 41dvh, 380px);
             height: min(72vw, 41dvh, 380px);
         }
-        /* スマホ横画面（縦幅が狭い場合）およびPC横画面の盤面サイズ */
+
+        /* スマホ横画面およびPC画面のレイアウト (盤面左、ヘッダーと手札が右) */
         @media (orientation: landscape) and (max-height: 600px), (min-width: 900px) {
-            body:not(.tabletop-active) .board-wrapper {
-                width: min(50vw, 75dvh, 520px);
-                height: min(50vw, 75dvh, 520px);
+            body:not(.tabletop-active) #screen-game {
+                display: grid;
+                grid-template-columns: 1fr 340px; /* 左: 盤面 / 右: 操作パネル(固定幅) */
+                grid-template-rows: auto 1fr;
+                grid-template-areas: 
+                    "board header"
+                    "board deck";
+                gap: 16px;
+                padding: 16px;
+                align-items: center;
+                justify-items: center;
             }
+            body:not(.tabletop-active) #standard-top-header {
+                grid-area: header;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                align-self: end;
+            }
+            body:not(.tabletop-active) #main-battle-body {
+                grid-area: board;
+                width: 100%;
+                margin: 0;
+            }
+            body:not(.tabletop-active) #p1-bottom-deck-area {
+                grid-area: deck;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                align-self: start;
+            }
+        }
+
+        /* 追加: 新しい画面中央ポップアップ */
+        #center-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9999;
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(8px);
+            border: 3px solid #fde047;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(253, 224, 71, 0.4);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        #center-popup.show {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
         }
 
         .board-grid {
@@ -265,7 +318,8 @@
             z-index: 9999;
             width: 44px;
             height: 44px;
-            transform: translate(-50%, -125%);
+            /* transform: translate(-50%, -125%); だったものを以下に変更 */
+            transform: translate(-50%, -50%); 
             filter: drop-shadow(0 10px 10px rgba(0,0,0,0.55));
             display: none;
         }
@@ -379,10 +433,10 @@
         </div>
     </div>
 
-    <!-- ミニマル通知トースト -->
-    <div id="toast-msg" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4 bg-slate-900/95 border-2 border-yellow-400 text-white font-extrabold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
-        <i class="fa-solid fa-star text-yellow-400"></i>
-        <span id="toast-text">READY</span>
+    <!-- 新しい画面中央ポップアップ -->
+    <div id="center-popup">
+        <i id="popup-icon" class="fa-solid fa-star text-yellow-400 text-2xl"></i>
+        <span id="popup-text" class="text-xl sm:text-2xl font-black">READY</span>
     </div>
 
     <!-- ==================== 1. タイトル＆ロビー画面 ==================== -->
@@ -530,8 +584,12 @@
                             <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
-                            <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
-                            <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                            <button id="reroll-btn-p2" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap">
+                                <i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>
+                            </button>
+                            <button id="ult-btn-p2" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap">
+                                <i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -596,8 +654,12 @@
                             <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
-                            <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
-                            <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                            <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap">
+                                <i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>
+                            </button>
+                            <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap">
+                                <i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1423,13 +1485,8 @@
         }
 
         function applyLayoutMode() {
-            const topHeader = document.getElementById('standard-top-header');
-            const p2TopDeck = document.getElementById('p2-top-deck-area');
-            const rotatedHeader = document.getElementById('tabletop-rotated-header');
             const toggleBtn = document.getElementById('btn-toggle-tabletop');
-            const mainBody = document.getElementById('main-battle-body');
-            const p1BottomDeck = document.getElementById('p1-bottom-deck-area');
-
+            
             if (gameMode === 'local') {
                 toggleBtn.classList.remove('hidden');
                 toggleBtn.classList.add('flex');
@@ -1438,38 +1495,22 @@
                 toggleBtn.classList.remove('flex');
             }
 
-            // スマホ横画面（縦幅が狭い）またはPC横画面の判定
-            const isLandscapeMobile = window.innerWidth > window.innerHeight && window.innerHeight < 600;
-            const isWideScreen = window.innerWidth >= 900;
-            const useSideBySide = !isTabletopMode && (isLandscapeMobile || isWideScreen);
-
+            // 対面レイアウトの切り替え処理のみ行う (横画面制御はCSSで自動化)
             if (gameMode === 'local' && isTabletopMode) {
                 document.body.classList.add('tabletop-active');
-                topHeader.classList.add('hidden');
-                p2TopDeck.classList.remove('hidden');
-                p2TopDeck.classList.add('flex');
-                rotatedHeader.classList.remove('hidden');
-                mainBody.className = 'flex-1 w-full flex flex-col items-center justify-center gap-2 my-0.5 overflow-hidden';
-                p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0 mt-0';
+                document.getElementById('standard-top-header').classList.add('hidden');
+                document.getElementById('p2-top-deck-area').classList.remove('hidden');
+                document.getElementById('p2-top-deck-area').classList.add('flex');
+                document.getElementById('tabletop-rotated-header').classList.remove('hidden');
             } else {
                 document.body.classList.remove('tabletop-active');
-                topHeader.classList.remove('hidden');
-                p2TopDeck.classList.add('hidden');
-                p2TopDeck.classList.remove('flex');
-                rotatedHeader.classList.add('hidden');
-                
-                if (useSideBySide) {
-                    // ★横画面レイアウト（flex-row-reverse で 盤面を右、手札・デッキを左に配置）
-                    mainBody.className = 'flex-1 w-full flex flex-row-reverse items-center justify-center gap-4 sm:gap-6 my-2 overflow-hidden';
-                    p1BottomDeck.className = 'w-full max-w-[340px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 sm:p-3 shadow-2xl flex flex-col gap-2 shrink-0';
-                } else {
-                    // ★縦画面レイアウト（盤面は中央寄り、手札デッキは justify-between と mt-auto で画面下部に固定して余白を確保）
-                    mainBody.className = 'flex-1 w-full flex flex-col items-center justify-between gap-4 my-2 overflow-hidden';
-                    p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0 mt-auto mb-2';
-                }
+                document.getElementById('standard-top-header').classList.remove('hidden');
+                document.getElementById('p2-top-deck-area').classList.add('hidden');
+                document.getElementById('p2-top-deck-area').classList.remove('flex');
+                document.getElementById('tabletop-rotated-header').classList.add('hidden');
             }
         }
-
+        
         function toggleTabletopLayout() {
             if (gameMode !== 'local') return;
             isTabletopMode = !isTabletopMode;
@@ -1879,7 +1920,6 @@
 
             // P1とP2で完全に同一のボタンデザイン＆ラベル構造に統一
             const rerollBtn = document.getElementById(domIds.rerollBtnId);
-            rerollBtn.innerHTML = `<i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>`;
             if (sp >= 30 && canControl) {
                 rerollBtn.disabled = false;
                 rerollBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 whitespace-nowrap cursor-pointer';
@@ -1889,7 +1929,6 @@
             }
 
             const ultBtn = document.getElementById(domIds.ultBtnId);
-            ultBtn.innerHTML = `<i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>`;
             if (sp >= 100 && canControl) {
                 ultBtn.disabled = false;
                 ultBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-amber-300 via-yellow-300 to-pink-400 text-slate-950 shadow-[0_0_12px_rgba(250,204,21,0.9)] animate-pulse whitespace-nowrap cursor-pointer';
@@ -2103,14 +2142,73 @@
             hands[color][handIndex] = nextDrawnPiece;
             playSE('place');
 
+            // 修正前は showToast を呼んでいた部分を書き換え
             if (pickedBonus === 'UPGRADE') {
                 playSE('bonus');
-                showToast('ボーナス獲得！レア特殊コマが補充されました！');
+                flyBonusToDeck(r, c, 'UPGRADE', color);
             } else if (pickedBonus === 'SP') {
                 spGauge[color] = Math.min(100, spGauge[color] + 35);
                 playSE('bonus');
-                showToast('ボーナス獲得！SPゲージ +35%！');
+                flyBonusToDeck(r, c, 'SP', color);
             }
+
+            // ボーナスがゲージに吸い込まれるアニメーション演出
+        function flyBonusToDeck(r, c, type, playerColor) {
+            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+            let targetEl;
+            // SP増減のターゲットとなるゲージを取得
+            if (gameMode === 'local' && isTabletopMode && playerColor === 2) {
+                targetEl = document.getElementById('sp-bar-p2');
+            } else {
+                targetEl = document.getElementById('sp-bar'); 
+            }
+            
+            if (!cellEl || !targetEl) return;
+
+            const cellRect = cellEl.getBoundingClientRect();
+            const targetRect = targetEl.getBoundingClientRect();
+
+            const flyEl = document.createElement('div');
+            flyEl.className = type === 'SP' 
+                ? 'bg-amber-400 border-2 border-white text-white shadow-[0_0_15px_rgba(251,191,36,1)]'
+                : 'bg-fuchsia-500 border-2 border-white text-white shadow-[0_0_15px_rgba(232,121,249,1)]';
+            
+            flyEl.innerHTML = type === 'SP' ? '<i class="fa-solid fa-bolt"></i>' : '<i class="fa-solid fa-gem"></i>';
+            flyEl.style.position = 'fixed';
+            flyEl.style.left = `${cellRect.left + cellRect.width / 2}px`;
+            flyEl.style.top = `${cellRect.top + cellRect.height / 2}px`;
+            flyEl.style.width = '32px';
+            flyEl.style.height = '32px';
+            flyEl.style.borderRadius = '50%';
+            flyEl.style.display = 'flex';
+            flyEl.style.alignItems = 'center';
+            flyEl.style.justifyContent = 'center';
+            flyEl.style.transform = 'translate(-50%, -50%) scale(1)';
+            flyEl.style.zIndex = 10000;
+            flyEl.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+            
+            document.body.appendChild(flyEl);
+
+            // 次のフレームでゲージ位置へ移動させながら縮小
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    flyEl.style.left = `${targetRect.left + targetRect.width / 2}px`;
+                    flyEl.style.top = `${targetRect.top + targetRect.height / 2}px`;
+                    flyEl.style.transform = 'translate(-50%, -50%) scale(0.3)';
+                    flyEl.style.opacity = '0';
+                });
+            });
+
+            // 移動完了後に要素を消し、ゲージの枠を光らせる
+            setTimeout(() => {
+                flyEl.remove();
+                const barContainer = targetEl.parentElement;
+                barContainer.classList.add('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
+                setTimeout(() => {
+                    barContainer.classList.remove('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
+                }, 300);
+            }, 600);
+        }
 
             renderAll([], [r, c]);
 
@@ -2434,16 +2532,16 @@
 
         function openRulesModal() { openModal('modal-rules'); }
 
-        function showToast(msg) {
-            const toast = document.getElementById('toast-msg');
-            document.getElementById('toast-text').textContent = msg;
-            toast.classList.remove('opacity-0', '-translate-y-4');
-            toast.classList.add('opacity-100', 'translate-y-0');
-            clearTimeout(window._toastTimer);
-            window._toastTimer = setTimeout(() => {
-                toast.classList.remove('opacity-100', 'translate-y-0');
-                toast.classList.add('opacity-0', '-translate-y-4');
-            }, 2400);
+        function showToast(msg, iconClass = 'fa-solid fa-circle-info text-cyan-400') {
+            const popup = document.getElementById('center-popup');
+            document.getElementById('popup-text').textContent = msg;
+            document.getElementById('popup-icon').className = `${iconClass} text-2xl drop-shadow-md`;
+            
+            popup.classList.add('show');
+            clearTimeout(window._popupTimer);
+            window._popupTimer = setTimeout(() => {
+                popup.classList.remove('show');
+            }, 1800);
         }
 
         function sleep(ms) {
