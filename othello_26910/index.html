@@ -19,11 +19,12 @@
             user-select: none;
             -webkit-user-select: none;
             overflow: hidden;
-            background-color: #2e1065;
+            background-color: #1e1b4b;
             background-image: 
-                radial-gradient(rgba(255, 255, 255, 0.12) 2px, transparent 2px),
-                radial-gradient(circle at 50% 15%, #6d28d9 0%, #3b0764 55%, #1e1b4b 100%);
-            background-size: 28px 28px, 100% 100%;
+                radial-gradient(rgba(255, 255, 255, 0.1) 1.5px, transparent 1.5px),
+                var(--turn-bg, radial-gradient(circle at 50% 20%, #0369a1 0%, #1e1b4b 65%, #090d16 100%));
+            background-size: 24px 24px, 100% 100%;
+            transition: background-image 0.5s ease, background-color 0.5s ease;
             touch-action: none;
             height: 100dvh;
             width: 100vw;
@@ -38,31 +39,33 @@
         /* ポップな立体ボタン */
         .btn-pop {
             transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.15s ease;
-            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.45), 0 5px 10px rgba(0, 0, 0, 0.25);
         }
         .btn-pop:hover:not(:disabled) {
             filter: brightness(1.06);
             transform: translateY(-1px);
         }
         .btn-pop:active:not(:disabled) {
-            transform: translateY(4px);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.3);
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 2px 4px rgba(0, 0, 0, 0.25);
         }
 
-        /* 盤面サイズ計算（対面モードでも見切れない） */
+        /* 盤面サイズ計算（スマホ縦・対面モード・PC横ワイドすべてに最適化） */
         .board-wrapper {
-            width: min(84vw, 44dvh, 420px);
-            height: min(84vw, 44dvh, 420px);
-            transition: width 0.3s ease, height 0.3s ease;
+            width: min(86vw, 46dvh, 420px);
+            height: min(86vw, 46dvh, 420px);
+            transition: width 0.25s ease, height 0.25s ease;
         }
+        /* 1台で2人対戦（上下デッキ＋左回転ヘッダー） */
         body.tabletop-active .board-wrapper {
-            width: min(74vw, 40dvh, 390px);
-            height: min(74vw, 40dvh, 390px);
+            width: min(72vw, 41dvh, 380px);
+            height: min(72vw, 41dvh, 380px);
         }
-        @media (min-width: 1024px) {
+        /* PC横画面（1人プレイ・オンライン時は左に盤面、右にデッキ） */
+        @media (min-width: 900px) and (min-aspect-ratio: 4/3) {
             body:not(.tabletop-active) .board-wrapper {
-                width: min(50vw, 72dvh, 500px);
-                height: min(50vw, 72dvh, 500px);
+                width: min(52vw, 74dvh, 520px);
+                height: min(52vw, 74dvh, 520px);
             }
         }
 
@@ -70,28 +73,28 @@
             display: grid;
             grid-template-columns: repeat(8, minmax(0, 1fr));
             grid-template-rows: repeat(8, minmax(0, 1fr));
-            gap: 3px;
-            background: #1e293b;
-            border: 6px solid #facc15;
-            border-radius: 22px;
+            gap: 2.5px;
+            background: #0f172a;
+            border: 4px solid #facc15;
+            border-radius: 14px;
             box-shadow: 
-                0 8px 0 #ca8a04,
-                0 18px 36px rgba(0,0,0,0.65),
-                inset 0 0 12px rgba(250, 204, 21, 0.25);
+                0 6px 0 #ca8a04,
+                0 14px 30px rgba(0,0,0,0.6),
+                inset 0 0 10px rgba(250, 204, 21, 0.2);
             width: 100%;
             height: 100%;
-            padding: 5px;
+            padding: 4px;
             position: relative;
         }
 
         .board-cell {
             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border-radius: 7px;
+            border-radius: 5px;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 2px 2px rgba(255,255,255,0.28), inset 0 -2px 3px rgba(0,0,0,0.35);
+            box-shadow: inset 0 1.5px 1.5px rgba(255,255,255,0.25), inset 0 -1.5px 2px rgba(0,0,0,0.35);
             perspective: 600px;
         }
         .board-cell:nth-child(even) {
@@ -253,22 +256,41 @@
             100% { box-shadow: 0 0 20px rgba(250, 204, 21, 0.95), 0 4px 0 #ca8a04; }
         }
 
-        /* ドラッグ中のゴーストコマ */
+        /* ドラッグ中のゴーストコマ（手元が見やすいコンパクトサイズ＆指の少し上に配置） */
         #drag-ghost {
             position: fixed;
             pointer-events: none;
             z-index: 9999;
-            width: 64px;
-            height: 64px;
-            transform: translate(-50%, -75%) scale(1.22);
-            filter: drop-shadow(0 14px 12px rgba(0,0,0,0.55));
+            width: 44px;
+            height: 44px;
+            transform: translate(-50%, -125%);
+            filter: drop-shadow(0 10px 10px rgba(0,0,0,0.55));
             display: none;
         }
 
-        /* 対面プレイ時の左サイド90度回転スコアヘッダー */
-        .side-rotated-bar {
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
+        /* 対面プレイ時の左サイド90度回転スコアヘッダー（枠ごと綺麗に回転させて崩れを防止） */
+        .tabletop-side-slot {
+            width: 46px;
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .tabletop-rotated-box {
+            transform: rotate(-90deg);
+            transform-origin: center center;
+            width: 250px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 8px;
+            border-radius: 12px;
+            background: rgba(15, 23, 42, 0.94);
+            border: 2px solid rgba(250, 204, 21, 0.75);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.55);
+            white-space: nowrap;
         }
 
         /* 画面シェイク */
@@ -367,8 +389,8 @@
             
             <!-- ポップなタイトルロゴ -->
             <div class="text-center relative">
-                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-pink-500 via-amber-400 to-cyan-400 text-slate-950 text-[11px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg mb-2 border-2 border-white">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> POP PARTY BOARD GAME
+                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-pink-500 via-amber-400 to-cyan-400 text-slate-950 text-[10px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-lg mb-1.5 border border-white">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> POP STRATEGY OTHELLO
                 </div>
                 <h1 class="font-num text-5xl sm:text-6xl font-black tracking-tight text-white drop-shadow-[0_6px_0_#1e1b4b] leading-none">
                     OTHELLO<br>
@@ -377,60 +399,60 @@
             </div>
 
             <!-- モード選択パネル -->
-            <div class="w-full bg-indigo-950/90 backdrop-blur-xl border-4 border-indigo-400/60 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
+            <div class="w-full bg-slate-950/90 backdrop-blur-xl border-2 border-white/20 rounded-2xl p-4 shadow-2xl space-y-2.5">
                 
                 <!-- VS CPU -->
-                <button onclick="openSetupModal('cpu')" class="btn-pop w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3.5 px-4 rounded-2xl border-2 border-white flex items-center justify-between group">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-2xl bg-white/30 flex items-center justify-center text-xl text-slate-950 group-hover:scale-110 transition-transform">
+                <button onclick="openSetupModal('cpu')" class="btn-pop w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3 px-4 rounded-xl border-2 border-white flex items-center justify-between group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-white/30 flex items-center justify-center text-lg text-slate-950 group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-robot"></i>
                         </div>
                         <div class="text-left">
-                            <div class="text-base sm:text-lg tracking-wide leading-tight">ひとりで遊ぶ (VS CPU)</div>
-                            <div class="text-[11px] text-slate-900/80 font-extrabold">好きなコマの色を選んでAIとバトル</div>
+                            <div class="text-base tracking-wide leading-tight">VS CPU</div>
+                            <div class="text-[10px] text-slate-900/80 font-extrabold">1人で気軽にバトル</div>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right text-slate-950"></i>
                 </button>
 
                 <!-- 2P TABLETOP (1台で向かい合って対戦) -->
-                <button onclick="openSetupModal('local')" class="btn-pop w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-pink-200 flex items-center justify-between group">
-                    <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-2xl bg-black/25 flex items-center justify-center text-xl text-yellow-300 group-hover:scale-110 transition-transform">
+                <button onclick="openSetupModal('local')" class="btn-pop w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black py-3 px-4 rounded-xl border-2 border-pink-200 flex items-center justify-between group">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-black/25 flex items-center justify-center text-lg text-yellow-300 group-hover:scale-110 transition-transform">
                             <i class="fa-solid fa-tablet-screen-button"></i>
                         </div>
                         <div class="text-left">
-                            <div class="text-base sm:text-lg tracking-wide leading-tight">1台でふたり対戦 (対面対応)</div>
-                            <div class="text-[11px] text-pink-100 font-bold">上下反転パネルで向かい合って遊べる！</div>
+                            <div class="text-base tracking-wide leading-tight">2P 対面バトル</div>
+                            <div class="text-[10px] text-pink-100 font-bold">1台の端末で向かい合って対戦</div>
                         </div>
                     </div>
                     <i class="fa-solid fa-chevron-right text-pink-100"></i>
                 </button>
 
                 <!-- 2端末リアルタイム通信対戦 (P2P ID連携) -->
-                <div class="bg-indigo-900/70 border-2 border-indigo-400/40 rounded-2xl p-3 space-y-2">
-                    <div class="text-xs font-black text-cyan-300 flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-wifi"></i> 2台の端末でID通信対戦 (リアルタイムP2P)
+                <div class="bg-slate-900/80 border border-white/15 rounded-xl p-2.5 space-y-2">
+                    <div class="text-[11px] font-black text-cyan-300 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-wifi"></i> オンライン通信対戦 (ROOM ID)
                     </div>
-                    <div class="grid grid-cols-2 gap-2.5">
-                        <button onclick="openSetupModal('online_host')" class="btn-pop bg-gradient-to-b from-amber-300 to-amber-500 text-slate-950 font-black py-2.5 px-3 rounded-xl border-2 border-white flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="openSetupModal('online_host')" class="btn-pop bg-gradient-to-b from-amber-300 to-amber-500 text-slate-950 font-black py-2.5 px-3 rounded-lg border border-white flex items-center justify-center gap-1.5 text-xs">
                             <i class="fa-solid fa-plus-circle"></i>
                             <span>部屋を作る</span>
                         </button>
 
-                        <button onclick="openSetupModal('online_guest')" class="btn-pop bg-gradient-to-b from-cyan-400 to-blue-500 text-slate-950 font-black py-2.5 px-3 rounded-xl border-2 border-white flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                        <button onclick="openSetupModal('online_guest')" class="btn-pop bg-gradient-to-b from-cyan-400 to-blue-500 text-slate-950 font-black py-2.5 px-3 rounded-lg border border-white flex items-center justify-center gap-1.5 text-xs">
                             <i class="fa-solid fa-key"></i>
-                            <span>IDで参加する</span>
+                            <span>IDで参加</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- ユーティリティバー -->
-                <div class="pt-1 flex items-center gap-2">
-                    <button onclick="openRulesModal()" class="btn-pop flex-1 py-2.5 bg-indigo-900 hover:bg-indigo-800 border-2 border-indigo-400/50 rounded-xl text-xs font-extrabold text-yellow-300 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-book-open"></i> 特殊コマ＆ルール説明
+                <div class="pt-0.5 flex items-center gap-2">
+                    <button onclick="openRulesModal()" class="btn-pop flex-1 py-2 bg-slate-900 hover:bg-slate-800 border border-white/20 rounded-lg text-xs font-extrabold text-yellow-300 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-book-open"></i> ルール
                     </button>
-                    <button id="sound-toggle-lobby" onclick="toggleSound()" class="btn-pop w-11 py-2.5 bg-indigo-900 hover:bg-indigo-800 border-2 border-indigo-400/50 rounded-xl text-xs font-bold text-cyan-300 flex items-center justify-center">
+                    <button id="sound-toggle-lobby" onclick="toggleSound()" class="btn-pop w-10 py-2 bg-slate-900 hover:bg-slate-800 border border-white/20 rounded-lg text-xs font-bold text-cyan-300 flex items-center justify-center">
                         <i class="fa-solid fa-volume-high"></i>
                     </button>
                 </div>
@@ -440,141 +462,130 @@
     </div>
 
     <!-- ==================== 2. メインゲーム画面 ==================== -->
-    <div id="screen-game" class="w-full h-full hidden flex-col items-center justify-between p-1.5 sm:p-3 max-w-6xl mx-auto z-10 overflow-hidden">
+    <div id="screen-game" class="w-full h-full hidden flex-col items-center justify-between p-2 sm:p-3 max-w-6xl mx-auto z-10 overflow-hidden">
         
-        <!-- ① 通常モード用の上部ヘッダーバー (対面モード時は非表示になり左90度回転バーへ切り替わる) -->
-        <div id="standard-top-header" class="w-full max-w-[440px] lg:max-w-[540px] flex items-center justify-between gap-2 bg-indigo-950/90 border-2 border-indigo-400/60 rounded-2xl px-3 py-1.5 shadow-lg shrink-0">
-            <button onclick="confirmReturnToLobby()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-900 border border-indigo-400/50 text-white flex items-center justify-center text-xs" title="タイトルへ戻る">
+        <!-- ① 通常モード用の上部ヘッダーバー (崩れない横1行レイアウト・中央は常に「VS」) -->
+        <div id="standard-top-header" class="w-full max-w-[420px] lg:max-w-[780px] flex items-center justify-between gap-2 bg-slate-950/90 border-2 border-white/20 rounded-xl px-2.5 py-1.5 shadow-lg shrink-0">
+            <button onclick="confirmReturnToLobby()" class="btn-pop w-8 h-8 rounded-lg bg-slate-800 border border-white/20 text-white flex items-center justify-center text-xs shrink-0" title="タイトルへ戻る">
                 <i class="fa-solid fa-right-from-bracket rotate-180"></i>
             </button>
 
-            <!-- スコア＆ターン表示 -->
-            <div class="flex-1 flex items-center justify-between bg-slate-950/80 rounded-xl px-2.5 py-1 border border-indigo-500/40">
-                <div id="p1-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/50 transition-all">
-                    <div id="p1-header-disc" class="w-4 h-4 rounded-full border border-white"></div>
-                    <span id="p1-name" class="text-[11px] font-black text-white max-w-[68px] truncate">P1</span>
-                    <span id="p1-score" class="font-num text-base font-black text-yellow-300 ml-0.5">2</span>
+            <!-- スコア＆VS表示 -->
+            <div class="flex-1 flex items-center justify-between bg-slate-900/90 rounded-lg px-2.5 py-1 border border-white/10 min-w-0">
+                <div id="p1-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-md border-2 border-cyan-400 bg-cyan-950/50 transition-all min-w-0 flex-1">
+                    <div id="p1-header-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
+                    <span id="p1-name" class="text-[11px] font-black text-white truncate">P1</span>
+                    <span id="p1-score" class="font-num text-sm sm:text-base font-black text-yellow-300 ml-auto pl-1">2</span>
                 </div>
 
-                <div class="flex flex-col items-center px-1">
-                    <div id="turn-badge" class="bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow">
-                        TURN
+                <div class="flex flex-col items-center px-2 shrink-0">
+                    <div id="turn-badge" class="font-num bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md shadow leading-none">
+                        VS
                     </div>
-                    <div id="room-badge" class="hidden text-[9px] font-bold text-cyan-300 mt-0.5">
-                        ID: <span id="active-room-id">----</span>
+                    <div id="room-badge" class="hidden text-[9px] font-bold text-cyan-300 mt-0.5 leading-none">
+                        ID:<span id="active-room-id">----</span>
                     </div>
                 </div>
 
-                <div id="p2-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 transition-all">
-                    <span id="p2-score" class="font-num text-base font-black text-yellow-300 mr-0.5">2</span>
-                    <span id="p2-name" class="text-[11px] font-black text-white max-w-[68px] truncate">P2</span>
-                    <div id="p2-header-disc" class="w-4 h-4 rounded-full border border-white"></div>
+                <div id="p2-panel" class="flex items-center justify-end gap-1.5 px-2 py-0.5 rounded-md border-2 border-transparent bg-slate-800/40 transition-all min-w-0 flex-1">
+                    <span id="p2-score" class="font-num text-sm sm:text-base font-black text-yellow-300 mr-auto pr-1">2</span>
+                    <span id="p2-name" class="text-[11px] font-black text-white truncate">P2</span>
+                    <div id="p2-header-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-1">
-                <button id="btn-toggle-tabletop" onclick="toggleTabletopLayout()" class="hidden btn-pop w-8 h-8 rounded-xl bg-pink-600 border border-pink-300 text-white items-center justify-center text-xs" title="対面レイアウト切替">
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button id="btn-toggle-tabletop" onclick="toggleTabletopLayout()" class="hidden btn-pop w-8 h-8 rounded-lg bg-pink-600 border border-pink-300 text-white items-center justify-center text-xs" title="対面レイアウト切替">
                     <i class="fa-solid fa-arrows-up-down"></i>
                 </button>
-                <button onclick="openRulesModal()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-900 border border-indigo-400/50 text-yellow-300 flex items-center justify-center text-xs">
+                <button onclick="openRulesModal()" class="btn-pop w-8 h-8 rounded-lg bg-slate-800 border border-white/20 text-yellow-300 flex items-center justify-center text-xs">
                     <i class="fa-solid fa-book-open"></i>
                 </button>
             </div>
         </div>
 
-        <!-- ② 対面2人プレイ用：上部P2デッキ（180度上下反転表示） -->
-        <div id="p2-top-deck-area" class="hidden w-full max-w-[420px] bg-indigo-950/90 border-2 border-pink-400/70 rounded-2xl p-2 shadow-xl rotate-180 shrink-0">
-            <div class="flex items-center justify-between gap-2 mb-1.5">
-                <div class="flex items-center gap-1.5">
-                    <div id="p2-deck-disc" class="w-4 h-4 rounded-full border border-white"></div>
-                    <span id="p2-deck-name" class="text-xs font-black text-pink-200">PLAYER 2</span>
-                </div>
-                <!-- P2 SPゲージ＆スキル -->
-                <div class="flex items-center gap-1.5 flex-1 max-w-[230px]">
-                    <div class="flex-1 h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
-                        <div id="sp-bar-p2" class="h-full bg-gradient-to-r from-amber-400 to-pink-500 transition-all" style="width:30%"></div>
+        <!-- ② 対面2人プレイ用：上部P2デッキ（180度上下反転表示・下部P1デッキと完全同一デザイン） -->
+        <div id="p2-top-deck-area" class="hidden w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-xl rotate-180 flex-col gap-1.5 shrink-0">
+            <div class="flex items-center justify-between gap-1.5 bg-slate-900/90 px-2 py-1 rounded-lg border border-white/10">
+                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                    <div id="p2-deck-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
+                    <span id="p2-deck-name" class="text-[11px] font-black text-white truncate max-w-[64px]">P2</span>
+                    <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
+                        <div id="sp-bar-p2" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
                     </div>
-                    <span id="sp-text-p2" class="font-num text-[10px] font-black text-yellow-300 w-8">30%</span>
-                    <button id="reroll-btn-p2" onclick="rerollHand(2)" class="btn-pop px-2 py-1 rounded-lg font-black text-[10px] bg-cyan-500 text-slate-950 border border-white">
-                        <i class="fa-solid fa-rotate"></i>30
-                    </button>
-                    <button id="ult-btn-p2" onclick="activateUltimate(2)" class="btn-pop px-2 py-1 rounded-lg font-black text-[10px] bg-amber-400 text-slate-950 border border-white">
-                        <i class="fa-solid fa-bolt"></i>100
-                    </button>
+                    <span id="sp-text-p2" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <button id="reroll-btn-p2" onclick="rerollHand(2)" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                    <button id="ult-btn-p2" onclick="activateUltimate(2)" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
                 </div>
             </div>
-            <div id="hand-container-p2" class="grid grid-cols-3 gap-2 h-20"></div>
+            <div id="hand-container-p2" class="grid grid-cols-3 gap-1.5 h-[74px] sm:h-20"></div>
         </div>
 
-        <!-- ③ 中央エリア：左90度回転ヘッダー（対面時）＋ 8x8盤面 ＋ PC横並びデッキ -->
-        <div class="flex-1 w-full flex flex-row items-center justify-center gap-2 sm:gap-4 my-0.5 overflow-hidden">
+        <!-- ③ 中央エリア：対面時は[左90度回転ヘッダー＋盤面]、PC通常時は[左に盤面＋右にP1デッキ]、スマホ通常時は[盤面＋下にP1デッキ] -->
+        <div id="main-battle-body" class="flex-1 w-full flex flex-col items-center justify-center gap-2 sm:gap-4 my-0.5 overflow-hidden">
             
-            <!-- 対面2人プレイ専用：左に90度回転して表示されるスコア＆操作ヘッダー -->
-            <div id="tabletop-rotated-header" class="hidden flex-col items-center justify-between bg-indigo-950/95 border-2 border-yellow-400/80 rounded-2xl py-2.5 px-1.5 shadow-2xl gap-2 shrink-0">
-                <button onclick="confirmReturnToLobby()" class="btn-pop w-8 h-8 rounded-xl bg-rose-600 border border-white text-white flex items-center justify-center text-xs -rotate-90" title="中断して戻る">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+            <div class="flex flex-row items-center justify-center gap-2 sm:gap-4">
+                <!-- 対面2人プレイ専用：左に90度回転して表示されるスコア＆操作ヘッダー（枠ごと回転して崩れない） -->
+                <div id="tabletop-rotated-header" class="hidden tabletop-side-slot">
+                    <div class="tabletop-rotated-box">
+                        <button onclick="confirmReturnToLobby()" class="btn-pop w-7 h-7 rounded-lg bg-rose-600 border border-white text-white flex items-center justify-center text-xs shrink-0">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
 
-                <!-- 左に90度回転したスコア表示 -->
-                <div class=" -rotate-90 flex items-center gap-2 py-6 px-1 whitespace-nowrap">
-                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-lg border border-cyan-400">
-                        <div id="rot-p1-disc" class="w-3.5 h-3.5 rounded-full border border-white"></div>
-                        <span id="rot-p1-name" class="text-[10px] font-black text-cyan-200 max-w-[55px] truncate">P1</span>
-                        <span id="rot-p1-score" class="font-num text-sm font-black text-yellow-300">2</span>
-                    </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="flex items-center gap-1 bg-slate-900 px-2 py-0.5 rounded-md border border-white/20">
+                                <div id="rot-p1-disc" class="w-3 h-3 rounded-full border border-white shrink-0"></div>
+                                <span id="rot-p1-name" class="text-[10px] font-black text-white max-w-[48px] truncate">P1</span>
+                                <span id="rot-p1-score" class="font-num text-xs font-black text-yellow-300">2</span>
+                            </div>
 
-                    <span id="rot-turn-label" class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full">VS</span>
+                            <span id="rot-turn-label" class="font-num bg-amber-400 text-slate-950 text-[9px] font-black px-1.5 py-0.5 rounded">VS</span>
 
-                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-lg border border-pink-400">
-                        <span id="rot-p2-score" class="font-num text-sm font-black text-yellow-300">2</span>
-                        <span id="rot-p2-name" class="text-[10px] font-black text-pink-200 max-w-[55px] truncate">P2</span>
-                        <div id="rot-p2-disc" class="w-3.5 h-3.5 rounded-full border border-white"></div>
+                            <div class="flex items-center gap-1 bg-slate-900 px-2 py-0.5 rounded-md border border-white/20">
+                                <span id="rot-p2-score" class="font-num text-xs font-black text-yellow-300">2</span>
+                                <span id="rot-p2-name" class="text-[10px] font-black text-white max-w-[48px] truncate">P2</span>
+                                <div id="rot-p2-disc" class="w-3 h-3 rounded-full border border-white shrink-0"></div>
+                            </div>
+                        </div>
+
+                        <button onclick="openRulesModal()" class="btn-pop w-7 h-7 rounded-lg bg-slate-800 border border-white/30 text-yellow-300 flex items-center justify-center text-xs shrink-0">
+                            <i class="fa-solid fa-question"></i>
+                        </button>
                     </div>
                 </div>
 
-                <button onclick="openRulesModal()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-800 border border-indigo-300 text-yellow-300 flex items-center justify-center text-xs -rotate-90" title="ルール">
-                    <i class="fa-solid fa-question"></i>
-                </button>
+                <!-- 8x8 盤面ラッパー -->
+                <div class="board-wrapper flex items-center justify-center relative shrink-0">
+                    <div id="board" class="board-grid"></div>
+                </div>
             </div>
 
-            <!-- 8x8 盤面ラッパー -->
-            <div class="board-wrapper flex items-center justify-center relative shrink-0">
-                <div id="board" class="board-grid"></div>
-            </div>
-
-        </div>
-
-        <!-- ④ 下部エリア：P1（または現在のプレイヤー）のデッキ＆SPアクション -->
-        <div id="p1-bottom-deck-area" class="w-full max-w-[430px] bg-indigo-950/95 border-2 border-indigo-400/70 rounded-2xl p-2.5 sm:p-3 shadow-2xl flex flex-col gap-2 shrink-0">
-            
-            <!-- SPゲージ ＆ スキルボタン -->
-            <div class="flex items-center justify-between gap-2 bg-slate-950/85 px-2.5 py-1.5 rounded-xl border border-indigo-500/30">
-                <div class="flex items-center gap-1.5 flex-1">
-                    <div id="p1-deck-disc" class="w-4 h-4 rounded-full border border-white shrink-0"></div>
-                    <span id="p1-deck-name" class="text-[11px] font-black text-cyan-200 truncate max-w-[70px]">PLAYER 1</span>
-                    <div class="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
-                        <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+            <!-- ④ P1（または現在のプレイヤー）のデッキ＆SPアクション（スマホでは下、PC横画面の1人プレイ時は右側に配置） -->
+            <div id="p1-bottom-deck-area" class="w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0">
+                
+                <!-- SPゲージ ＆ スキルボタン（絶対に改行・崩れしない1行設計） -->
+                <div class="flex items-center justify-between gap-1.5 bg-slate-900/90 px-2 py-1 rounded-lg border border-white/10">
+                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                        <div id="p1-deck-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
+                        <span id="p1-deck-name" class="text-[11px] font-black text-white truncate max-w-[64px]">P1</span>
+                        <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
+                            <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+                        </div>
+                        <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
                     </div>
-                    <span id="sp-text" class="font-num text-[11px] font-black text-yellow-300 w-9 text-right">30%</span>
+
+                    <div class="flex items-center gap-1 shrink-0">
+                        <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                        <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                    </div>
                 </div>
 
-                <div class="flex items-center gap-1.5">
-                    <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border transition-all">
-                        <i class="fa-solid fa-rotate"></i>
-                        <span>手札交換</span>
-                        <span class="text-[9px] px-1 rounded bg-black/30 font-num">30</span>
-                    </button>
-
-                    <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border transition-all">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>必殺サンダー</span>
-                        <span class="text-[9px] px-1 rounded bg-black/30 font-num">100</span>
-                    </button>
-                </div>
+                <!-- 3つの手札スロット -->
+                <div id="hand-container" class="grid grid-cols-3 gap-1.5 h-[74px] sm:h-20"></div>
             </div>
 
-            <!-- 3つの手札スロット -->
-            <div id="hand-container" class="grid grid-cols-3 gap-2 h-20 sm:h-24"></div>
         </div>
 
     </div>
@@ -971,31 +982,37 @@
             cyan: {
                 id: 'cyan', label: 'ソーダブルー', hex: '#38bdf8',
                 bg: 'radial-gradient(circle at 32% 28%, #bae6fd, #0284c7 68%, #0c4a6e 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #0284c7 0%, #0c4a6e 55%, #090d16 100%)',
                 border: '#e0f2fe', shadow: '#0369a1', iconColor: '#ffffff'
             },
             pink: {
                 id: 'pink', label: 'ベリーピンク', hex: '#f43f5e',
                 bg: 'radial-gradient(circle at 32% 28%, #fecdd3, #e11d48 68%, #881337 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #e11d48 0%, #881337 55%, #180614 100%)',
                 border: '#ffe4e6', shadow: '#9f1239', iconColor: '#ffffff'
             },
             yellow: {
                 id: 'yellow', label: 'レモンイエロー', hex: '#facc15',
                 bg: 'radial-gradient(circle at 32% 28%, #fef08a, #eab308 68%, #854d0e 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #ca8a04 0%, #713f12 55%, #1c1917 100%)',
                 border: '#fef9c3', shadow: '#a16207', iconColor: '#1e293b'
             },
             mint: {
                 id: 'mint', label: 'ミントグリーン', hex: '#10b981',
                 bg: 'radial-gradient(circle at 32% 28%, #a7f3d0, #059669 68%, #064e3b 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #059669 0%, #064e3b 55%, #041f18 100%)',
                 border: '#d1fae5', shadow: '#047857', iconColor: '#ffffff'
             },
             purple: {
                 id: 'purple', label: 'グレープ', hex: '#a855f7',
                 bg: 'radial-gradient(circle at 32% 28%, #e9d5ff, #7e22ce 68%, #3b0764 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #7e22ce 0%, #3b0764 55%, #130725 100%)',
                 border: '#f3e8ff', shadow: '#581c87', iconColor: '#ffffff'
             },
             obsidian: {
                 id: 'obsidian', label: 'クラシック黒', hex: '#475569',
                 bg: 'radial-gradient(circle at 32% 28%, #64748b, #0f172a 70%, #020617 100%)',
+                roomBg: 'radial-gradient(circle at 50% 20%, #334155 0%, #0f172a 60%, #020617 100%)',
                 border: '#94a3b8', shadow: '#020617', iconColor: '#38bdf8'
             }
         };
@@ -1004,6 +1021,12 @@
             1: { name: 'プレイヤー1', themeId: 'cyan' },
             2: { name: 'プレイヤー2', themeId: 'pink' }
         };
+
+        // 現在のターンのプレイヤーカラーに合わせて画面背景色を変更
+        function updateTurnBackground(turnColor) {
+            const theme = COLOR_THEMES[playerConfig[turnColor]?.themeId] || COLOR_THEMES.cyan;
+            document.body.style.setProperty('--turn-bg', theme.roomBg);
+        }
 
         function getFaceInlineStyle(playerNum) {
             const theme = COLOR_THEMES[playerConfig[playerNum]?.themeId] || COLOR_THEMES.cyan;
@@ -1378,6 +1401,8 @@
             const p2TopDeck = document.getElementById('p2-top-deck-area');
             const rotatedHeader = document.getElementById('tabletop-rotated-header');
             const toggleBtn = document.getElementById('btn-toggle-tabletop');
+            const mainBody = document.getElementById('main-battle-body');
+            const p1BottomDeck = document.getElementById('p1-bottom-deck-area');
 
             if (gameMode === 'local') {
                 toggleBtn.classList.remove('hidden');
@@ -1391,14 +1416,19 @@
                 document.body.classList.add('tabletop-active');
                 topHeader.classList.add('hidden');
                 p2TopDeck.classList.remove('hidden');
+                p2TopDeck.classList.add('flex');
                 rotatedHeader.classList.remove('hidden');
-                rotatedHeader.classList.add('flex');
+                mainBody.className = 'flex-1 w-full flex flex-col items-center justify-center gap-2 my-0.5 overflow-hidden';
+                p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0';
             } else {
                 document.body.classList.remove('tabletop-active');
                 topHeader.classList.remove('hidden');
                 p2TopDeck.classList.add('hidden');
+                p2TopDeck.classList.remove('flex');
                 rotatedHeader.classList.add('hidden');
-                rotatedHeader.classList.remove('flex');
+                // PC横画面（lg以上）では盤面の右側に手札フィールドを並べるレスポンシブ設計
+                mainBody.className = 'flex-1 w-full flex flex-col lg:flex-row items-center justify-center gap-2.5 lg:gap-6 my-0.5 overflow-hidden';
+                p1BottomDeck.className = 'w-full max-w-[420px] lg:w-[330px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 lg:p-3 shadow-2xl flex flex-col gap-2 shrink-0';
             }
         }
 
@@ -1407,7 +1437,7 @@
             isTabletopMode = !isTabletopMode;
             applyLayoutMode();
             renderAll();
-            showToast(isTabletopMode ? '対面テーブルトップ表示 ON' : '通常表示 ON');
+            showToast(isTabletopMode ? '対面レイアウト ON' : '通常レイアウト ON');
         }
 
         function startGame(mode, customRoomId = null, syncedState = null) {
@@ -1736,12 +1766,21 @@
             document.getElementById('rot-p1-score').textContent = p1Count;
             document.getElementById('rot-p2-score').textContent = p2Count;
 
-            const turnBadge = document.getElementById('turn-badge');
-            const rotTurnLabel = document.getElementById('rot-turn-label');
-            const activeName = playerConfig[currentTurn].name;
-            turnBadge.textContent = `${activeName}の番`;
-            rotTurnLabel.textContent = `${activeName}の番`;
+            // 中央ラベルは常にすっきり「VS」に固定し、どちらの番かはパネル枠の発光と背景カラーで視覚化
+            document.getElementById('turn-badge').textContent = 'VS';
+            document.getElementById('rot-turn-label').textContent = 'VS';
 
+            const p1Panel = document.getElementById('p1-panel');
+            const p2Panel = document.getElementById('p2-panel');
+            if (currentTurn === BLACK) {
+                p1Panel.className = 'flex items-center gap-1.5 px-2 py-0.5 rounded-md border-2 border-yellow-300 bg-white/15 shadow-[0_0_12px_rgba(253,224,71,0.45)] transition-all min-w-0 flex-1';
+                p2Panel.className = 'flex items-center justify-end gap-1.5 px-2 py-0.5 rounded-md border-2 border-transparent bg-slate-900/40 opacity-60 transition-all min-w-0 flex-1';
+            } else {
+                p1Panel.className = 'flex items-center gap-1.5 px-2 py-0.5 rounded-md border-2 border-transparent bg-slate-900/40 opacity-60 transition-all min-w-0 flex-1';
+                p2Panel.className = 'flex items-center justify-end gap-1.5 px-2 py-0.5 rounded-md border-2 border-yellow-300 bg-white/15 shadow-[0_0_12px_rgba(253,224,71,0.45)] transition-all min-w-0 flex-1';
+            }
+
+            updateTurnBackground(currentTurn);
             renderHandAndSP();
         }
 
@@ -1755,6 +1794,7 @@
             }
 
             renderPlayerDeckUI(bottomPlayer, {
+                deckAreaId: 'p1-bottom-deck-area',
                 discId: 'p1-deck-disc',
                 nameId: 'p1-deck-name',
                 spBarId: 'sp-bar',
@@ -1764,9 +1804,10 @@
                 handContainerId: 'hand-container'
             });
 
-            // 対面テーブルトップモード時は上部反転デッキにP2を描画
+            // 対面テーブルトップモード時は上部反転デッキにP2を完全同一デザインで描画
             if (gameMode === 'local' && isTabletopMode) {
                 renderPlayerDeckUI(WHITE, {
+                    deckAreaId: 'p2-top-deck-area',
                     discId: 'p2-deck-disc',
                     nameId: 'p2-deck-name',
                     spBarId: 'sp-bar-p2',
@@ -1785,6 +1826,11 @@
             const sp = spGauge[playerNum];
             const canControl = isMyControllableTurn(playerNum);
 
+            const deckAreaEl = document.getElementById(domIds.deckAreaId);
+            if (deckAreaEl) {
+                deckAreaEl.style.borderColor = (currentTurn === playerNum) ? '#fde047' : 'rgba(255,255,255,0.2)';
+            }
+
             const discEl = document.getElementById(domIds.discId);
             const nameEl = document.getElementById(domIds.nameId);
             if (discEl) discEl.style.background = theme.bg;
@@ -1793,22 +1839,25 @@
             document.getElementById(domIds.spTextId).textContent = `${sp}%`;
             document.getElementById(domIds.spBarId).style.width = `${sp}%`;
 
+            // P1とP2で完全に同一のボタンデザイン＆ラベル構造に統一
             const rerollBtn = document.getElementById(domIds.rerollBtnId);
+            rerollBtn.innerHTML = `<i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>`;
             if (sp >= 30 && canControl) {
                 rerollBtn.disabled = false;
-                rerollBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 border-white cursor-pointer';
+                rerollBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 whitespace-nowrap cursor-pointer';
             } else {
                 rerollBtn.disabled = true;
-                rerollBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+                rerollBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-slate-700 bg-slate-800 text-slate-500 whitespace-nowrap cursor-not-allowed';
             }
 
             const ultBtn = document.getElementById(domIds.ultBtnId);
+            ultBtn.innerHTML = `<i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>`;
             if (sp >= 100 && canControl) {
                 ultBtn.disabled = false;
-                ultBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border-2 bg-gradient-to-r from-amber-300 via-yellow-300 to-pink-400 text-slate-950 border-white shadow-[0_0_16px_rgba(250,204,21,0.9)] animate-pulse cursor-pointer';
+                ultBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-white bg-gradient-to-r from-amber-300 via-yellow-300 to-pink-400 text-slate-950 shadow-[0_0_12px_rgba(250,204,21,0.9)] animate-pulse whitespace-nowrap cursor-pointer';
             } else {
                 ultBtn.disabled = true;
-                ultBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+                ultBtn.className = 'btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border border-slate-700 bg-slate-800 text-slate-500 whitespace-nowrap cursor-not-allowed';
             }
 
             const container = document.getElementById(domIds.handContainerId);
@@ -1816,11 +1865,11 @@
 
             playerHand.forEach((piece, idx) => {
                 const card = document.createElement('div');
-                let rarityClass = 'border-indigo-400/50 bg-indigo-900/80';
+                let rarityClass = 'border-white/20 bg-slate-900/90';
                 if (piece.rarity === 'rare') rarityClass = 'rarity-rare bg-sky-950/90';
                 if (piece.rarity === 'sr') rarityClass = 'rarity-sr bg-amber-950/90';
 
-                card.className = `hand-card rounded-2xl border-2 ${rarityClass} p-1.5 flex flex-col items-center justify-between relative select-none ${canControl ? '' : 'opacity-45 pointer-events-none'}`;
+                card.className = `hand-card rounded-xl border-2 ${rarityClass} p-1 flex flex-col items-center justify-between relative select-none ${canControl ? '' : 'opacity-45 pointer-events-none'}`;
                 card.dataset.index = idx;
 
                 let badgeColor = 'bg-slate-700 text-slate-200';
@@ -1828,13 +1877,12 @@
                 if (piece.rarity === 'sr') badgeColor = 'bg-gradient-to-r from-yellow-300 to-amber-400 text-slate-950';
 
                 card.innerHTML = `
-                    <span class="font-num text-[9px] font-black px-2 py-0.5 rounded-full ${badgeColor} leading-none">${piece.badge}</span>
-                    <div class="w-10 h-10 sm:w-11 sm:h-11 my-0.5 flex items-center justify-center">
+                    <span class="font-num text-[8px] font-black px-1.5 py-0.5 rounded ${badgeColor} leading-none">${piece.badge}</span>
+                    <div class="w-9 h-9 sm:w-10 sm:h-10 my-auto flex items-center justify-center">
                         <div class="w-full h-full rounded-full flex items-center justify-center" style="${getFaceInlineStyle(playerNum)}">
-                            ${piece.iconClass ? `<i class="${piece.iconClass} text-sm sm:text-base"></i>` : ''}
+                            ${piece.iconClass ? `<i class="${piece.iconClass} text-xs sm:text-sm"></i>` : ''}
                         </div>
                     </div>
-                    <span class="text-[10px] font-black text-white tracking-tight">${piece.name}</span>
                 `;
 
                 if (canControl) {
@@ -1892,9 +1940,17 @@
             cardEl.classList.add('dragging-source');
 
             const ghost = document.getElementById('drag-ghost');
+            // 実際の盤面セルサイズに合わせてドラッグ中のゴーストサイズを自動調整し、手元を見やすくする
+            const sampleCell = document.querySelector('.board-cell');
+            if (sampleCell) {
+                const cRect = sampleCell.getBoundingClientRect();
+                const gSize = Math.max(36, Math.min(52, cRect.width * 0.92));
+                ghost.style.width = `${gSize}px`;
+                ghost.style.height = `${gSize}px`;
+            }
             ghost.innerHTML = `
                 <div class="w-full h-full rounded-full flex items-center justify-center" style="${getFaceInlineStyle(color)}">
-                    ${piece.iconClass ? `<i class="${piece.iconClass} text-xl"></i>` : ''}
+                    ${piece.iconClass ? `<i class="${piece.iconClass} text-sm"></i>` : ''}
                 </div>
             `;
             ghost.style.display = 'block';
@@ -2020,10 +2076,9 @@
 
             renderAll([], [r, c]);
 
-            // 2. 特殊コマ（ボム・矢印）の場合は、あえて「ため」の時間を作ってどこが自分の色に変わるかを視覚的にロックオン表示！
+            // 2. 特殊コマ（ボム・矢印）の場合は、文字を出さずにロックオン照準＆サウンドで「ため」を作って視覚フィードバック
             if (usedPiece.id !== 'NORMAL') {
                 playSE('lockon');
-                showSkillChargeBanner(r, c, usedPiece);
 
                 // 効果範囲のセルを赤くロックオン点滅させる
                 extraFlips.forEach(([tr, tc]) => {
@@ -2035,8 +2090,7 @@
                     if (tCell) tCell.classList.add('effect-target');
                 });
 
-                // しっかり視覚的にわかるよう 620ms の「ため」を作る
-                await sleep(620);
+                await sleep(560);
 
                 playSE('laser');
                 triggerScreenShake();
@@ -2063,11 +2117,7 @@
             if (placedCell) {
                 const rect = placedCell.getBoundingClientRect();
                 const themeHex = COLOR_THEMES[playerConfig[color].themeId]?.hex || '#38bdf8';
-                spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, themeHex, 16 + flipList.length * 2);
-
-                if (flipList.length >= 4) {
-                    showComboPopup(r, c, flipList.length);
-                }
+                spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, themeHex, 18 + flipList.length * 3);
             }
 
             const gainSp = Math.min(45, 12 + flipList.length * 6);
@@ -2076,46 +2126,8 @@
             renderAll(flipList);
             playSE('flip');
 
-            await sleep(620);
+            await sleep(600);
             await advanceTurn();
-        }
-
-        function showSkillChargeBanner(r, c, piece) {
-            const boardEl = document.getElementById('board');
-            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
-            if (!boardEl || !cellEl) return;
-
-            const boardRect = boardEl.getBoundingClientRect();
-            const cellRect = cellEl.getBoundingClientRect();
-            const x = cellRect.left - boardRect.left + cellRect.width / 2;
-            const y = cellRect.top - boardRect.top;
-
-            const badge = document.createElement('div');
-            badge.className = 'combo-float font-black text-xs sm:text-sm px-3 py-1 rounded-full bg-rose-600 text-yellow-200 border-2 border-yellow-300 shadow-2xl whitespace-nowrap';
-            badge.style.left = `${x}px`;
-            badge.style.top = `${y}px`;
-            badge.innerHTML = `<i class="${piece.iconClass} mr-1"></i>${piece.name} 発動！`;
-            boardEl.appendChild(badge);
-            setTimeout(() => badge.remove(), 950);
-        }
-
-        function showComboPopup(r, c, count) {
-            const boardEl = document.getElementById('board');
-            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
-            if (!boardEl || !cellEl) return;
-
-            const boardRect = boardEl.getBoundingClientRect();
-            const cellRect = cellEl.getBoundingClientRect();
-            const x = cellRect.left - boardRect.left + cellRect.width / 2;
-            const y = cellRect.top - boardRect.top;
-
-            const badge = document.createElement('div');
-            badge.className = 'combo-float font-num font-black text-sm sm:text-base px-3 py-0.5 rounded-full bg-gradient-to-r from-yellow-300 to-pink-500 text-slate-950 border-2 border-white shadow-xl whitespace-nowrap';
-            badge.style.left = `${x}px`;
-            badge.style.top = `${y}px`;
-            badge.innerHTML = `<i class="fa-solid fa-fire mr-1"></i>${count}枚 ひっくり返した！`;
-            boardEl.appendChild(badge);
-            setTimeout(() => badge.remove(), 1000);
         }
 
         function showVisualSkillEffect(r, c, piece) {
