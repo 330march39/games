@@ -860,10 +860,20 @@
 
     <script>
         /* ============================================================================
-           1. Web Audio シンセサウンドエンジン
+           1. Web Audio シンセサウンドエンジン ＆ BGM管理 (iOS対応)
         ============================================================================ */
         let soundEnabled = true;
         let audioCtx = null;
+        let isAudioUnlocked = false;
+
+        // BGM用のAudioオブジェクト (音量は少し控えめの0.15に設定)
+        const bgmLobby = new Audio('MusMus-BGM-103.ogg');
+        bgmLobby.loop = true;
+        bgmLobby.volume = 0.15;
+
+        const bgmGame = new Audio('MusMus-BGM-167.ogg');
+        bgmGame.loop = true;
+        bgmGame.volume = 0.15;
 
         function initAudio() {
             if (!audioCtx) {
@@ -873,6 +883,33 @@
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
+            // iOS Safari対策: 初回のみ無音を鳴らしてオーディオを完全ロック解除
+            if (!isAudioUnlocked) {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(0);
+                osc.stop(audioCtx.currentTime + 0.001);
+                isAudioUnlocked = true;
+            }
+        }
+
+        function playBGM(type) {
+            if (!soundEnabled) return;
+            bgmLobby.pause();
+            bgmGame.pause();
+            if (type === 'lobby') {
+                bgmLobby.play().catch(e => console.log('BGM再生ブロック:', e));
+            } else if (type === 'game') {
+                bgmGame.play().catch(e => console.log('BGM再生ブロック:', e));
+            }
+        }
+
+        function stopBGM() {
+            bgmLobby.pause();
+            bgmGame.pause();
         }
 
         function playSE(type) {
@@ -993,6 +1030,18 @@
                 : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
             document.getElementById('sound-toggle-lobby').innerHTML = iconHtml;
             showToast(soundEnabled ? 'サウンド ON' : 'サウンド OFF');
+            
+            if (soundEnabled) {
+                initAudio();
+                // 現在の画面に応じてBGMを再開
+                if (document.getElementById('screen-game').classList.contains('hidden')) {
+                    playBGM('lobby');
+                } else {
+                    playBGM('game');
+                }
+            } else {
+                stopBGM();
+            }
         }
 
         /* ============================================================================
@@ -1185,6 +1234,7 @@
 
         function openSetupModal(mode) {
             initAudio();
+            playBGM('lobby'); // ←この1行を追加
             playSE('pickup');
             pendingMode = mode;
 
@@ -1522,6 +1572,7 @@
 
         function startGame(mode, customRoomId = null, syncedState = null) {
             initAudio();
+            playBGM('game'); // ←この1行を追加（ゲーム用BGMに切り替え）
             playSE('pickup');
             gameMode = mode;
             roomCode = customRoomId;
@@ -1623,6 +1674,8 @@
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('flex');
             document.getElementById('screen-lobby').classList.remove('hidden');
+
+            playBGM('lobby'); // ←この1行を追加（ロビーBGMに戻す）
         }
 
         function rematchGame() {
@@ -1921,7 +1974,7 @@
 
             // P1とP2で完全に同一のボタンデザイン＆ラベル構造に統一
             const rerollBtn = document.getElementById(domIds.rerollBtnId);
-            // ↓この1行を追加して中身を描画します
+            // ↓ この1行を追加してボタンの中身を描画します
             rerollBtn.innerHTML = `<i class="fa-solid fa-rotate"></i><span>CHANGE</span><span class="font-num text-[9px] px-1 rounded bg-black/25">30</span>`;
             if (sp >= 30 && canControl) {
                 rerollBtn.disabled = false;
@@ -1932,7 +1985,7 @@
             }
 
             const ultBtn = document.getElementById(domIds.ultBtnId);
-            // ↓この1行を追加して中身を描画します
+            // ↓ この1行を追加してボタンの中身を描画します
             ultBtn.innerHTML = `<i class="fa-solid fa-bolt"></i><span>ULT</span><span class="font-num text-[9px] px-1 rounded bg-black/25">100</span>`;
             if (sp >= 100 && canControl) {
                 ultBtn.disabled = false;
@@ -2422,7 +2475,6 @@
             playSE('laser');
             triggerScreenShake();
             renderAll(flipObjects);
-            showToast('必殺サンダー！相手のコマを奪いました！');
 
             await sleep(550);
             isAnimating = false;
