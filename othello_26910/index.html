@@ -866,7 +866,7 @@
         let audioCtx = null;
         let isAudioUnlocked = false;
 
-        // BGM用のAudioオブジェクト (音量は少し控えめの0.15に設定)
+        // BGM用のAudioオブジェクト (音量は控えめの0.15)
         const bgmLobby = new Audio('MusMus-BGM-103.ogg');
         bgmLobby.loop = true;
         bgmLobby.volume = 0.15;
@@ -874,6 +874,16 @@
         const bgmGame = new Audio('MusMus-BGM-167.ogg');
         bgmGame.loop = true;
         bgmGame.volume = 0.15;
+
+        // 勝利時BGM
+        const bgmWin = new Audio('MusMus-BGM-113.ogg');
+        bgmWin.loop = true;
+        bgmWin.volume = 0.15;
+
+        // 敗北・引き分け時ジングル
+        const bgmLose = new Audio('MusMus-JGL-006.mp3');
+        bgmLose.loop = true;
+        bgmLose.volume = 0.15;
 
         function initAudio() {
             if (!audioCtx) {
@@ -898,18 +908,28 @@
 
         function playBGM(type) {
             if (!soundEnabled) return;
-            bgmLobby.pause();
-            bgmGame.pause();
-            if (type === 'lobby') {
-                bgmLobby.play().catch(e => console.log('BGM再生ブロック:', e));
-            } else if (type === 'game') {
-                bgmGame.play().catch(e => console.log('BGM再生ブロック:', e));
+            
+            // 再生前に一度すべてのBGMを停止する
+            stopBGM();
+
+            let targetAudio = null;
+            if (type === 'lobby') targetAudio = bgmLobby;
+            else if (type === 'game') targetAudio = bgmGame;
+            else if (type === 'win') targetAudio = bgmWin;
+            else if (type === 'lose') targetAudio = bgmLose;
+
+            if (targetAudio) {
+                // ★画面が切り替わった時は必ず曲の冒頭から再生する
+                targetAudio.currentTime = 0;
+                targetAudio.play().catch(e => console.log('BGM再生ブロック:', e));
             }
         }
 
         function stopBGM() {
             bgmLobby.pause();
             bgmGame.pause();
+            bgmWin.pause();
+            bgmLose.pause();
         }
 
         function playSE(type) {
@@ -2547,7 +2567,28 @@
                 }
             }
 
-            playSE('win');
+            // ★プレイヤー視点での勝敗を判定
+            let isWin = false;
+            let isDraw = (b === w);
+
+            if (gameMode === 'cpu' || gameMode === 'online') {
+                // CPU戦・オンライン戦は自分の色を基準に判定
+                const myColor = (gameMode === 'online') ? myOnlineRole : BLACK;
+                if ((b > w && myColor === BLACK) || (w > b && myColor === WHITE)) {
+                    isWin = true;
+                }
+            } else if (gameMode === 'local') {
+                // 1台対戦の場合は、引き分け以外は「誰かの勝利」として勝利BGMで盛り上げる
+                if (!isDraw) isWin = true;
+            }
+
+            // ★勝敗に応じてBGMを再生
+            if (isWin) {
+                playBGM('win');
+            } else {
+                playBGM('lose');
+            }
+
             document.getElementById('res-p1-name').textContent = playerConfig[1].name;
             document.getElementById('res-p2-name').textContent = playerConfig[2].name;
             document.getElementById('res-p1-score').textContent = b;
