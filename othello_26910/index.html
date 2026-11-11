@@ -860,40 +860,52 @@
 
     <script>
         /* ============================================================================
-           1. Web Audio シンセサウンドエンジン ＆ BGM管理 (iOS対応)
+           1. Web Audio シンセサウンドエンジン ＆ BGM管理 (音楽プレイヤー回避対応)
         ============================================================================ */
         let soundEnabled = true;
         let audioCtx = null;
         let isAudioUnlocked = false;
 
-        // BGM用のAudioオブジェクト (音量は控えめの0.15)
-        const bgmLobby = new Audio('MusMus-BGM-103.ogg');
-        bgmLobby.loop = true;
-        bgmLobby.volume = 0.15;
-
-        const bgmGame = new Audio('MusMus-BGM-167.ogg');
-        bgmGame.loop = true;
-        bgmGame.volume = 0.15;
-
-        // 勝利時BGM
-        const bgmWin = new Audio('MusMus-BGM-113.ogg');
-        bgmWin.loop = true;
-        bgmWin.volume = 0.15;
-
-        // 敗北・引き分け時ジングル
-        const bgmLose = new Audio('MusMus-JGL-006.mp3');
-        bgmLose.loop = true;
-        bgmLose.volume = 0.15;
+        // BGM用のファイルと状態管理
+        const bgmFiles = {
+            lobby: { url: 'MusMus-BGM-103.ogg', loop: true },
+            game:  { url: 'MusMus-BGM-167.ogg', loop: true },
+            win:   { url: 'MusMus-BGM-113.ogg', loop: true },
+            lose:  { url: 'MusMus-JGL-006.mp3', loop: false }
+        };
+        const bgmBuffers = {};
+        let currentBgmSource = null;
+        let currentBgmType = null;
+        let bgmGainNode = null;
 
         function initAudio() {
             if (!audioCtx) {
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 audioCtx = new AudioContext();
+                
+                // BGM用の音量調整ノード（控えめの0.15）
+                bgmGainNode = audioCtx.createGain();
+                bgmGainNode.gain.value = 0.15;
+                bgmGainNode.connect(audioCtx.destination);
+                
+                // 初回にすべてのBGMをゲームデータとして読み込む (音楽プレイヤーには認識されない)
+                for (const [type, data] of Object.entries(bgmFiles)) {
+                    fetch(data.url)
+                        .then(response => response.arrayBuffer())
+                        .then(arrayBuffer => audioCtx.decodeAudioData(arrayBuffer))
+                        .then(audioBuffer => {
+                            bgmBuffers[type] = audioBuffer;
+                            // 読み込み完了前に再生リクエストが来ていた場合は即座に再生
+                            if (currentBgmType === type && !currentBgmSource) {
+                                playBGM(type);
+                            }
+                        })
+                        .catch(e => console.log('BGMロード失敗:', e));
+                }
             }
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-            // iOS Safari対策: 初回のみ無音を鳴らしてオーディオを完全ロック解除
             if (!isAudioUnlocked) {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -909,28 +921,42 @@
         function playBGM(type) {
             if (!soundEnabled) return;
             
-            // 再生前に一度すべてのBGMを停止する
+            // ★全く同じBGMがすでに流れている場合は何もしない（頭出ししない）
+            if (currentBgmType === type && currentBgmSource) return;
+
             stopBGM();
+            currentBgmType = type;
 
-            let targetAudio = null;
-            if (type === 'lobby') targetAudio = bgmLobby;
-            else if (type === 'game') targetAudio = bgmGame;
-            else if (type === 'win') targetAudio = bgmWin;
-            else if (type === 'lose') targetAudio = bgmLose;
+            // まだ読み込みが終わっていなければ、完了次第自動で再生されるためリターン
+            if (!bgmBuffers[type]) return;
 
-            if (targetAudio) {
-                // ★画面が切り替わった時は必ず曲の冒頭から再生する
-                targetAudio.currentTime = 0;
-                targetAudio.play().catch(e => console.log('BGM再生ブロック:', e));
-            }
+            // 内部データとしてBGMを再生（端末の音楽プレイヤーやロック画面には表示されない）
+            currentBgmSource = audioCtx.createBufferSource();
+            currentBgmSource.buffer = bgmBuffers[type];
+            currentBgmSource.loop = bgmFiles[type].loop;
+            currentBgmSource.connect(bgmGainNode);
+            currentBgmSource.start(0);
         }
 
         function stopBGM() {
-            bgmLobby.pause();
-            bgmGame.pause();
-            bgmWin.pause();
-            bgmLose.pause();
+            if (currentBgmSource) {
+                try { currentBgmSource.stop(); } catch (e) {}
+                currentBgmSource.disconnect();
+                currentBgmSource = null;
+            }
+            currentBgmType = null;
         }
+
+        // ★サイトを開いた後、画面のどこかを最初にタップした瞬間にBGMを開始する
+        function onFirstInteraction() {
+            if (currentBgmType) return; // すでに再生中なら無視
+            initAudio();
+            playBGM('lobby');
+        }
+        window.addEventListener('pointerdown', onFirstInteraction, { once: true });
+        window.addEventListener('keydown', onFirstInteraction, { once: true });
+
+        // (この下に既存の function playSE(type) が続きます)
 
         function playSE(type) {
             if (!soundEnabled) return;
