@@ -12,6 +12,7 @@
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation; /* ← これを追加 */
         }
 
         html, body {
@@ -440,6 +441,25 @@
         <span id="popup-text" class="text-xl sm:text-2xl font-black">READY</span>
     </div>
 
+    <!-- BGM再生確認モーダル -->
+<div id="modal-audio-check" class="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-indigo-950 border-4 border-cyan-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+        <div class="w-16 h-16 rounded-2xl bg-cyan-400/20 border-2 border-cyan-400 text-cyan-300 flex items-center justify-center text-3xl mx-auto mb-4 animate-pulse">
+            <i class="fa-solid fa-music"></i>
+        </div>
+        <h3 class="text-xl font-black text-white mb-2">サウンド設定</h3>
+        <p class="text-sm text-slate-300 mb-6">このゲームは音楽と効果音が流れます。<br>サウンドをオンにしますか？</p>
+        <div class="flex gap-3">
+            <button onclick="resolveAudioCheck(false)" class="btn-pop flex-1 py-3 bg-slate-800 text-slate-300 font-black rounded-xl text-sm border border-slate-600">
+                <i class="fa-solid fa-volume-xmark mr-1"></i> オフ
+            </button>
+            <button onclick="resolveAudioCheck(true)" class="btn-pop flex-1 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 font-black py-3 rounded-xl border-2 border-white text-sm">
+                <i class="fa-solid fa-volume-high mr-1"></i> オン
+            </button>
+        </div>
+    </div>
+</div>
+
     <!-- ==================== 1. タイトル＆ロビー画面 ==================== -->
     <div id="screen-lobby" class="w-full h-full flex flex-col items-center justify-center p-4 z-20 overflow-hidden">
         <div class="max-w-md w-full flex flex-col items-center justify-center gap-4">
@@ -580,9 +600,9 @@
                     <div class="flex items-center justify-between gap-2">
                         <div class="flex items-center flex-1 gap-1.5">
                             <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
-                                <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+                                <div id="sp-bar-p2" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
                             </div>
-                            <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                            <span id="sp-text-p2" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
                             <button id="reroll-btn-p2" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap">
@@ -947,14 +967,21 @@
             currentBgmType = null;
         }
 
-        // ★サイトを開いた後、画面のどこかを最初にタップした瞬間にBGMを開始する
-        function onFirstInteraction() {
-            if (currentBgmType) return; // すでに再生中なら無視
-            initAudio();
-            playBGM('lobby');
-        }
-        window.addEventListener('pointerdown', onFirstInteraction, { once: true });
-        window.addEventListener('keydown', onFirstInteraction, { once: true });
+        function resolveAudioCheck(enableSound) {
+    soundEnabled = enableSound;
+    const iconHtml = soundEnabled
+        ? '<i class="fa-solid fa-volume-high text-cyan-300"></i>'
+        : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
+    document.getElementById('sound-toggle-lobby').innerHTML = iconHtml;
+
+    document.getElementById('modal-audio-check').classList.add('hidden');
+    document.getElementById('modal-audio-check').classList.remove('flex');
+
+    if (soundEnabled) {
+        initAudio();
+        playBGM('lobby');
+    }
+}
 
         // (この下に既存の function playSE(type) が続きます)
 
@@ -2257,62 +2284,83 @@
             }
 
             // ボーナスがゲージに吸い込まれるアニメーション演出
-        function flyBonusToDeck(r, c, type, playerColor) {
-            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
-            let targetEl;
-            // SP増減のターゲットとなるゲージを取得
-            if (gameMode === 'local' && isTabletopMode && playerColor === 2) {
-                targetEl = document.getElementById('sp-bar-p2');
-            } else {
-                targetEl = document.getElementById('sp-bar'); 
-            }
-            
-            if (!cellEl || !targetEl) return;
+function flyBonusToDeck(r, c, type, playerColor) {
+    const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+    if (!cellEl) return;
 
-            const cellRect = cellEl.getBoundingClientRect();
-            const targetRect = targetEl.getBoundingClientRect();
+    // CPUのターンかどうかを判定
+    const isCpuTurn = (gameMode === 'cpu' && playerColor === 2);
+    let targetEl = null;
 
-            const flyEl = document.createElement('div');
-            flyEl.className = type === 'SP' 
-                ? 'bg-amber-400 border-2 border-white text-white shadow-[0_0_15px_rgba(251,191,36,1)]'
-                : 'bg-fuchsia-500 border-2 border-white text-white shadow-[0_0_15px_rgba(232,121,249,1)]';
-            
-            flyEl.innerHTML = type === 'SP' ? '<i class="fa-solid fa-bolt"></i>' : '<i class="fa-solid fa-gem"></i>';
-            flyEl.style.position = 'fixed';
-            flyEl.style.left = `${cellRect.left + cellRect.width / 2}px`;
-            flyEl.style.top = `${cellRect.top + cellRect.height / 2}px`;
-            flyEl.style.width = '32px';
-            flyEl.style.height = '32px';
-            flyEl.style.borderRadius = '50%';
-            flyEl.style.display = 'flex';
-            flyEl.style.alignItems = 'center';
-            flyEl.style.justifyContent = 'center';
-            flyEl.style.transform = 'translate(-50%, -50%) scale(1)';
-            flyEl.style.zIndex = 10000;
-            flyEl.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
-            
-            document.body.appendChild(flyEl);
-
-            // 次のフレームでゲージ位置へ移動させながら縮小
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    flyEl.style.left = `${targetRect.left + targetRect.width / 2}px`;
-                    flyEl.style.top = `${targetRect.top + targetRect.height / 2}px`;
-                    flyEl.style.transform = 'translate(-50%, -50%) scale(0.3)';
-                    flyEl.style.opacity = '0';
-                });
-            });
-
-            // 移動完了後に要素を消し、ゲージの枠を光らせる
-            setTimeout(() => {
-                flyEl.remove();
-                const barContainer = targetEl.parentElement;
-                barContainer.classList.add('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
-                setTimeout(() => {
-                    barContainer.classList.remove('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
-                }, 300);
-            }, 600);
+    // CPUでなければターゲット（SPゲージ）を取得
+    if (!isCpuTurn) {
+        if (gameMode === 'local' && isTabletopMode && playerColor === 2) {
+            targetEl = document.getElementById('sp-bar-p2'); // P2用のSPゲージ
+        } else {
+            targetEl = document.getElementById('sp-bar'); // P1用またはオンライン時の自分のSPゲージ
         }
+    }
+    
+    const cellRect = cellEl.getBoundingClientRect();
+
+    const flyEl = document.createElement('div');
+    flyEl.className = type === 'SP' 
+        ? 'bg-amber-400 border-2 border-white text-white shadow-[0_0_15px_rgba(251,191,36,1)]'
+        : 'bg-fuchsia-500 border-2 border-white text-white shadow-[0_0_15px_rgba(232,121,249,1)]';
+    
+    flyEl.innerHTML = type === 'SP' ? '<i class="fa-solid fa-bolt"></i>' : '<i class="fa-solid fa-gem"></i>';
+    flyEl.style.position = 'fixed';
+    flyEl.style.left = `${cellRect.left + cellRect.width / 2}px`;
+    flyEl.style.top = `${cellRect.top + cellRect.height / 2}px`;
+    flyEl.style.width = '32px';
+    flyEl.style.height = '32px';
+    flyEl.style.borderRadius = '50%';
+    flyEl.style.display = 'flex';
+    flyEl.style.alignItems = 'center';
+    flyEl.style.justifyContent = 'center';
+    
+    // 【変更点】最初は「2倍の大きさ（scale(2.0)）」で強調表示する
+    flyEl.style.transform = 'translate(-50%, -50%) scale(2.0)';
+    flyEl.style.zIndex = 10000;
+    flyEl.style.transition = 'all 0.6s cubic-bezier(0.25, 1, 0.5, 1)';
+    
+    document.body.appendChild(flyEl);
+
+    // 次のフレームで移動またはフェードアウト開始
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (isCpuTurn || !targetEl) {
+                // CPUの場合は移動せず、その場で小さくなってフェードアウト
+                flyEl.style.transform = 'translate(-50%, -50%) scale(0.5)';
+                flyEl.style.opacity = '0';
+            } else {
+                // プレイヤーの場合はゲージ位置へ移動しながら小さくなる
+                const targetRect = targetEl.getBoundingClientRect();
+                flyEl.style.left = `${targetRect.left + targetRect.width / 2}px`;
+                flyEl.style.top = `${targetRect.top + targetRect.height / 2}px`;
+                flyEl.style.transform = 'translate(-50%, -50%) scale(0.3)';
+                flyEl.style.opacity = '0';
+            }
+        });
+    });
+
+    // 演出完了時の処理（0.6秒後）
+    setTimeout(() => {
+        flyEl.remove();
+        if (targetEl && !isCpuTurn) {
+            // ゲージの枠を一瞬光らせる
+            const barContainer = targetEl.parentElement;
+            barContainer.classList.add('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
+            
+            // 【変更点】アニメーションがゲージに到達したタイミングでゲージを伸ばす
+            renderHandAndSP();
+            
+            setTimeout(() => {
+                barContainer.classList.remove('ring-2', 'ring-white', 'shadow-[0_0_10px_white]');
+            }, 300);
+        }
+    }, 600);
+}
 
             renderAll([], [r, c]);
 
@@ -2671,6 +2719,12 @@
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
+
+        // ダブルタップによるズーム防止
+document.addEventListener('dblclick', function(e) {
+    e.preventDefault();
+}, { passive: false });
+        
     </script>
 </body>
 </html>
