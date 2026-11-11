@@ -52,20 +52,22 @@
 
         /* 盤面サイズ計算（スマホ縦・対面モード・PC横ワイドすべてに最適化） */
         .board-wrapper {
-            width: min(86vw, 46dvh, 420px);
-            height: min(86vw, 46dvh, 420px);
+            /* 修正前より最大サイズ（600px）と割合（92vw, 55dvh）を大きくしました */
+            width: min(92vw, 55dvh, 600px);
+            height: min(92vw, 55dvh, 600px);
             transition: width 0.25s ease, height 0.25s ease;
+            margin: auto; /* 盤面を中央に保つ */
         }
         /* 1台で2人対戦（上下デッキ＋左回転ヘッダー） */
         body.tabletop-active .board-wrapper {
             width: min(72vw, 41dvh, 380px);
             height: min(72vw, 41dvh, 380px);
         }
-        /* PC横画面（1人プレイ・オンライン時は左に盤面、右にデッキ） */
-        @media (min-width: 900px) and (min-aspect-ratio: 4/3) {
+        /* スマホ横画面（縦幅が狭い場合）およびPC横画面の盤面サイズ */
+        @media (orientation: landscape) and (max-height: 600px), (min-width: 900px) {
             body:not(.tabletop-active) .board-wrapper {
-                width: min(52vw, 74dvh, 520px);
-                height: min(52vw, 74dvh, 520px);
+                width: min(50vw, 75dvh, 520px);
+                height: min(50vw, 75dvh, 520px);
             }
         }
 
@@ -472,10 +474,13 @@
 
             <!-- スコア＆VS表示 -->
             <div class="flex-1 flex items-center justify-between bg-slate-900/90 rounded-lg px-2.5 py-1 border border-white/10 min-w-0">
-                <div id="p1-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-md border-2 border-cyan-400 bg-cyan-950/50 transition-all min-w-0 flex-1">
+                <div id="p1-panel" class="flex items-center gap-1.5 px-2 py-1 rounded-md border-2 border-cyan-400 bg-cyan-950/50 transition-all min-w-0 flex-1">
                     <div id="p1-header-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
-                    <span id="p1-name" class="text-[11px] font-black text-white truncate">P1</span>
-                    <span id="p1-score" class="font-num text-sm sm:text-base font-black text-yellow-300 ml-auto pl-1">2</span>
+                    <!-- 2段構成に変更 -->
+                    <div class="flex flex-col min-w-0 flex-1">
+                        <span id="p1-name" class="text-[11px] font-black text-white truncate w-full">P1</span>
+                        <span id="p1-score" class="font-num text-sm sm:text-base font-black text-yellow-300 leading-none mt-0.5">2</span>
+                    </div>
                 </div>
 
                 <div class="flex flex-col items-center px-2 shrink-0">
@@ -487,9 +492,12 @@
                     </div>
                 </div>
 
-                <div id="p2-panel" class="flex items-center justify-end gap-1.5 px-2 py-0.5 rounded-md border-2 border-transparent bg-slate-800/40 transition-all min-w-0 flex-1">
-                    <span id="p2-score" class="font-num text-sm sm:text-base font-black text-yellow-300 mr-auto pr-1">2</span>
-                    <span id="p2-name" class="text-[11px] font-black text-white truncate">P2</span>
+                <div id="p2-panel" class="flex items-center justify-end gap-1.5 px-2 py-1 rounded-md border-2 border-transparent bg-slate-800/40 transition-all min-w-0 flex-1 text-right">
+                    <!-- 2段構成に変更 -->
+                    <div class="flex flex-col items-end min-w-0 flex-1">
+                        <span id="p2-name" class="text-[11px] font-black text-white truncate w-full">P2</span>
+                        <span id="p2-score" class="font-num text-sm sm:text-base font-black text-yellow-300 leading-none mt-0.5">2</span>
+                    </div>
                     <div id="p2-header-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
                 </div>
             </div>
@@ -506,20 +514,27 @@
 
         <!-- ② 対面2人プレイ用：上部P2デッキ（180度上下反転表示・下部P1デッキと完全同一デザイン） -->
         <div id="p2-top-deck-area" class="hidden w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-xl rotate-180 flex-col gap-1.5 shrink-0">
-            <div class="flex items-center justify-between gap-1.5 bg-slate-900/90 px-2 py-1 rounded-lg border border-white/10">
-                <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                    <div id="p2-deck-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
-                    <span id="p2-deck-name" class="text-[11px] font-black text-white truncate max-w-[64px]">P2</span>
-                    <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
-                        <div id="sp-bar-p2" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+            <!-- SPゲージ ＆ スキルボタン を2段化して長く見せる -->
+                <div class="flex flex-col gap-1.5 bg-slate-900/90 px-2 py-1.5 rounded-lg border border-white/10">
+                    <!-- 1段目: アイコンと名前（フル幅） -->
+                    <div class="flex items-center gap-1.5 min-w-0">
+                        <div id="p2-deck-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
+                        <span id="p2-deck-name" class="text-[11px] font-black text-white truncate flex-1">P2</span>
                     </div>
-                    <span id="sp-text-p2" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                    <!-- 2段目: ゲージとボタン -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center flex-1 gap-1.5">
+                            <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
+                                <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+                            </div>
+                            <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                            <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                        </div>
+                    </div>
                 </div>
-                <div class="flex items-center gap-1 shrink-0">
-                    <button id="reroll-btn-p2" onclick="rerollHand(2)" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
-                    <button id="ult-btn-p2" onclick="activateUltimate(2)" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
-                </div>
-            </div>
             <div id="hand-container-p2" class="grid grid-cols-3 gap-1.5 h-[74px] sm:h-20"></div>
         </div>
 
@@ -565,23 +580,27 @@
             <!-- ④ P1（または現在のプレイヤー）のデッキ＆SPアクション（スマホでは下、PC横画面の1人プレイ時は右側に配置） -->
             <div id="p1-bottom-deck-area" class="w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0">
                 
-                <!-- SPゲージ ＆ スキルボタン（絶対に改行・崩れしない1行設計） -->
-                <div class="flex items-center justify-between gap-1.5 bg-slate-900/90 px-2 py-1 rounded-lg border border-white/10">
-                    <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                <!-- SPゲージ ＆ スキルボタン を2段化して長く見せる -->
+                <div class="flex flex-col gap-1.5 bg-slate-900/90 px-2 py-1.5 rounded-lg border border-white/10">
+                    <!-- 1段目: アイコンと名前（フル幅） -->
+                    <div class="flex items-center gap-1.5 min-w-0">
                         <div id="p1-deck-disc" class="w-3.5 h-3.5 rounded-full border border-white shrink-0"></div>
-                        <span id="p1-deck-name" class="text-[11px] font-black text-white truncate max-w-[64px]">P1</span>
-                        <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
-                            <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
-                        </div>
-                        <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                        <span id="p1-deck-name" class="text-[11px] font-black text-white truncate flex-1">P1</span>
                     </div>
-
-                    <div class="flex items-center gap-1 shrink-0">
-                        <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
-                        <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                    <!-- 2段目: ゲージとボタン -->
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="flex items-center flex-1 gap-1.5">
+                            <div class="flex-1 h-2.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 min-w-[44px]">
+                                <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
+                            </div>
+                            <span id="sp-text" class="font-num text-[10px] font-black text-yellow-300 w-7 text-right shrink-0">30%</span>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                            <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop h-7 px-2 rounded-lg font-black text-[10px] flex items-center gap-1 border whitespace-nowrap"></button>
+                        </div>
                     </div>
                 </div>
-
                 <!-- 3つの手札スロット -->
                 <div id="hand-container" class="grid grid-cols-3 gap-1.5 h-[74px] sm:h-20"></div>
             </div>
@@ -924,7 +943,14 @@
             fxCanvas.width = window.innerWidth;
             fxCanvas.height = window.innerHeight;
         }
-        window.addEventListener('resize', resizeFxCanvas);
+        // 修正後:
+        window.addEventListener('resize', () => {
+            resizeFxCanvas();
+            // ゲーム画面が表示されている場合のみレイアウトを再計算
+            if (document.getElementById('screen-game').classList.contains('flex')) {
+                applyLayoutMode();
+            }
+        });
         resizeFxCanvas();
 
         function spawnParticles(x, y, colorHex = '#38bdf8', count = 18) {
@@ -1412,6 +1438,11 @@
                 toggleBtn.classList.remove('flex');
             }
 
+            // スマホ横画面（縦幅が狭い）またはPC横画面の判定
+            const isLandscapeMobile = window.innerWidth > window.innerHeight && window.innerHeight < 600;
+            const isWideScreen = window.innerWidth >= 900;
+            const useSideBySide = !isTabletopMode && (isLandscapeMobile || isWideScreen);
+
             if (gameMode === 'local' && isTabletopMode) {
                 document.body.classList.add('tabletop-active');
                 topHeader.classList.add('hidden');
@@ -1419,16 +1450,23 @@
                 p2TopDeck.classList.add('flex');
                 rotatedHeader.classList.remove('hidden');
                 mainBody.className = 'flex-1 w-full flex flex-col items-center justify-center gap-2 my-0.5 overflow-hidden';
-                p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0';
+                p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0 mt-0';
             } else {
                 document.body.classList.remove('tabletop-active');
                 topHeader.classList.remove('hidden');
                 p2TopDeck.classList.add('hidden');
                 p2TopDeck.classList.remove('flex');
                 rotatedHeader.classList.add('hidden');
-                // PC横画面（lg以上）では盤面の右側に手札フィールドを並べるレスポンシブ設計
-                mainBody.className = 'flex-1 w-full flex flex-col lg:flex-row items-center justify-center gap-2.5 lg:gap-6 my-0.5 overflow-hidden';
-                p1BottomDeck.className = 'w-full max-w-[420px] lg:w-[330px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 lg:p-3 shadow-2xl flex flex-col gap-2 shrink-0';
+                
+                if (useSideBySide) {
+                    // ★横画面レイアウト（flex-row-reverse で 盤面を右、手札・デッキを左に配置）
+                    mainBody.className = 'flex-1 w-full flex flex-row-reverse items-center justify-center gap-4 sm:gap-6 my-2 overflow-hidden';
+                    p1BottomDeck.className = 'w-full max-w-[340px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 sm:p-3 shadow-2xl flex flex-col gap-2 shrink-0';
+                } else {
+                    // ★縦画面レイアウト（盤面は中央寄り、手札デッキは justify-between と mt-auto で画面下部に固定して余白を確保）
+                    mainBody.className = 'flex-1 w-full flex flex-col items-center justify-between gap-4 my-2 overflow-hidden';
+                    p1BottomDeck.className = 'w-full max-w-[420px] bg-slate-950/90 border-2 border-white/25 rounded-xl p-2 shadow-2xl flex flex-col gap-1.5 shrink-0 mt-auto mb-2';
+                }
             }
         }
 
