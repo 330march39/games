@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Othello BOOST! - 進化版パーティーオセロ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --p1-glow: #38bdf8;
+            --p2-glow: #f43f5e;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow: hidden;
+            background: radial-gradient(circle at 50% 20%, #31105f 0%, #0f172a 65%, #020617 100%);
+            touch-action: none;
+            height: 100dvh;
+            width: 100vw;
+            margin: 0;
+        }
+
+        .font-num {
+            font-family: 'Orbitron', 'M PLUS Rounded 1c', sans-serif;
+        }
+
+        /* 動的背景グリッド */
+        .bg-cyber-grid {
+            background-image: 
+                linear-gradient(to right, rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        /* 立体ボタン */
+        .btn-pop {
+            transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.15s ease;
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.45), 0 8px 16px rgba(0, 0, 0, 0.35);
+        }
+        .btn-pop:hover:not(:disabled) {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .btn-pop:active:not(:disabled) {
+            transform: translateY(4px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 3px 6px rgba(0, 0, 0, 0.35);
+        }
+
+        /* 画面見切れを完全に防ぐレスポンシブ盤面サイズ */
+        .board-wrapper {
+            width: min(88vw, 44dvh, 430px);
+            height: min(88vw, 44dvh, 430px);
+        }
+        @media (min-width: 1024px) {
+            .board-wrapper {
+                width: min(52vw, 74dvh, 520px);
+                height: min(52vw, 74dvh, 520px);
+            }
+        }
+
+        .board-grid {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+            grid-template-rows: repeat(8, minmax(0, 1fr));
+            gap: 3px;
+            background: linear-gradient(145deg, #064e3b, #022c22);
+            border: 5px solid #059669;
+            border-radius: 20px;
+            box-shadow: 
+                0 10px 0 #022c22,
+                0 20px 40px rgba(0,0,0,0.75),
+                inset 0 0 15px rgba(16, 185, 129, 0.3);
+            width: 100%;
+            height: 100%;
+            padding: 5px;
+            position: relative;
+        }
+
+        .board-cell {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 6px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 2px 3px rgba(255,255,255,0.22), inset 0 -2px 3px rgba(0,0,0,0.28);
+            transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        /* 置ける場所のガイドドット */
+        .board-cell.valid-hint::after {
+            content: '';
+            width: 28%;
+            height: 28%;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.55);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
+            animation: pulse-hint 1.4s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        /* ドラッグホバー時 */
+        .board-cell.drag-over-valid {
+            background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%) !important;
+            transform: scale(0.92);
+            box-shadow: 0 0 16px #fde047 !important;
+        }
+
+        /* ひっくり返るターゲットプレビュー */
+        .board-cell.effect-target {
+            box-shadow: inset 0 0 0 3px #f43f5e, 0 0 14px #f43f5e !important;
+            background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%) !important;
+        }
+
+        @keyframes pulse-hint {
+            0%, 100% { transform: scale(0.8); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        /* 盤面ボーナスセル */
+        .bonus-token {
+            width: 65%;
+            height: 65%;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            animation: float-bonus 2s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 5;
+        }
+        @keyframes float-bonus {
+            0%, 100% { transform: translateY(0) scale(0.95); }
+            50% { transform: translateY(-3px) scale(1.1); }
+        }
+
+        /* オセロのコマ */
+        .piece {
+            width: 86%;
+            height: 86%;
+            border-radius: 50%;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .piece.black {
+            background: radial-gradient(circle at 32% 28%, #475569, #0f172a 68%, #020617 100%);
+            box-shadow: 0 3px 0 #020617, 0 5px 8px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.28);
+            color: #38bdf8;
+            border: 2px solid #38bdf8;
+        }
+
+        .piece.white {
+            background: radial-gradient(circle at 32% 28%, #ffffff, #e2e8f0 70%, #94a3b8 100%);
+            box-shadow: 0 3px 0 #64748b, 0 5px 8px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,1);
+            color: #f43f5e;
+            border: 2px solid #fb7185;
+        }
+
+        .piece.flipping {
+            animation: flip-3d 0.48s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes flip-3d {
+            0% { transform: scale(1) rotateY(0deg); }
+            50% { transform: scale(1.38) rotateY(90deg); filter: brightness(1.6); }
+            100% { transform: scale(1) rotateY(180deg); }
+        }
+
+        .piece.pop-in {
+            animation: pop-bounce 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes pop-bounce {
+            0% { transform: scale(0); opacity: 0; }
+            75% { transform: scale(1.22); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+        /* 手札スロット */
+        .hand-card {
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s;
+            touch-action: none;
+            cursor: grab;
+        }
+        .hand-card:hover {
+            transform: translateY(-5px) scale(1.03);
+        }
+        .hand-card:active {
+            cursor: grabbing;
+        }
+        .hand-card.dragging-source {
+            opacity: 0.25;
+            transform: scale(0.88);
+        }
+
+        .rarity-rare {
+            border-color: #38bdf8 !important;
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.45), 0 5px 0 #0284c7 !important;
+        }
+        .rarity-sr {
+            border-color: #facc15 !important;
+            box-shadow: 0 0 18px rgba(250, 204, 21, 0.65), 0 5px 0 #ca8a04 !important;
+            animation: sr-pulse 1.8s infinite alternate;
+        }
+
+        @keyframes sr-pulse {
+            0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.45), 0 5px 0 #ca8a04; }
+            100% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.95), 0 5px 0 #ca8a04; }
+        }
+
+        /* ドラッグ中のゴーストコマ */
+        #drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 66px;
+            height: 66px;
+            transform: translate(-50%, -75%) scale(1.22);
+            filter: drop-shadow(0 16px 14px rgba(0,0,0,0.6));
+            display: none;
+        }
+
+        /* 画面シェイク */
+        .screen-shake {
+            animation: shake-anim 0.38s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+        }
+        @keyframes shake-anim {
+            10%, 90% { transform: translate3d(-3px, 1px, 0); }
+            20%, 80% { transform: translate3d(5px, -2px, 0); }
+            30%, 50%, 70% { transform: translate3d(-6px, 3px, 0); }
+            40%, 60% { transform: translate3d(6px, -3px, 0); }
+        }
+
+        /* レーザー＆爆発エフェクト */
+        .beam-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 40;
+            background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
+            box-shadow: 0 0 22px #38bdf8, 0 0 40px #fde047;
+            border-radius: 999px;
+            animation: beam-flash 0.48s ease-out forwards;
+        }
+        @keyframes beam-flash {
+            0% { opacity: 1; transform: scale(0.4); }
+            45% { opacity: 1; transform: scale(1.08); }
+            100% { opacity: 0; transform: scale(1.25); }
+        }
+
+        /* コンボポップアップ */
+        .combo-float {
+            position: absolute;
+            pointer-events: none;
+            z-index: 60;
+            animation: combo-rise 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes combo-rise {
+            0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
+            25% { transform: translate(-50%, -18px) scale(1.2); opacity: 1; }
+            80% { transform: translate(-50%, -32px) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -48px) scale(0.85); opacity: 0; }
+        }
+
+        /* 必殺技カットイン */
+        .cutin-banner {
+            animation: cutin-slide 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes cutin-slide {
+            0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+            20% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
+            80% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
+            100% { transform: translateX(100%) skewX(-12deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="bg-cyber-grid text-white flex flex-col justify-between overflow-hidden select-none">
+
+    <!-- パーティクル演出キャンバス -->
+    <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-40"></canvas>
+
+    <!-- ドラッグ用ゴースト -->
+    <div id="drag-ghost"></div>
+
+    <!-- 必殺技カットイン -->
+    <div id="cutin-overlay" class="fixed inset-0 z-50 pointer-events-none flex items-center justify-center hidden bg-black/60 backdrop-blur-sm">
+        <div class="cutin-banner w-full bg-gradient-to-r from-amber-500 via-yellow-300 to-rose-500 py-6 border-y-4 border-white shadow-[0_0_60px_rgba(250,204,21,0.95)] flex flex-col items-center justify-center">
+            <div class="flex items-center gap-2 text-slate-900 font-black text-xs md:text-sm tracking-widest uppercase">
+                <i class="fa-solid fa-bolt"></i> OVERDRIVE ACTIVATED <i class="fa-solid fa-bolt"></i>
+            </div>
+            <h2 id="cutin-title" class="text-3xl md:text-5xl font-black text-slate-950 drop-shadow-[0_3px_0_#fff] mt-1">
+                THUNDER STORM
+            </h2>
+        </div>
+    </div>
+
+    <!-- ミニマル通知トースト -->
+    <div id="toast-msg" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4 bg-slate-900/95 border-2 border-cyan-400 text-white font-extrabold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
+        <i class="fa-solid fa-bolt text-yellow-400"></i>
+        <span id="toast-text">READY</span>
+    </div>
+
+    <!-- ==================== 1. タイトル＆ロビー画面 ==================== -->
+    <div id="screen-lobby" class="w-full h-full flex flex-col items-center justify-center p-4 z-20 overflow-hidden">
+        <div class="max-w-md w-full flex flex-col items-center justify-center gap-5">
+            
+            <!-- タイトルロゴ -->
+            <div class="text-center relative">
+                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-lg mb-2 border border-white/30">
+                    <i class="fa-solid fa-crown text-yellow-300"></i> HYPER BOARD BATTLE
+                </div>
+                <h1 class="font-num text-5xl sm:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-cyan-300 drop-shadow-[0_6px_0_rgba(0,0,0,0.7)] leading-none">
+                    OTHELLO<br>
+                    <span class="text-4xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-rose-500 drop-shadow-[0_5px_0_rgba(0,0,0,0.8)]">BOOST!</span>
+                </h1>
+
+                <!-- アイコンエンブレム -->
+                <div class="flex justify-center items-center gap-4 mt-4">
+                    <div class="w-11 h-11 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.5)] text-cyan-400 text-lg">
+                        <i class="fa-solid fa-arrows-left-right"></i>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-amber-400/20 border border-amber-400/60 flex items-center justify-center text-amber-300 text-sm rotate-45">
+                        <i class="fa-solid fa-bolt -rotate-45"></i>
+                    </div>
+                    <div class="w-11 h-11 rounded-full bg-white border-2 border-rose-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.5)] text-rose-500 text-lg">
+                        <i class="fa-solid fa-Crosshairs"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- モード選択パネル -->
+            <div class="w-full bg-slate-900/85 backdrop-blur-xl border-2 border-slate-700/80 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
+                
+                <!-- VS CPU -->
+                <button onclick="startGame('cpu')" class="btn-pop w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-emerald-300 flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-slate-950/35 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-robot text-emerald-200"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-base sm:text-lg tracking-wide">SOLO BATTLE</div>
+                            <div class="text-[11px] text-emerald-100 font-bold opacity-90">VS AI コンピュータ対戦</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-play text-emerald-200"></i>
+                </button>
+
+                <!-- 2P LOCAL -->
+                <button onclick="startGame('local')" class="btn-pop w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-blue-300 flex items-center justify-between group">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-11 h-11 rounded-xl bg-slate-950/35 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-user-group text-blue-200"></i>
+                        </div>
+                        <div class="text-left">
+                            <div class="text-base sm:text-lg tracking-wide">LOCAL 2P</div>
+                            <div class="text-[11px] text-blue-100 font-bold opacity-90">1台の端末でふたり対戦</div>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-play text-blue-200"></i>
+                </button>
+
+                <!-- オンライン・招待連携 -->
+                <div class="grid grid-cols-2 gap-2.5 pt-1">
+                    <button onclick="openJoinModal()" class="btn-pop bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-black py-3 px-3 rounded-2xl border-2 border-yellow-200 flex flex-col items-center justify-center gap-1">
+                        <i class="fa-solid fa-key text-lg"></i>
+                        <span class="text-xs sm:text-sm leading-none">ID入力で参加</span>
+                    </button>
+
+                    <button onclick="openInviteRestrictionModal()" class="btn-pop bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 font-black py-3 px-3 rounded-2xl border-2 border-slate-500 flex flex-col items-center justify-center gap-1 relative overflow-hidden">
+                        <span class="absolute top-1 right-1.5 bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-extrabold">APP</span>
+                        <i class="fa-solid fa-paper-plane text-lg text-rose-400"></i>
+                        <span class="text-xs sm:text-sm leading-none">ルーム招待</span>
+                    </button>
+                </div>
+
+                <!-- ユーティリティバー -->
+                <div class="pt-1 flex items-center gap-2">
+                    <button onclick="openRulesModal()" class="btn-pop flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-extrabold text-cyan-300 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i> コマ能力一覧
+                    </button>
+                    <button id="sound-toggle-lobby" onclick="toggleSound()" class="btn-pop w-11 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-bold text-cyan-400 flex items-center justify-center">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ==================== 2. メインゲーム画面 (縦画面・横画面ハイブリッド対応) ==================== -->
+    <div id="screen-game" class="w-full h-full hidden flex-col lg:flex-row items-center justify-between lg:justify-center p-2 sm:p-4 lg:gap-8 max-w-6xl mx-auto z-10 overflow-hidden">
+        
+        <!-- 左/上部エリア：ナビゲーション＋スコア＋盤面 -->
+        <div class="w-full lg:w-auto flex flex-col items-center justify-center gap-2">
+            
+            <!-- コンパクトヘッダーバー -->
+            <div class="w-full max-w-[430px] lg:max-w-[520px] flex items-center justify-between gap-2 bg-slate-900/90 border-2 border-slate-700/80 rounded-2xl px-3 py-2 shadow-lg">
+                <!-- 中断確認付きホームボタン -->
+                <button onclick="confirmReturnToLobby()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-slate-300 hover:text-white flex items-center justify-center text-sm" title="タイトルへ戻る">
+                    <i class="fa-solid fa-right-from-bracket rotate-180"></i>
+                </button>
+
+                <!-- スコア＆ターンVSバー -->
+                <div class="flex-1 flex items-center justify-between bg-slate-950/90 rounded-xl px-2.5 py-1 border border-slate-800">
+                    <!-- P1 (BLACK) -->
+                    <div id="p1-panel" class="flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/40 transition-all">
+                        <div class="w-5 h-5 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center text-[10px] text-cyan-400">
+                            <i class="fa-solid fa-circle"></i>
+                        </div>
+                        <span id="p1-name" class="text-[10px] font-extrabold text-cyan-300 hidden sm:inline">P1</span>
+                        <span id="p1-score" class="font-num text-base sm:text-lg font-black text-white">2</span>
+                    </div>
+
+                    <!-- ターン表示バッジ -->
+                    <div class="flex flex-col items-center px-1">
+                        <div id="turn-badge" class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider">
+                            YOUR TURN
+                        </div>
+                        <div id="room-badge" class="hidden text-[9px] font-bold text-amber-400 mt-0.5">
+                            ID: <span id="active-room-id">----</span>
+                        </div>
+                    </div>
+
+                    <!-- P2 (WHITE) -->
+                    <div id="p2-panel" class="flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 transition-all">
+                        <span id="p2-score" class="font-num text-base sm:text-lg font-black text-white">2</span>
+                        <span id="p2-name" class="text-[10px] font-extrabold text-rose-300 hidden sm:inline">CPU</span>
+                        <div class="w-5 h-5 rounded-full bg-white border-2 border-rose-500 flex items-center justify-center text-[10px] text-rose-500">
+                            <i class="fa-solid fa-circle"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 図鑑＆サウンドボタン -->
+                <div class="flex items-center gap-1.5">
+                    <button onclick="openRulesModal()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-purple-300 flex items-center justify-center text-sm" title="コマ能力">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </button>
+                    <button id="sound-toggle-game" onclick="toggleSound()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-cyan-400 flex items-center justify-center text-sm" title="サウンド">
+                        <i class="fa-solid fa-volume-high"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 8x8 盤面ラッパー -->
+            <div class="board-wrapper flex items-center justify-center relative my-0.5">
+                <div id="board" class="board-grid">
+                    <!-- JSで64セル生成 -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 右/下部エリア：SPアクション＆3つの手札デッキ -->
+        <div class="w-full max-w-[430px] lg:w-80 bg-slate-900/95 border-2 border-slate-700/90 rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-3">
+            
+            <!-- SPゲージ ＆ アクションボタン群 -->
+            <div class="bg-slate-950/90 p-2.5 rounded-2xl border border-slate-800 flex flex-col gap-2">
+                <!-- ゲージバー -->
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-lg bg-amber-400/20 border border-amber-400 flex items-center justify-center text-amber-300 text-xs shrink-0">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="flex-1 h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
+                        <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-500 via-yellow-300 to-rose-500 rounded-full transition-all duration-300" style="width: 25%"></div>
+                    </div>
+                    <span id="sp-text" class="font-num text-xs font-black text-yellow-300 w-11 text-right">25%</span>
+                </div>
+
+                <!-- スキルボタン（新機能：リロール ＆ 必殺サンダー） -->
+                <div class="grid grid-cols-5 gap-2">
+                    <!-- 手札リロール (SP 30%消費) -->
+                    <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed">
+                        <i class="fa-solid fa-Arrows-rotate"></i>
+                        <span>CHANGE</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-black/40 font-num">30</span>
+                    </button>
+
+                    <!-- 必殺サンダー (SP 100%消費) -->
+                    <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed">
+                        <i class="fa-solid fa-bolt-lightning"></i>
+                        <span>THUNDER</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-black/40 font-num">100</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3つの手札スロット -->
+            <div class="flex flex-col gap-1.5">
+                <div class="flex items-center justify-between px-1">
+                    <div class="flex items-center gap-1.5 text-[11px] font-black text-slate-300 uppercase tracking-wider">
+                        <i class="fa-solid fa-hand-sparkles text-cyan-400"></i> DECK SLOTS
+                    </div>
+                    <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
+                        <i class="fa-solid fa-plus-circle"></i> AUTO DRAW
+                    </div>
+                </div>
+
+                <div id="hand-container" class="grid grid-cols-3 gap-2.5 h-24 sm:h-28">
+                    <!-- JSで手札3枚を生成 -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ==================== モーダル群 ==================== -->
+
+    <!-- 1. バトル中断確認モーダル（新規追加） -->
+    <div id="modal-confirm-quit" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400 text-rose-400 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 class="text-xl font-black text-white">バトルを中断しますか？</h3>
+            <p class="text-xs text-slate-300 mt-2 leading-relaxed">
+                現在の進行状況はリセットされ、タイトル画面へ戻ります。よろしいですか？
+            </p>
+            <div class="mt-5 flex gap-2.5">
+                <button onclick="closeModal('modal-confirm-quit')" class="btn-pop flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
+                    続ける
+                </button>
+                <button onclick="executeReturnToLobby()" class="btn-pop flex-1 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black py-3 rounded-xl border-2 border-rose-300 text-xs">
+                    中断して戻る
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. クイズHPアプリ招待制限モーダル -->
+    <div id="modal-invite-restrict" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
+            <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400 text-rose-400 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-mobile-screen-button"></i>
+            </div>
+            <span class="bg-rose-600 text-white text-[10px] font-black px-3 py-0.5 rounded-full">QUIZ HP APP EXCLUSIVE</span>
+            <h3 class="text-xl font-black mt-2 text-white">ルーム作成は「クイズHPアプリ」限定</h3>
+            <p class="text-xs text-slate-300 mt-2 leading-relaxed">
+                招待ルームの新規作成は公式の<strong class="text-yellow-300">「クイズHPアプリ」</strong>からのみ行えます。招待された方は「ID入力で参加」から入室できます。
+            </p>
+
+            <div class="mt-5 space-y-2">
+                <button onclick="simulateQuizAppHost()" class="btn-pop w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black py-3 rounded-xl border-2 border-white text-xs flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-bolt"></i> クイズHPアプリ連携デモでルーム発行
+                </button>
+                <button onclick="closeModal('modal-invite-restrict')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. 招待ID入力モーダル -->
+    <div id="modal-join-id" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
+            <div class="w-14 h-14 rounded-2xl bg-amber-400/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-2xl mx-auto mb-3">
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <h3 class="text-xl font-black text-white">ROOM ID ENTRY</h3>
+            <p class="text-xs text-slate-400 mt-1">共有されたルームIDを入力してください</p>
+
+            <div class="mt-4">
+                <input id="input-room-id" type="text" maxlength="8" placeholder="QZ777" class="font-num w-full bg-slate-950 border-2 border-amber-400/60 focus:border-amber-300 rounded-2xl py-3 px-4 text-center text-2xl font-black tracking-widest text-yellow-300 uppercase outline-none" />
+                <div class="flex justify-center items-center gap-2 mt-2.5">
+                    <span class="text-[10px] text-slate-400 font-bold">PRESET:</span>
+                    <button onclick="fillDemoId('QZ777')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-0.5 rounded-lg border border-slate-600 font-bold">QZ777</button>
+                    <button onclick="fillDemoId('HP2026')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-0.5 rounded-lg border border-slate-600 font-bold">HP2026</button>
+                </div>
+            </div>
+
+            <div class="mt-5 flex gap-2.5">
+                <button onclick="closeModal('modal-join-id')" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
+                    戻る
+                </button>
+                <button onclick="joinRoomById()" class="btn-pop flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-3 rounded-xl border-2 border-yellow-200 text-xs">
+                    JOIN ROOM
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. コマ能力＆ボーナス一覧モーダル（アイコン中心のスマート図鑑） -->
+    <div id="modal-rules" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-cyan-400 rounded-3xl max-w-md w-full max-h-[84dvh] flex flex-col shadow-2xl overflow-hidden animate-[pop-bounce_0.25s_ease-out]">
+            <div class="bg-gradient-to-r from-cyan-600 to-blue-700 px-4 py-3 flex items-center justify-between border-b-2 border-cyan-300">
+                <h3 class="text-base font-black text-white flex items-center gap-2">
+                    <i class="fa-solid fa-layer-group"></i> PIECE &amp; SKILL GUIDE
+                </h3>
+                <button onclick="closeModal('modal-rules')" class="w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 overflow-y-auto space-y-2.5 text-left text-xs text-slate-200">
+                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-cyan-500/40">
+                    <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center text-cyan-400 text-base shrink-0">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-cyan-300">ARROW LASER <span class="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded ml-1">RARE</span></div>
+                        <div class="text-[11px] text-slate-300">矢印の方向の端まで、全てのコマを一気に自分の色に変える</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-amber-400/50">
+                    <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-amber-400 text-base shrink-0">
+                        <i class="fa-solid fa-arrows-left-right"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-amber-300">TWIN / CROSS LASER <span class="text-[10px] bg-amber-950 px-1.5 py-0.5 rounded ml-1">S-RARE</span></div>
+                        <div class="text-[11px] text-slate-300">直線2方向、または十字4方向の全コマを一気に奪取する</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-rose-400/50">
+                    <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-rose-400 flex items-center justify-center text-rose-400 text-base shrink-0">
+                        <i class="fa-solid fa-burst"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-rose-300">BLAST BOMB <span class="text-[10px] bg-rose-950 px-1.5 py-0.5 rounded ml-1">S-RARE</span></div>
+                        <div class="text-[11px] text-slate-300">配置した周囲8マスのコマをすべて自分の色に変換する</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-emerald-400/50">
+                    <div class="w-10 h-10 rounded-full bg-emerald-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 text-base shrink-0">
+                        <i class="fa-solid fa-gem"></i>
+                    </div>
+                    <div>
+                        <div class="font-black text-emerald-300">BOARD BONUS CAPSULE <span class="text-[10px] bg-emerald-950 px-1.5 py-0.5 rounded ml-1">NEW</span></div>
+                        <div class="text-[11px] text-slate-300">盤面の光るアイテム上に置くと、SP大チャージやレア手札進化が発生！</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3 bg-slate-950 border-t border-slate-800">
+                <button onclick="closeModal('modal-rules')" class="btn-pop w-full py-2.5 bg-cyan-500 text-slate-950 font-black rounded-xl text-xs">
+                    CLOSE
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. リザルト（勝敗結果）モーダル -->
+    <div id="modal-result" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border-4 border-yellow-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.35s_ease-out]">
+            <div id="result-icon-wrap" class="w-16 h-16 rounded-2xl bg-yellow-400/20 border-2 border-yellow-400 text-yellow-300 flex items-center justify-center text-3xl mx-auto mb-2 shadow-[0_0_25px_rgba(250,204,21,0.5)]">
+                <i id="result-icon" class="fa-solid fa-trophy"></i>
+            </div>
+            <h2 id="result-title" class="font-num text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-500">
+                VICTORY!
+            </h2>
+
+            <div class="grid grid-cols-2 gap-3 my-5 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                <div class="flex flex-col items-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40">
+                    <span id="res-p1-name" class="text-[11px] font-bold text-cyan-300">P1</span>
+                    <span id="res-p1-score" class="font-num text-3xl font-black text-white mt-1">34</span>
+                </div>
+                <div class="flex flex-col items-center p-2 rounded-xl bg-rose-950/40 border border-rose-500/40">
+                    <span id="res-p2-name" class="text-[11px] font-bold text-rose-300">CPU</span>
+                    <span id="res-p2-score" class="font-num text-3xl font-black text-white mt-1">30</span>
+                </div>
+            </div>
+
+            <div class="flex gap-2.5">
+                <button onclick="executeReturnToLobby()" class="btn-pop flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
+                    TITLE
+                </button>
+                <button onclick="rematchGame()" class="btn-pop flex-1 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3 rounded-xl border-2 border-emerald-200 text-xs">
+                    REMATCH
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ============================================================================
+           1. Web Audio シンセサウンドエンジン
+        ============================================================================ */
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playSE(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const now = audioCtx.currentTime;
+
+                if (type === 'pickup') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(720, now + 0.07);
+                    gain.gain.setValueAtTime(0.14, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.07);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.07);
+                } else if (type === 'place') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(320, now);
+                    osc.frequency.exponentialRampToValueAtTime(130, now + 0.1);
+                    gain.gain.setValueAtTime(0.24, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'flip') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(540 + Math.random() * 240, now);
+                    osc.frequency.exponentialRampToValueAtTime(920, now + 0.08);
+                    gain.gain.setValueAtTime(0.11, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'laser') {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(960, now);
+                    osc.frequency.exponentialRampToValueAtTime(190, now + 0.34);
+                    gain.gain.setValueAtTime(0.18, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.34);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.34);
+                } else if (type === 'bonus') {
+                    [587.33, 880, 1174.66].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.05);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.05 + 0.22);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.05);
+                        osc.stop(now + idx * 0.05 + 0.22);
+                    });
+                } else if (type === 'ult') {
+                    [261.6, 329.6, 392.0, 523.2, 659.2].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.055);
+                        gain.gain.setValueAtTime(0.12, now + idx * 0.055);
+                        gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.055 + 0.32);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.055);
+                        osc.stop(now + idx * 0.055 + 0.32);
+                    });
+                } else if (type === 'win') {
+                    [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                        gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.008, now + idx * 0.1 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(now + idx * 0.1);
+                        osc.stop(now + idx * 0.1 + 0.4);
+                    });
+                }
+            } catch (e) {}
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const iconHtml = soundEnabled
+                ? '<i class="fa-solid fa-volume-high text-cyan-400"></i>'
+                : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
+            document.getElementById('sound-toggle-lobby').innerHTML = iconHtml;
+            document.getElementById('sound-toggle-game').innerHTML = iconHtml;
+            showToast(soundEnabled ? 'SOUND ON' : 'SOUND OFF');
+        }
+
+        /* ============================================================================
+           2. キャンバスパーティクル演出システム
+        ============================================================================ */
+        const fxCanvas = document.getElementById('fx-canvas');
+        const fxCtx = fxCanvas.getContext('2d');
+        let particles = [];
+
+        function resizeFxCanvas() {
+            fxCanvas.width = window.innerWidth;
+            fxCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeFxCanvas);
+        resizeFxCanvas();
+
+        function spawnParticles(x, y, colorHex = '#38bdf8', count = 18) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 6;
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: 3 + Math.random() * 4,
+                    color: colorHex,
+                    alpha: 1,
+                    decay: 0.025 + Math.random() * 0.02
+                });
+            }
+        }
+
+        function updateParticles() {
+            fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= p.decay;
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+                fxCtx.save();
+                fxCtx.globalAlpha = p.alpha;
+                fxCtx.fillStyle = p.color;
+                fxCtx.shadowBlur = 8;
+                fxCtx.shadowColor = p.color;
+                fxCtx.beginPath();
+                fxCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                fxCtx.fill();
+                fxCtx.restore();
+            }
+            requestAnimationFrame(updateParticles);
+        }
+        requestAnimationFrame(updateParticles);
+
+        function triggerScreenShake() {
+            const gameEl = document.getElementById('screen-game');
+            gameEl.classList.remove('screen-shake');
+            void gameEl.offsetWidth;
+            gameEl.classList.add('screen-shake');
+        }
+
+        /* ============================================================================
+           3. 特殊コマ定義（絵文字ゼロ・すべてFontAwesomeアイコン）
+        ============================================================================ */
+        const PIECE_TYPES = {
+            NORMAL: {
+                id: 'NORMAL', name: 'NORMAL', iconClass: '', badge: 'STD',
+                weight: 66, rarity: 'normal', dirs: []
+            },
+            ARROW_U: {
+                id: 'ARROW_U', name: 'UP LASER', iconClass: 'fa-solid fa-arrow-up', badge: '1-WAY',
+                weight: 5, rarity: 'rare', dirs: [[-1, 0]]
+            },
+            ARROW_D: {
+                id: 'ARROW_D', name: 'DOWN LASER', iconClass: 'fa-solid fa-arrow-down', badge: '1-WAY',
+                weight: 5, rarity: 'rare', dirs: [[1, 0]]
+            },
+            ARROW_L: {
+                id: 'ARROW_L', name: 'LEFT LASER', iconClass: 'fa-solid fa-arrow-left', badge: '1-WAY',
+                weight: 5, rarity: 'rare', dirs: [[0, -1]]
+            },
+            ARROW_R: {
+                id: 'ARROW_R', name: 'RIGHT LASER', iconClass: 'fa-solid fa-arrow-right', badge: '1-WAY',
+                weight: 5, rarity: 'rare', dirs: [[0, 1]]
+            },
+            LINE_H: {
+                id: 'LINE_H', name: 'H-LASER', iconClass: 'fa-solid fa-arrows-left-right', badge: '2-WAY',
+                weight: 3.5, rarity: 'sr', dirs: [[0, -1], [0, 1]]
+            },
+            LINE_V: {
+                id: 'LINE_V', name: 'V-LASER', iconClass: 'fa-solid fa-arrows-up-down', badge: '2-WAY',
+                weight: 3.5, rarity: 'sr', dirs: [[-1, 0], [1, 0]]
+            },
+            BOMB: {
+                id: 'BOMB', name: 'BLAST', iconClass: 'fa-solid fa-burst', badge: 'AREA',
+                weight: 4.5, rarity: 'sr', dirs: 'BOMB'
+            },
+            CROSS: {
+                id: 'CROSS', name: 'CROSS', iconClass: 'fa-solid fa-up-down-left-right', badge: '4-WAY',
+                weight: 2.5, rarity: 'sr', dirs: [[-1, 0], [1, 0], [0, -1], [0, 1]]
+            }
+        };
+
+        function drawRandomPiece(guaranteedNormal = false, forceSpecial = false) {
+            if (guaranteedNormal) return { ...PIECE_TYPES.NORMAL, uid: Math.random().toString(36).slice(2) };
+            const list = Object.values(PIECE_TYPES).filter(p => !forceSpecial || p.id !== 'NORMAL');
+            const totalWeight = list.reduce((sum, item) => sum + item.weight, 0);
+            let r = Math.random() * totalWeight;
+            for (const item of list) {
+                if (r < item.weight) {
+                    return { ...item, uid: Math.random().toString(36).slice(2) };
+                }
+                r -= item.weight;
+            }
+            return { ...PIECE_TYPES.NORMAL, uid: Math.random().toString(36).slice(2) };
+        }
+
+        /* ============================================================================
+           4. ゲームステータス管理 ＆ 新機能「盤面ボーナスカプセル」
+        ============================================================================ */
+        const BLACK = 1;
+        const WHITE = 2;
+        const DIRS_8 = [
+            [-1, -1], [-1, 0], [-1, 1],
+            [0, -1],           [0, 1],
+            [1, -1],  [1, 0],  [1, 1]
+        ];
+
+        let gameMode = 'cpu';
+        let roomCode = null;
+        let board = [];
+        let bonusGrid = []; // null or 'SP' | 'UPGRADE'
+        let currentTurn = BLACK;
+        let isAnimating = false;
+        let hands = { [BLACK]: [], [WHITE]: [] };
+        let spGauge = { [BLACK]: 0, [WHITE]: 0 };
+
+        let dragState = {
+            active: false,
+            handIndex: null,
+            piece: null,
+            hoveredCell: null
+        };
+
+        function spawnBoardBonuses() {
+            bonusGrid = Array.from({ length: 8 }, () => Array(8).fill(null));
+            const candidates = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (r >= 2 && r <= 5 && c >= 2 && c <= 5) continue;
+                    candidates.push([r, c]);
+                }
+            }
+            candidates.sort(() => Math.random() - 0.5);
+            // SPカプセル3個、レア進化カプセル2個を盤面にランダム配置
+            for (let i = 0; i < 3; i++) {
+                const [r, c] = candidates[i];
+                bonusGrid[r][c] = 'SP';
+            }
+            for (let i = 3; i < 5; i++) {
+                const [r, c] = candidates[i];
+                bonusGrid[r][c] = 'UPGRADE';
+            }
+        }
+
+        /* ============================================================================
+           5. ゲーム開始・中断確認・画面遷移
+        ============================================================================ */
+        function startGame(mode, customRoomId = null) {
+            initAudio();
+            playSE('pickup');
+            gameMode = mode;
+            roomCode = customRoomId;
+
+            const p1NameEl = document.getElementById('p1-name');
+            const p2NameEl = document.getElementById('p2-name');
+            const roomBadge = document.getElementById('room-badge');
+
+            if (mode === 'cpu') {
+                p1NameEl.textContent = 'YOU';
+                p2NameEl.textContent = 'CPU';
+                roomBadge.classList.add('hidden');
+            } else if (mode === 'local') {
+                p1NameEl.textContent = 'P1';
+                p2NameEl.textContent = 'P2';
+                roomBadge.classList.add('hidden');
+            } else if (mode === 'online') {
+                p1NameEl.textContent = 'YOU';
+                p2NameEl.textContent = 'GUEST';
+                document.getElementById('active-room-id').textContent = customRoomId;
+                roomBadge.classList.remove('hidden');
+            }
+
+            board = Array.from({ length: 8 }, () => Array(8).fill(null));
+            board[3][3] = { color: WHITE, typeId: 'NORMAL' };
+            board[3][4] = { color: BLACK, typeId: 'NORMAL' };
+            board[4][3] = { color: BLACK, typeId: 'NORMAL' };
+            board[4][4] = { color: WHITE, typeId: 'NORMAL' };
+
+            spawnBoardBonuses();
+
+            hands[BLACK] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
+            hands[WHITE] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
+
+            spGauge[BLACK] = 30;
+            spGauge[WHITE] = 30;
+
+            currentTurn = BLACK;
+            isAnimating = false;
+
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('screen-game').classList.add('flex');
+
+            buildBoardDOM();
+            renderAll();
+
+            showToast(customRoomId ? `ROOM [${customRoomId}] CONNECTED` : 'BATTLE START!');
+        }
+
+        // タイトルへ戻る際の確認ポップアップ表示
+        function confirmReturnToLobby() {
+            playSE('pickup');
+            openModal('modal-confirm-quit');
+        }
+
+        function executeReturnToLobby() {
+            closeModal('modal-confirm-quit');
+            closeModal('modal-result');
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('flex');
+            document.getElementById('screen-lobby').classList.remove('hidden');
+        }
+
+        function rematchGame() {
+            closeModal('modal-result');
+            startGame(gameMode, roomCode);
+        }
+
+        /* ============================================================================
+           6. オセロ＆特殊スキル判定ロジック
+        ============================================================================ */
+        function inBounds(r, c) {
+            return r >= 0 && r < 8 && c >= 0 && c < 8;
+        }
+
+        function getStandardFlips(r, c, color) {
+            if (board[r][c] !== null) return [];
+            const opp = color === BLACK ? WHITE : BLACK;
+            let flips = [];
+
+            for (const [dr, dc] of DIRS_8) {
+                let nr = r + dr;
+                let nc = c + dc;
+                let line = [];
+                while (inBounds(nr, nc) && board[nr][nc] && board[nr][nc].color === opp) {
+                    line.push([nr, nc]);
+                    nr += dr;
+                    nc += dc;
+                }
+                if (line.length > 0 && inBounds(nr, nc) && board[nr][nc] && board[nr][nc].color === color) {
+                    flips.push(...line);
+                }
+            }
+            return flips;
+        }
+
+        function getSpecialEffectFlips(r, c, color, pieceType) {
+            if (!pieceType || pieceType.id === 'NORMAL') return [];
+            let extra = [];
+
+            if (pieceType.dirs === 'BOMB') {
+                for (const [dr, dc] of DIRS_8) {
+                    const nr = r + dr;
+                    const nc = c + dc;
+                    if (inBounds(nr, nc) && board[nr][nc] && board[nr][nc].color !== color) {
+                        extra.push([nr, nc]);
+                    }
+                }
+            } else if (Array.isArray(pieceType.dirs)) {
+                for (const [dr, dc] of pieceType.dirs) {
+                    let nr = r + dr;
+                    let nc = c + dc;
+                    while (inBounds(nr, nc)) {
+                        if (board[nr][nc] && board[nr][nc].color !== color) {
+                            extra.push([nr, nc]);
+                        }
+                        nr += dr;
+                        nc += dc;
+                    }
+                }
+            }
+            return extra;
+        }
+
+        function getAllValidMoves(color) {
+            let moves = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const stdFlips = getStandardFlips(r, c, color);
+                    if (stdFlips.length > 0) {
+                        moves.push({ r, c, stdFlips });
+                    }
+                }
+            }
+            return moves;
+        }
+
+        /* ============================================================================
+           7. 盤面・手札・SPボタン描画
+        ============================================================================ */
+        function buildBoardDOM() {
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'board-cell';
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    boardEl.appendChild(cell);
+                }
+            }
+        }
+
+        function renderAll(animatedCoords = [], newPlacedCoord = null) {
+            const validMoves = getAllValidMoves(currentTurn);
+            const validSet = new Set(validMoves.map(m => `${m.r},${m.c}`));
+            const animSet = new Set(animatedCoords.map(([r, c]) => `${r},${c}`));
+
+            const cells = document.querySelectorAll('.board-cell');
+            let blackCount = 0;
+            let whiteCount = 0;
+
+            cells.forEach(cell => {
+                const r = parseInt(cell.dataset.r);
+                const c = parseInt(cell.dataset.c);
+                const data = board[r][c];
+                const bonus = bonusGrid[r][c];
+
+                cell.classList.remove('valid-hint', 'drag-over-valid', 'effect-target');
+
+                const isHumanTurn = (gameMode === 'local') || (currentTurn === BLACK);
+                if (!data && validSet.has(`${r},${c}`) && isHumanTurn && !isAnimating) {
+                    cell.classList.add('valid-hint');
+                }
+
+                cell.innerHTML = '';
+
+                // 空きマスでボーナスカプセルがある場合
+                if (!data && bonus) {
+                    const token = document.createElement('div');
+                    if (bonus === 'SP') {
+                        token.className = 'bonus-token bg-amber-400/25 border border-amber-300 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.6)]';
+                        token.innerHTML = '<i class="fa-solid fa-bolt"></i>';
+                    } else {
+                        token.className = 'bonus-token bg-fuchsia-500/25 border border-fuchsia-300 text-fuchsia-300 shadow-[0_0_10px_rgba(232,121,249,0.6)]';
+                        token.innerHTML = '<i class="fa-solid fa-gem"></i>';
+                    }
+                    cell.appendChild(token);
+                }
+
+                if (data) {
+                    if (data.color === BLACK) blackCount++;
+                    else whiteCount++;
+
+                    const pieceEl = document.createElement('div');
+                    const colorClass = data.color === BLACK ? 'black' : 'white';
+                    const isNew = newPlacedCoord && newPlacedCoord[0] === r && newPlacedCoord[1] === c;
+                    const isFlipped = animSet.has(`${r},${c}`);
+
+                    pieceEl.className = `piece ${colorClass} ${isNew ? 'pop-in' : ''} ${isFlipped ? 'flipping' : ''}`;
+
+                    const pType = PIECE_TYPES[data.typeId] || PIECE_TYPES.NORMAL;
+                    if (pType.iconClass) {
+                        pieceEl.innerHTML = `<i class="${pType.iconClass} text-xs sm:text-sm pointer-events-none"></i>`;
+                    }
+                    cell.appendChild(pieceEl);
+                }
+            });
+
+            document.getElementById('p1-score').textContent = blackCount;
+            document.getElementById('p2-score').textContent = whiteCount;
+
+            const p1Panel = document.getElementById('p1-panel');
+            const p2Panel = document.getElementById('p2-panel');
+            const turnBadge = document.getElementById('turn-badge');
+
+            if (currentTurn === BLACK) {
+                p1Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(56,189,248,0.45)] transition-all';
+                p2Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 opacity-55 transition-all';
+                turnBadge.className = 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider';
+                turnBadge.textContent = gameMode === 'local' ? 'P1 TURN' : 'YOUR TURN';
+            } else {
+                p1Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 opacity-55 transition-all';
+                p2Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-rose-400 bg-rose-950/60 shadow-[0_0_12px_rgba(244,63,94,0.45)] transition-all';
+                turnBadge.className = 'bg-gradient-to-r from-rose-500 to-pink-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider';
+                turnBadge.textContent = gameMode === 'local' ? 'P2 TURN' : 'ENEMY TURN';
+            }
+
+            renderHandAndSP();
+        }
+
+        function renderHandAndSP() {
+            const activePlayer = (gameMode === 'local') ? currentTurn : BLACK;
+            const playerHand = hands[activePlayer];
+            const sp = spGauge[activePlayer];
+            const canControl = !isAnimating && (gameMode === 'local' || currentTurn === BLACK);
+
+            document.getElementById('sp-text').textContent = `${sp}%`;
+            document.getElementById('sp-bar').style.width = `${sp}%`;
+
+            // リロールボタン (SP 30%以上で使用可能)
+            const rerollBtn = document.getElementById('reroll-btn');
+            if (sp >= 30 && canControl) {
+                rerollBtn.disabled = false;
+                rerollBtn.className = 'btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-200 cursor-pointer';
+            } else {
+                rerollBtn.disabled = true;
+                rerollBtn.className = 'btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+            }
+
+            // 必殺サンダーボタン (SP 100%で使用可能)
+            const ultBtn = document.getElementById('ult-btn');
+            if (sp >= 100 && canControl) {
+                ultBtn.disabled = false;
+                ultBtn.className = 'btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-slate-950 border-white shadow-[0_0_18px_rgba(250,204,21,0.85)] animate-pulse cursor-pointer';
+            } else {
+                ultBtn.disabled = true;
+                ultBtn.className = 'btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+            }
+
+            const container = document.getElementById('hand-container');
+            container.innerHTML = '';
+
+            playerHand.forEach((piece, idx) => {
+                const card = document.createElement('div');
+                let rarityClass = 'border-slate-600 bg-slate-800/90';
+                if (piece.rarity === 'rare') rarityClass = 'rarity-rare bg-sky-950/85';
+                if (piece.rarity === 'sr') rarityClass = 'rarity-sr bg-amber-950/85';
+
+                card.className = `hand-card rounded-2xl border-2 ${rarityClass} p-2 flex flex-col items-center justify-between relative select-none ${canControl ? '' : 'opacity-50 pointer-events-none'}`;
+                card.dataset.index = idx;
+
+                let badgeColor = 'bg-slate-700 text-slate-300';
+                if (piece.rarity === 'rare') badgeColor = 'bg-cyan-400 text-slate-950';
+                if (piece.rarity === 'sr') badgeColor = 'bg-gradient-to-r from-yellow-300 to-amber-500 text-slate-950';
+
+                const discColorClass = activePlayer === BLACK ? 'black' : 'white';
+
+                card.innerHTML = `
+                    <span class="font-num text-[9px] font-black px-2 py-0.5 rounded-full ${badgeColor} leading-none">${piece.badge}</span>
+                    <div class="w-11 h-11 sm:w-12 sm:h-12 my-0.5 flex items-center justify-center">
+                        <div class="piece ${discColorClass} w-full h-full flex items-center justify-center">
+                            ${piece.iconClass ? `<i class="${piece.iconClass} text-base sm:text-lg"></i>` : ''}
+                        </div>
+                    </div>
+                    <span class="font-num text-[10px] font-black text-white tracking-wider">${piece.name}</span>
+                `;
+
+                if (canControl) {
+                    card.addEventListener('pointerdown', (e) => onDragStart(e, idx, piece, activePlayer, card));
+                }
+
+                container.appendChild(card);
+            });
+        }
+
+        /* ============================================================================
+           8. 新機能：手札リロール（SP 30%消費で手札3枚をリフレッシュ＆1枚以上レア確定）
+        ============================================================================ */
+        function rerollHand() {
+            const activePlayer = (gameMode === 'local') ? currentTurn : BLACK;
+            if (isAnimating || spGauge[activePlayer] < 30) return;
+
+            spGauge[activePlayer] -= 30;
+            playSE('bonus');
+
+            // 最低1枚は特殊コマ確定で3枚引き直す
+            hands[activePlayer] = [
+                drawRandomPiece(false, true),
+                drawRandomPiece(),
+                drawRandomPiece()
+            ];
+
+            const handEl = document.getElementById('hand-container');
+            const rect = handEl.getBoundingClientRect();
+            spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, '#38bdf8', 24);
+
+            renderHandAndSP();
+            showToast('DECK RELOADED!');
+        }
+
+        /* ============================================================================
+           9. ドラッグ＆ドロップ制御
+        ============================================================================ */
+        function onDragStart(e, handIndex, piece, color, cardEl) {
+            if (isAnimating) return;
+            e.preventDefault();
+            initAudio();
+            playSE('pickup');
+
+            dragState.active = true;
+            dragState.handIndex = handIndex;
+            dragState.piece = piece;
+            dragState.color = color;
+            dragState.cardEl = cardEl;
+
+            cardEl.classList.add('dragging-source');
+
+            const ghost = document.getElementById('drag-ghost');
+            const discColorClass = color === BLACK ? 'black' : 'white';
+            ghost.innerHTML = `
+                <div class="piece ${discColorClass} w-full h-full flex items-center justify-center">
+                    ${piece.iconClass ? `<i class="${piece.iconClass} text-xl"></i>` : ''}
+                </div>
+            `;
+            ghost.style.display = 'block';
+            updateGhostPosition(e.clientX, e.clientY);
+
+            window.addEventListener('pointermove', onDragMove);
+            window.addEventListener('pointerup', onDragEnd);
+            window.addEventListener('pointercancel', onDragEnd);
+        }
+
+        function updateGhostPosition(x, y) {
+            const ghost = document.getElementById('drag-ghost');
+            ghost.style.left = `${x}px`;
+            ghost.style.top = `${y}px`;
+        }
+
+        function onDragMove(e) {
+            if (!dragState.active) return;
+            updateGhostPosition(e.clientX, e.clientY);
+
+            document.querySelectorAll('.board-cell').forEach(c => {
+                c.classList.remove('drag-over-valid', 'effect-target');
+            });
+
+            const targetEl = document.elementFromPoint(e.clientX, e.clientY);
+            const cellEl = targetEl ? targetEl.closest('.board-cell') : null;
+
+            if (cellEl) {
+                const r = parseInt(cellEl.dataset.r);
+                const c = parseInt(cellEl.dataset.c);
+                const stdFlips = getStandardFlips(r, c, dragState.color);
+
+                if (stdFlips.length > 0) {
+                    dragState.hoveredCell = { r, c };
+                    cellEl.classList.add('drag-over-valid');
+
+                    const extraFlips = getSpecialEffectFlips(r, c, dragState.color, dragState.piece);
+                    const allTargets = [...stdFlips, ...extraFlips];
+                    allTargets.forEach(([tr, tc]) => {
+                        const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                        if (tCell) tCell.classList.add('effect-target');
+                    });
+                    return;
+                }
+            }
+            dragState.hoveredCell = null;
+        }
+
+        function onDragEnd() {
+            if (!dragState.active) return;
+
+            window.removeEventListener('pointermove', onDragMove);
+            window.removeEventListener('pointerup', onDragEnd);
+            window.removeEventListener('pointercancel', onDragEnd);
+
+            document.getElementById('drag-ghost').style.display = 'none';
+            if (dragState.cardEl) dragState.cardEl.classList.remove('dragging-source');
+
+            document.querySelectorAll('.board-cell').forEach(c => {
+                c.classList.remove('drag-over-valid', 'effect-target');
+            });
+
+            const target = dragState.hoveredCell;
+            const hIdx = dragState.handIndex;
+            dragState.active = false;
+            dragState.hoveredCell = null;
+
+            if (target) {
+                executeMove(target.r, target.c, currentTurn, hIdx);
+            }
+        }
+
+        /* ============================================================================
+           10. コマ配置・コンボ演出・ボーナスカプセル取得・ターン進行
+        ============================================================================ */
+        async function executeMove(r, c, color, handIndex) {
+            if (isAnimating) return;
+            isAnimating = true;
+
+            const usedPiece = hands[color][handIndex];
+            const stdFlips = getStandardFlips(r, c, color);
+            const extraFlips = getSpecialEffectFlips(r, c, color, usedPiece);
+
+            const flipMap = new Map();
+            stdFlips.forEach(([fr, fc]) => flipMap.set(`${fr},${fc}`, [fr, fc]));
+            extraFlips.forEach(([fr, fc]) => flipMap.set(`${fr},${fc}`, [fr, fc]));
+            const totalFlips = Array.from(flipMap.values());
+
+            board[r][c] = { color, typeId: usedPiece.id };
+            playSE('place');
+
+            // 盤面ボーナスカプセル判定
+            const pickedBonus = bonusGrid[r][c];
+            bonusGrid[r][c] = null;
+
+            // 手札補充（UPGRADEカプセルを踏んだ場合はレア特殊コマ確定補充）
+            if (pickedBonus === 'UPGRADE') {
+                hands[color][handIndex] = drawRandomPiece(false, true);
+                playSE('bonus');
+                showToast('BONUS! SPECIAL PIECE ACQUIRED!');
+            } else {
+                hands[color][handIndex] = drawRandomPiece();
+            }
+
+            if (pickedBonus === 'SP') {
+                spGauge[color] = Math.min(100, spGauge[color] + 35);
+                playSE('bonus');
+                showToast('BONUS! SP +35% CHARGED!');
+            }
+
+            // 特殊コマエフェクト＆シェイク
+            if (usedPiece.id !== 'NORMAL') {
+                playSE('laser');
+                triggerScreenShake();
+                showVisualSkillEffect(r, c, usedPiece);
+            }
+
+            totalFlips.forEach(([fr, fc]) => {
+                board[fr][fc].color = color;
+            });
+
+            // セル座標でパーティクル＆コンボポップアップ発火
+            const placedCell = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+            if (placedCell) {
+                const rect = placedCell.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                spawnParticles(cx, cy, color === BLACK ? '#38bdf8' : '#f43f5e', 16 + totalFlips.length * 2);
+
+                if (totalFlips.length >= 4) {
+                    showComboPopup(r, c, totalFlips.length);
+                }
+            }
+
+            const gainSp = Math.min(45, 12 + totalFlips.length * 6);
+            spGauge[color] = Math.min(100, spGauge[color] + gainSp);
+
+            renderAll(totalFlips, [r, c]);
+            setTimeout(() => playSE('flip'), 110);
+
+            await sleep(540);
+            await advanceTurn();
+        }
+
+        function showComboPopup(r, c, count) {
+            const boardEl = document.getElementById('board');
+            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+            if (!boardEl || !cellEl) return;
+
+            const boardRect = boardEl.getBoundingClientRect();
+            const cellRect = cellEl.getBoundingClientRect();
+            const x = cellRect.left - boardRect.left + cellRect.width / 2;
+            const y = cellRect.top - boardRect.top;
+
+            const badge = document.createElement('div');
+            badge.className = 'combo-float font-num font-black text-sm sm:text-base px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-slate-950 border-2 border-white shadow-xl whitespace-nowrap';
+            badge.style.left = `${x}px`;
+            badge.style.top = `${y}px`;
+            badge.innerHTML = `<i class="fa-solid fa-fire mr-1"></i>+${count} BURST!`;
+            boardEl.appendChild(badge);
+            setTimeout(() => badge.remove(), 950);
+        }
+
+        function showVisualSkillEffect(r, c, piece) {
+            const boardEl = document.getElementById('board');
+            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+            if (!cellEl || !boardEl) return;
+
+            const boardRect = boardEl.getBoundingClientRect();
+            const cellRect = cellEl.getBoundingClientRect();
+            const centerX = cellRect.left - boardRect.left + cellRect.width / 2;
+            const centerY = cellRect.top - boardRect.top + cellRect.height / 2;
+
+            if (piece.dirs === 'BOMB') {
+                const shock = document.createElement('div');
+                shock.className = 'beam-effect';
+                shock.style.width = `${cellRect.width * 3.2}px`;
+                shock.style.height = `${cellRect.height * 3.2}px`;
+                shock.style.left = `${centerX - cellRect.width * 1.6}px`;
+                shock.style.top = `${centerY - cellRect.height * 1.6}px`;
+                shock.style.borderRadius = '50%';
+                boardEl.appendChild(shock);
+                setTimeout(() => shock.remove(), 500);
+            } else if (Array.isArray(piece.dirs)) {
+                piece.dirs.forEach(([dr, dc]) => {
+                    const beam = document.createElement('div');
+                    beam.className = 'beam-effect';
+                    if (dr !== 0) {
+                        beam.style.width = '16px';
+                        beam.style.left = `${centerX - 8}px`;
+                        if (dr < 0) {
+                            beam.style.top = '0px';
+                            beam.style.height = `${centerY}px`;
+                        } else {
+                            beam.style.top = `${centerY}px`;
+                            beam.style.height = `${boardRect.height - centerY}px`;
+                        }
+                    } else {
+                        beam.style.height = '16px';
+                        beam.style.top = `${centerY - 8}px`;
+                        if (dc < 0) {
+                            beam.style.left = '0px';
+                            beam.style.width = `${centerX}px`;
+                        } else {
+                            beam.style.left = `${centerX}px`;
+                            beam.style.width = `${boardRect.width - centerX}px`;
+                        }
+                    }
+                    boardEl.appendChild(beam);
+                    setTimeout(() => beam.remove(), 500);
+                });
+            }
+        }
+
+        async function advanceTurn() {
+            const nextColor = currentTurn === BLACK ? WHITE : BLACK;
+            const nextMoves = getAllValidMoves(nextColor);
+            const currentMoves = getAllValidMoves(currentTurn);
+
+            if (nextMoves.length === 0 && currentMoves.length === 0) {
+                isAnimating = false;
+                finishGame();
+                return;
+            }
+
+            if (nextMoves.length === 0) {
+                showToast('NO VALID MOVES - PASS!');
+                await sleep(850);
+                isAnimating = false;
+                renderAll();
+                if (gameMode !== 'local' && currentTurn === WHITE) {
+                    await executeCpuTurn();
+                }
+                return;
+            }
+
+            currentTurn = nextColor;
+            isAnimating = false;
+            renderAll();
+
+            if (gameMode !== 'local' && currentTurn === WHITE) {
+                await executeCpuTurn();
+            }
+        }
+
+        /* ============================================================================
+           11. 必殺技（THUNDER STORM）
+        ============================================================================ */
+        async function activateUltimate(playerColor = currentTurn) {
+            if (isAnimating || spGauge[playerColor] < 100) return;
+            isAnimating = true;
+            spGauge[playerColor] = 0;
+
+            const oppColor = playerColor === BLACK ? WHITE : BLACK;
+            let oppCoords = [];
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c] && board[r][c].color === oppColor) {
+                        oppCoords.push([r, c]);
+                    }
+                }
+            }
+
+            playSE('ult');
+            const cutin = document.getElementById('cutin-overlay');
+            const cutinTitle = document.getElementById('cutin-title');
+            cutinTitle.textContent = playerColor === BLACK ? 'THUNDER STORM' : 'METEOR STRIKE';
+            cutin.classList.remove('hidden');
+
+            await sleep(1400);
+            cutin.classList.add('hidden');
+
+            oppCoords.sort(() => Math.random() - 0.5);
+            const targets = oppCoords.slice(0, Math.min(3, Math.max(1, oppCoords.length - 1)));
+
+            targets.forEach(([tr, tc]) => {
+                board[tr][tc].color = playerColor;
+                const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                if (tCell) {
+                    const rect = tCell.getBoundingClientRect();
+                    spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, '#facc15', 22);
+                }
+            });
+
+            playSE('laser');
+            triggerScreenShake();
+            renderAll(targets);
+            showToast('OVERDRIVE! 3 PIECES CONVERTED!');
+
+            await sleep(480);
+            isAnimating = false;
+            renderAll();
+        }
+
+        /* ============================================================================
+           12. AI思考ルーチン
+        ============================================================================ */
+        async function executeCpuTurn() {
+            isAnimating = true;
+            await sleep(680);
+
+            if (spGauge[WHITE] >= 100) {
+                isAnimating = false;
+                await activateUltimate(WHITE);
+                isAnimating = true;
+                await sleep(450);
+            }
+
+            const validMoves = getAllValidMoves(WHITE);
+            if (validMoves.length === 0) {
+                isAnimating = false;
+                await advanceTurn();
+                return;
+            }
+
+            let bestChoice = null;
+            let bestScore = -9999;
+
+            hands[WHITE].forEach((piece, hIdx) => {
+                validMoves.forEach(move => {
+                    const extra = getSpecialEffectFlips(move.r, move.c, WHITE, piece);
+                    const totalGain = new Set([
+                        ...move.stdFlips.map(p => p.join(',')),
+                        ...extra.map(p => p.join(','))
+                    ]).size;
+
+                    const isCorner = (move.r === 0 || move.r === 7) && (move.c === 0 || move.c === 7);
+                    const hasBonus = bonusGrid[move.r][move.c] !== null;
+                    let score = totalGain * 10 + (isCorner ? 35 : 0) + (hasBonus ? 18 : 0);
+
+                    if (piece.id !== 'NORMAL' && extra.length <= 1) {
+                        score -= 12;
+                    }
+                    score += Math.random() * 6;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestChoice = { r: move.r, c: move.c, hIdx };
+                    }
+                });
+            });
+
+            isAnimating = false;
+            if (bestChoice) {
+                await executeMove(bestChoice.r, bestChoice.c, WHITE, bestChoice.hIdx);
+            }
+        }
+
+        /* ============================================================================
+           13. 勝敗リザルト
+        ============================================================================ */
+        function finishGame() {
+            let b = 0, w = 0;
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    if (board[r][c]?.color === BLACK) b++;
+                    else if (board[r][c]?.color === WHITE) w++;
+                }
+            }
+
+            playSE('win');
+            document.getElementById('res-p1-name').textContent = document.getElementById('p1-name').textContent;
+            document.getElementById('res-p2-name').textContent = document.getElementById('p2-name').textContent;
+            document.getElementById('res-p1-score').textContent = b;
+            document.getElementById('res-p2-score').textContent = w;
+
+            const titleEl = document.getElementById('result-title');
+            const iconEl = document.getElementById('result-icon');
+
+            if (b > w) {
+                iconEl.className = 'fa-solid fa-trophy';
+                titleEl.textContent = gameMode === 'local' ? 'P1 VICTORY!' : 'VICTORY!';
+                spawnParticles(window.innerWidth / 2, window.innerHeight / 2, '#facc15', 45);
+            } else if (w > b) {
+                iconEl.className = gameMode === 'local' ? 'fa-solid fa-crown' : 'fa-solid fa-skull';
+                titleEl.textContent = gameMode === 'local' ? 'P2 VICTORY!' : 'DEFEAT...';
+            } else {
+                iconEl.className = 'fa-solid fa-scale-balanced';
+                titleEl.textContent = 'DRAW GAME';
+            }
+
+            openModal('modal-result');
+        }
+
+        /* ============================================================================
+           14. モーダル＆ルーム招待制御
+        ============================================================================ */
+        function openModal(id) {
+            const el = document.getElementById(id);
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+
+        function closeModal(id) {
+            const el = document.getElementById(id);
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+
+        function openRulesModal() { openModal('modal-rules'); }
+        function openInviteRestrictionModal() { openModal('modal-invite-restrict'); }
+        function openJoinModal() {
+            openModal('modal-join-id');
+            setTimeout(() => document.getElementById('input-room-id').focus(), 100);
+        }
+
+        function fillDemoId(code) {
+            document.getElementById('input-room-id').value = code;
+        }
+
+        function joinRoomById() {
+            const raw = document.getElementById('input-room-id').value.trim().toUpperCase();
+            if (raw.length < 3) {
+                showToast('ENTER VALID ROOM ID');
+                return;
+            }
+            closeModal('modal-join-id');
+            startGame('online', raw);
+        }
+
+        function simulateQuizAppHost() {
+            closeModal('modal-invite-restrict');
+            const generatedId = 'QZ' + Math.floor(100 + Math.random() * 900);
+            startGame('online', generatedId);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast-msg');
+            document.getElementById('toast-text').textContent = msg;
+            toast.classList.remove('opacity-0', '-translate-y-4');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', '-translate-y-4');
+            }, 2200);
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        window.onload = () => {
+            const params = new URLSearchParams(window.location.search);
+            const roomParam = params.get('room');
+            if (roomParam) {
+                document.getElementById('input-room-id').value = roomParam.toUpperCase();
+                openJoinModal();
+            }
+        };
+    </script>
+</body>
+</html>
