@@ -3,68 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Othello BOOST! - 進化版パーティーオセロ</title>
+    <title>Othello BOOST! POP PARTY</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&family=Fredoka:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --p1-glow: #38bdf8;
-            --p2-glow: #f43f5e;
-        }
-
         * {
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
         }
 
-        body {
+        html, body {
             font-family: 'M PLUS Rounded 1c', sans-serif;
             user-select: none;
             -webkit-user-select: none;
             overflow: hidden;
-            background: radial-gradient(circle at 50% 20%, #31105f 0%, #0f172a 65%, #020617 100%);
+            background-color: #2e1065;
+            background-image: 
+                radial-gradient(rgba(255, 255, 255, 0.12) 2px, transparent 2px),
+                radial-gradient(circle at 50% 15%, #6d28d9 0%, #3b0764 55%, #1e1b4b 100%);
+            background-size: 28px 28px, 100% 100%;
             touch-action: none;
             height: 100dvh;
             width: 100vw;
             margin: 0;
+            color: #ffffff;
         }
 
         .font-num {
-            font-family: 'Orbitron', 'M PLUS Rounded 1c', sans-serif;
+            font-family: 'Fredoka', 'M PLUS Rounded 1c', sans-serif;
         }
 
-        /* 動的背景グリッド */
-        .bg-cyber-grid {
-            background-image: 
-                linear-gradient(to right, rgba(56, 189, 248, 0.06) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
-            background-size: 32px 32px;
-        }
-
-        /* 立体ボタン */
+        /* ポップな立体ボタン */
         .btn-pop {
             transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease, filter 0.15s ease;
-            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.45), 0 8px 16px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 5px 0 rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
         }
         .btn-pop:hover:not(:disabled) {
-            filter: brightness(1.08);
+            filter: brightness(1.06);
             transform: translateY(-1px);
         }
         .btn-pop:active:not(:disabled) {
             transform: translateY(4px);
-            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.45), 0 3px 6px rgba(0, 0, 0, 0.35);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 3px 6px rgba(0, 0, 0, 0.3);
         }
 
-        /* 画面見切れを完全に防ぐレスポンシブ盤面サイズ */
+        /* 盤面サイズ計算（対面モードでも見切れない） */
         .board-wrapper {
-            width: min(88vw, 44dvh, 430px);
-            height: min(88vw, 44dvh, 430px);
+            width: min(84vw, 44dvh, 420px);
+            height: min(84vw, 44dvh, 420px);
+            transition: width 0.3s ease, height 0.3s ease;
+        }
+        body.tabletop-active .board-wrapper {
+            width: min(74vw, 40dvh, 390px);
+            height: min(74vw, 40dvh, 390px);
         }
         @media (min-width: 1024px) {
-            .board-wrapper {
-                width: min(52vw, 74dvh, 520px);
-                height: min(52vw, 74dvh, 520px);
+            body:not(.tabletop-active) .board-wrapper {
+                width: min(50vw, 72dvh, 500px);
+                height: min(50vw, 72dvh, 500px);
             }
         }
 
@@ -73,13 +71,13 @@
             grid-template-columns: repeat(8, minmax(0, 1fr));
             grid-template-rows: repeat(8, minmax(0, 1fr));
             gap: 3px;
-            background: linear-gradient(145deg, #064e3b, #022c22);
-            border: 5px solid #059669;
-            border-radius: 20px;
+            background: #1e293b;
+            border: 6px solid #facc15;
+            border-radius: 22px;
             box-shadow: 
-                0 10px 0 #022c22,
-                0 20px 40px rgba(0,0,0,0.75),
-                inset 0 0 15px rgba(16, 185, 129, 0.3);
+                0 8px 0 #ca8a04,
+                0 18px 36px rgba(0,0,0,0.65),
+                inset 0 0 12px rgba(250, 204, 21, 0.25);
             width: 100%;
             height: 100%;
             padding: 5px;
@@ -87,50 +85,81 @@
         }
 
         .board-cell {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            border-radius: 6px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border-radius: 7px;
             position: relative;
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: inset 0 2px 3px rgba(255,255,255,0.22), inset 0 -2px 3px rgba(0,0,0,0.28);
-            transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+            box-shadow: inset 0 2px 2px rgba(255,255,255,0.28), inset 0 -2px 3px rgba(0,0,0,0.35);
+            perspective: 600px;
+        }
+        .board-cell:nth-child(even) {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
         }
 
-        /* 置ける場所のガイドドット */
+        /* 置ける場所のドット */
         .board-cell.valid-hint::after {
             content: '';
-            width: 28%;
-            height: 28%;
+            width: 30%;
+            height: 30%;
             border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.55);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.9);
-            animation: pulse-hint 1.4s infinite ease-in-out;
+            background-color: rgba(255, 255, 255, 0.75);
+            box-shadow: 0 0 10px #ffffff;
+            animation: pulse-hint 1.3s infinite ease-in-out;
             pointer-events: none;
+        }
+
+        @keyframes pulse-hint {
+            0%, 100% { transform: scale(0.75); opacity: 0.55; }
+            50% { transform: scale(1.2); opacity: 1; }
         }
 
         /* ドラッグホバー時 */
         .board-cell.drag-over-valid {
             background: linear-gradient(135deg, #fde047 0%, #f59e0b 100%) !important;
-            transform: scale(0.92);
+            transform: scale(0.93);
             box-shadow: 0 0 16px #fde047 !important;
         }
 
-        /* ひっくり返るターゲットプレビュー */
+        /* 通常挟みプレビュー */
         .board-cell.effect-target {
-            box-shadow: inset 0 0 0 3px #f43f5e, 0 0 14px #f43f5e !important;
-            background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%) !important;
+            box-shadow: inset 0 0 0 3px #38bdf8, 0 0 12px #38bdf8 !important;
         }
 
-        @keyframes pulse-hint {
-            0%, 100% { transform: scale(0.8); opacity: 0.5; }
-            50% { transform: scale(1.2); opacity: 1; }
+        /* 特殊効果（ボム・矢印）のプレビュー＆発動前「ため」ハイライト */
+        .board-cell.special-lockon {
+            background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%) !important;
+            box-shadow: inset 0 0 0 3px #fde047, 0 0 20px #f43f5e !important;
+            animation: lockon-pulse 0.28s infinite alternate;
+            z-index: 25;
+        }
+        .board-cell.special-lockon::before {
+            content: '\f05b';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            color: #fde047;
+            font-size: 1.15rem;
+            z-index: 35;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+            animation: spin-reticle 1.2s linear infinite;
+            pointer-events: none;
         }
 
-        /* 盤面ボーナスセル */
+        @keyframes lockon-pulse {
+            0% { transform: scale(0.94); filter: brightness(1); }
+            100% { transform: scale(1.06); filter: brightness(1.35); }
+        }
+        @keyframes spin-reticle {
+            0% { transform: rotate(0deg) scale(1.1); }
+            100% { transform: rotate(180deg) scale(1.1); }
+        }
+
+        /* 盤面ボーナスカプセル */
         .bonus-token {
-            width: 65%;
-            height: 65%;
+            width: 66%;
+            height: 66%;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -145,61 +174,61 @@
             50% { transform: translateY(-3px) scale(1.1); }
         }
 
-        /* オセロのコマ */
-        .piece {
+        /* ==================== 本物の両面3Dオセロコマ ==================== */
+        .piece-3d-wrap {
             width: 86%;
             height: 86%;
-            border-radius: 50%;
             position: relative;
+            z-index: 10;
+            perspective: 700px;
+        }
+
+        .piece-3d-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.52s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* 回転アニメーションクラス（0度＝旧カラー面 → 180度＝新カラー面） */
+        .piece-3d-inner.do-flip {
+            transform: rotateY(180deg);
+        }
+
+        .piece-face {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 10;
-            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        .piece.black {
-            background: radial-gradient(circle at 32% 28%, #475569, #0f172a 68%, #020617 100%);
-            box-shadow: 0 3px 0 #020617, 0 5px 8px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,255,255,0.28);
-            color: #38bdf8;
-            border: 2px solid #38bdf8;
+        .piece-face.back {
+            transform: rotateY(180deg);
         }
 
-        .piece.white {
-            background: radial-gradient(circle at 32% 28%, #ffffff, #e2e8f0 70%, #94a3b8 100%);
-            box-shadow: 0 3px 0 #64748b, 0 5px 8px rgba(0,0,0,0.45), inset 0 2px 4px rgba(255,255,255,1);
-            color: #f43f5e;
-            border: 2px solid #fb7185;
-        }
-
-        .piece.flipping {
-            animation: flip-3d 0.48s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes flip-3d {
-            0% { transform: scale(1) rotateY(0deg); }
-            50% { transform: scale(1.38) rotateY(90deg); filter: brightness(1.6); }
-            100% { transform: scale(1) rotateY(180deg); }
-        }
-
-        .piece.pop-in {
+        .piece-pop-in {
             animation: pop-bounce 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         @keyframes pop-bounce {
             0% { transform: scale(0); opacity: 0; }
-            75% { transform: scale(1.22); opacity: 1; }
+            75% { transform: scale(1.24); opacity: 1; }
             100% { transform: scale(1); }
         }
 
-        /* 手札スロット */
+        /* 手札カード */
         .hand-card {
             transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s;
             touch-action: none;
             cursor: grab;
         }
         .hand-card:hover {
-            transform: translateY(-5px) scale(1.03);
+            transform: translateY(-4px) scale(1.03);
         }
         .hand-card:active {
             cursor: grabbing;
@@ -211,17 +240,17 @@
 
         .rarity-rare {
             border-color: #38bdf8 !important;
-            box-shadow: 0 0 14px rgba(56, 189, 248, 0.45), 0 5px 0 #0284c7 !important;
+            box-shadow: 0 0 12px rgba(56, 189, 248, 0.5), 0 4px 0 #0284c7 !important;
         }
         .rarity-sr {
             border-color: #facc15 !important;
-            box-shadow: 0 0 18px rgba(250, 204, 21, 0.65), 0 5px 0 #ca8a04 !important;
-            animation: sr-pulse 1.8s infinite alternate;
+            box-shadow: 0 0 16px rgba(250, 204, 21, 0.7), 0 4px 0 #ca8a04 !important;
+            animation: sr-pulse 1.6s infinite alternate;
         }
 
         @keyframes sr-pulse {
-            0% { box-shadow: 0 0 10px rgba(250, 204, 21, 0.45), 0 5px 0 #ca8a04; }
-            100% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.95), 0 5px 0 #ca8a04; }
+            0% { box-shadow: 0 0 8px rgba(250, 204, 21, 0.45), 0 4px 0 #ca8a04; }
+            100% { box-shadow: 0 0 20px rgba(250, 204, 21, 0.95), 0 4px 0 #ca8a04; }
         }
 
         /* ドラッグ中のゴーストコマ */
@@ -229,11 +258,17 @@
             position: fixed;
             pointer-events: none;
             z-index: 9999;
-            width: 66px;
-            height: 66px;
+            width: 64px;
+            height: 64px;
             transform: translate(-50%, -75%) scale(1.22);
-            filter: drop-shadow(0 16px 14px rgba(0,0,0,0.6));
+            filter: drop-shadow(0 14px 12px rgba(0,0,0,0.55));
             display: none;
+        }
+
+        /* 対面プレイ時の左サイド90度回転スコアヘッダー */
+        .side-rotated-bar {
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
         }
 
         /* 画面シェイク */
@@ -252,44 +287,44 @@
             position: absolute;
             pointer-events: none;
             z-index: 40;
-            background: linear-gradient(90deg, transparent, #38bdf8, #ffffff, #38bdf8, transparent);
-            box-shadow: 0 0 22px #38bdf8, 0 0 40px #fde047;
+            background: linear-gradient(90deg, transparent, #fde047, #ffffff, #f43f5e, transparent);
+            box-shadow: 0 0 24px #fde047, 0 0 40px #f43f5e;
             border-radius: 999px;
-            animation: beam-flash 0.48s ease-out forwards;
+            animation: beam-flash 0.55s ease-out forwards;
         }
         @keyframes beam-flash {
-            0% { opacity: 1; transform: scale(0.4); }
-            45% { opacity: 1; transform: scale(1.08); }
-            100% { opacity: 0; transform: scale(1.25); }
+            0% { opacity: 1; transform: scale(0.3); }
+            50% { opacity: 1; transform: scale(1.1); }
+            100% { opacity: 0; transform: scale(1.3); }
         }
 
-        /* コンボポップアップ */
+        /* コンボ＆スキル名フロートポップ */
         .combo-float {
             position: absolute;
             pointer-events: none;
             z-index: 60;
-            animation: combo-rise 0.95s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: combo-rise 1.05s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         @keyframes combo-rise {
             0% { transform: translate(-50%, 0) scale(0.4); opacity: 0; }
-            25% { transform: translate(-50%, -18px) scale(1.2); opacity: 1; }
+            25% { transform: translate(-50%, -18px) scale(1.18); opacity: 1; }
             80% { transform: translate(-50%, -32px) scale(1); opacity: 1; }
             100% { transform: translate(-50%, -48px) scale(0.85); opacity: 0; }
         }
 
-        /* 必殺技カットイン */
-        .cutin-banner {
-            animation: cutin-slide 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        /* ターン告知＆必殺技カットイン */
+        .turn-banner-anim {
+            animation: turn-banner-slide 1.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        @keyframes cutin-slide {
-            0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
-            20% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
-            80% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
-            100% { transform: translateX(100%) skewX(-12deg); opacity: 0; }
+        @keyframes turn-banner-slide {
+            0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+            22% { transform: scale(1.06) translateY(0); opacity: 1; }
+            78% { transform: scale(1) translateY(0); opacity: 1; }
+            100% { transform: scale(0.85) translateY(-15px); opacity: 0; }
         }
     </style>
 </head>
-<body class="bg-cyber-grid text-white flex flex-col justify-between overflow-hidden select-none">
+<body class="flex flex-col justify-between overflow-hidden select-none">
 
     <!-- パーティクル演出キャンバス -->
     <canvas id="fx-canvas" class="fixed inset-0 pointer-events-none z-40"></canvas>
@@ -297,103 +332,105 @@
     <!-- ドラッグ用ゴースト -->
     <div id="drag-ghost"></div>
 
+    <!-- ターン切り替えアナウンスオーバーレイ（「〇〇さんのターンです！」） -->
+    <div id="turn-announce-overlay" class="fixed inset-0 z-40 pointer-events-none hidden items-center justify-center">
+        <div id="turn-announce-box" class="turn-banner-anim px-7 py-3.5 rounded-3xl border-4 border-white shadow-[0_12px_35px_rgba(0,0,0,0.65)] flex items-center gap-3">
+            <div id="turn-announce-disc" class="w-9 h-9 rounded-full border-2 border-white shadow-md"></div>
+            <div class="text-left">
+                <div class="text-[10px] font-black tracking-widest uppercase text-white/90">TURN CHANGE</div>
+                <div id="turn-announce-text" class="text-xl sm:text-2xl font-black text-white drop-shadow">PLAYER 1のターン！</div>
+            </div>
+        </div>
+    </div>
+
     <!-- 必殺技カットイン -->
     <div id="cutin-overlay" class="fixed inset-0 z-50 pointer-events-none flex items-center justify-center hidden bg-black/60 backdrop-blur-sm">
-        <div class="cutin-banner w-full bg-gradient-to-r from-amber-500 via-yellow-300 to-rose-500 py-6 border-y-4 border-white shadow-[0_0_60px_rgba(250,204,21,0.95)] flex flex-col items-center justify-center">
+        <div class="w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-rose-500 py-6 border-y-4 border-white shadow-[0_0_60px_rgba(250,204,21,0.95)] flex flex-col items-center justify-center">
             <div class="flex items-center gap-2 text-slate-900 font-black text-xs md:text-sm tracking-widest uppercase">
-                <i class="fa-solid fa-bolt"></i> OVERDRIVE ACTIVATED <i class="fa-solid fa-bolt"></i>
+                <i class="fa-solid fa-bolt"></i> SPECIAL OVERDRIVE <i class="fa-solid fa-bolt"></i>
             </div>
             <h2 id="cutin-title" class="text-3xl md:text-5xl font-black text-slate-950 drop-shadow-[0_3px_0_#fff] mt-1">
-                THUNDER STORM
+                THUNDER STORM!
             </h2>
         </div>
     </div>
 
     <!-- ミニマル通知トースト -->
-    <div id="toast-msg" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4 bg-slate-900/95 border-2 border-cyan-400 text-white font-extrabold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
-        <i class="fa-solid fa-bolt text-yellow-400"></i>
+    <div id="toast-msg" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 -translate-y-4 bg-slate-900/95 border-2 border-yellow-400 text-white font-extrabold px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
+        <i class="fa-solid fa-star text-yellow-400"></i>
         <span id="toast-text">READY</span>
     </div>
 
     <!-- ==================== 1. タイトル＆ロビー画面 ==================== -->
     <div id="screen-lobby" class="w-full h-full flex flex-col items-center justify-center p-4 z-20 overflow-hidden">
-        <div class="max-w-md w-full flex flex-col items-center justify-center gap-5">
+        <div class="max-w-md w-full flex flex-col items-center justify-center gap-4">
             
-            <!-- タイトルロゴ -->
+            <!-- ポップなタイトルロゴ -->
             <div class="text-center relative">
-                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-fuchsia-600 to-cyan-500 text-white text-[11px] font-black px-3.5 py-1 rounded-full uppercase tracking-widest shadow-lg mb-2 border border-white/30">
-                    <i class="fa-solid fa-crown text-yellow-300"></i> HYPER BOARD BATTLE
+                <div class="inline-flex items-center gap-1.5 bg-gradient-to-r from-pink-500 via-amber-400 to-cyan-400 text-slate-950 text-[11px] font-black px-4 py-1 rounded-full uppercase tracking-widest shadow-lg mb-2 border-2 border-white">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> POP PARTY BOARD GAME
                 </div>
-                <h1 class="font-num text-5xl sm:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-cyan-300 drop-shadow-[0_6px_0_rgba(0,0,0,0.7)] leading-none">
+                <h1 class="font-num text-5xl sm:text-6xl font-black tracking-tight text-white drop-shadow-[0_6px_0_#1e1b4b] leading-none">
                     OTHELLO<br>
-                    <span class="text-4xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-400 to-rose-500 drop-shadow-[0_5px_0_rgba(0,0,0,0.8)]">BOOST!</span>
+                    <span class="text-4xl sm:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-pink-400 drop-shadow-[0_4px_0_#1e1b4b]">BOOST!</span>
                 </h1>
-
-                <!-- アイコンエンブレム -->
-                <div class="flex justify-center items-center gap-4 mt-4">
-                    <div class="w-11 h-11 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center shadow-[0_0_15px_rgba(56,189,248,0.5)] text-cyan-400 text-lg">
-                        <i class="fa-solid fa-arrows-left-right"></i>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-amber-400/20 border border-amber-400/60 flex items-center justify-center text-amber-300 text-sm rotate-45">
-                        <i class="fa-solid fa-bolt -rotate-45"></i>
-                    </div>
-                    <div class="w-11 h-11 rounded-full bg-white border-2 border-rose-500 flex items-center justify-center shadow-[0_0_15px_rgba(244,63,94,0.5)] text-rose-500 text-lg">
-                        <i class="fa-solid fa-Crosshairs"></i>
-                    </div>
-                </div>
             </div>
 
             <!-- モード選択パネル -->
-            <div class="w-full bg-slate-900/85 backdrop-blur-xl border-2 border-slate-700/80 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
+            <div class="w-full bg-indigo-950/90 backdrop-blur-xl border-4 border-indigo-400/60 rounded-3xl p-4 sm:p-5 shadow-2xl space-y-3">
                 
                 <!-- VS CPU -->
-                <button onclick="startGame('cpu')" class="btn-pop w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-emerald-300 flex items-center justify-between group">
+                <button onclick="openSetupModal('cpu')" class="btn-pop w-full bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3.5 px-4 rounded-2xl border-2 border-white flex items-center justify-between group">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-xl bg-slate-950/35 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-robot text-emerald-200"></i>
+                        <div class="w-11 h-11 rounded-2xl bg-white/30 flex items-center justify-center text-xl text-slate-950 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-robot"></i>
                         </div>
                         <div class="text-left">
-                            <div class="text-base sm:text-lg tracking-wide">SOLO BATTLE</div>
-                            <div class="text-[11px] text-emerald-100 font-bold opacity-90">VS AI コンピュータ対戦</div>
+                            <div class="text-base sm:text-lg tracking-wide leading-tight">ひとりで遊ぶ (VS CPU)</div>
+                            <div class="text-[11px] text-slate-900/80 font-extrabold">好きなコマの色を選んでAIとバトル</div>
                         </div>
                     </div>
-                    <i class="fa-solid fa-play text-emerald-200"></i>
+                    <i class="fa-solid fa-chevron-right text-slate-950"></i>
                 </button>
 
-                <!-- 2P LOCAL -->
-                <button onclick="startGame('local')" class="btn-pop w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-blue-300 flex items-center justify-between group">
+                <!-- 2P TABLETOP (1台で向かい合って対戦) -->
+                <button onclick="openSetupModal('local')" class="btn-pop w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white font-black py-3.5 px-4 rounded-2xl border-2 border-pink-200 flex items-center justify-between group">
                     <div class="flex items-center gap-3.5">
-                        <div class="w-11 h-11 rounded-xl bg-slate-950/35 flex items-center justify-center text-xl group-hover:scale-110 transition-transform">
-                            <i class="fa-solid fa-user-group text-blue-200"></i>
+                        <div class="w-11 h-11 rounded-2xl bg-black/25 flex items-center justify-center text-xl text-yellow-300 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-tablet-screen-button"></i>
                         </div>
                         <div class="text-left">
-                            <div class="text-base sm:text-lg tracking-wide">LOCAL 2P</div>
-                            <div class="text-[11px] text-blue-100 font-bold opacity-90">1台の端末でふたり対戦</div>
+                            <div class="text-base sm:text-lg tracking-wide leading-tight">1台でふたり対戦 (対面対応)</div>
+                            <div class="text-[11px] text-pink-100 font-bold">上下反転パネルで向かい合って遊べる！</div>
                         </div>
                     </div>
-                    <i class="fa-solid fa-play text-blue-200"></i>
+                    <i class="fa-solid fa-chevron-right text-pink-100"></i>
                 </button>
 
-                <!-- オンライン・招待連携 -->
-                <div class="grid grid-cols-2 gap-2.5 pt-1">
-                    <button onclick="openJoinModal()" class="btn-pop bg-gradient-to-b from-amber-400 to-orange-500 text-slate-950 font-black py-3 px-3 rounded-2xl border-2 border-yellow-200 flex flex-col items-center justify-center gap-1">
-                        <i class="fa-solid fa-key text-lg"></i>
-                        <span class="text-xs sm:text-sm leading-none">ID入力で参加</span>
-                    </button>
+                <!-- 2端末リアルタイム通信対戦 (P2P ID連携) -->
+                <div class="bg-indigo-900/70 border-2 border-indigo-400/40 rounded-2xl p-3 space-y-2">
+                    <div class="text-xs font-black text-cyan-300 flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-wifi"></i> 2台の端末でID通信対戦 (リアルタイムP2P)
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button onclick="openSetupModal('online_host')" class="btn-pop bg-gradient-to-b from-amber-300 to-amber-500 text-slate-950 font-black py-2.5 px-3 rounded-xl border-2 border-white flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                            <i class="fa-solid fa-plus-circle"></i>
+                            <span>部屋を作る</span>
+                        </button>
 
-                    <button onclick="openInviteRestrictionModal()" class="btn-pop bg-gradient-to-b from-slate-700 to-slate-800 text-slate-100 font-black py-3 px-3 rounded-2xl border-2 border-slate-500 flex flex-col items-center justify-center gap-1 relative overflow-hidden">
-                        <span class="absolute top-1 right-1.5 bg-rose-600 text-white text-[9px] px-1.5 py-0.2 rounded-full font-extrabold">APP</span>
-                        <i class="fa-solid fa-paper-plane text-lg text-rose-400"></i>
-                        <span class="text-xs sm:text-sm leading-none">ルーム招待</span>
-                    </button>
+                        <button onclick="openSetupModal('online_guest')" class="btn-pop bg-gradient-to-b from-cyan-400 to-blue-500 text-slate-950 font-black py-2.5 px-3 rounded-xl border-2 border-white flex items-center justify-center gap-1.5 text-xs sm:text-sm">
+                            <i class="fa-solid fa-key"></i>
+                            <span>IDで参加する</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ユーティリティバー -->
                 <div class="pt-1 flex items-center gap-2">
-                    <button onclick="openRulesModal()" class="btn-pop flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-extrabold text-cyan-300 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-layer-group"></i> コマ能力一覧
+                    <button onclick="openRulesModal()" class="btn-pop flex-1 py-2.5 bg-indigo-900 hover:bg-indigo-800 border-2 border-indigo-400/50 rounded-xl text-xs font-extrabold text-yellow-300 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-book-open"></i> 特殊コマ＆ルール説明
                     </button>
-                    <button id="sound-toggle-lobby" onclick="toggleSound()" class="btn-pop w-11 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-xl text-xs font-bold text-cyan-400 flex items-center justify-center">
+                    <button id="sound-toggle-lobby" onclick="toggleSound()" class="btn-pop w-11 py-2.5 bg-indigo-900 hover:bg-indigo-800 border-2 border-indigo-400/50 rounded-xl text-xs font-bold text-cyan-300 flex items-center justify-center">
                         <i class="fa-solid fa-volume-high"></i>
                     </button>
                 </div>
@@ -402,138 +439,232 @@
         </div>
     </div>
 
-    <!-- ==================== 2. メインゲーム画面 (縦画面・横画面ハイブリッド対応) ==================== -->
-    <div id="screen-game" class="w-full h-full hidden flex-col lg:flex-row items-center justify-between lg:justify-center p-2 sm:p-4 lg:gap-8 max-w-6xl mx-auto z-10 overflow-hidden">
+    <!-- ==================== 2. メインゲーム画面 ==================== -->
+    <div id="screen-game" class="w-full h-full hidden flex-col items-center justify-between p-1.5 sm:p-3 max-w-6xl mx-auto z-10 overflow-hidden">
         
-        <!-- 左/上部エリア：ナビゲーション＋スコア＋盤面 -->
-        <div class="w-full lg:w-auto flex flex-col items-center justify-center gap-2">
-            
-            <!-- コンパクトヘッダーバー -->
-            <div class="w-full max-w-[430px] lg:max-w-[520px] flex items-center justify-between gap-2 bg-slate-900/90 border-2 border-slate-700/80 rounded-2xl px-3 py-2 shadow-lg">
-                <!-- 中断確認付きホームボタン -->
-                <button onclick="confirmReturnToLobby()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-slate-300 hover:text-white flex items-center justify-center text-sm" title="タイトルへ戻る">
-                    <i class="fa-solid fa-right-from-bracket rotate-180"></i>
-                </button>
+        <!-- ① 通常モード用の上部ヘッダーバー (対面モード時は非表示になり左90度回転バーへ切り替わる) -->
+        <div id="standard-top-header" class="w-full max-w-[440px] lg:max-w-[540px] flex items-center justify-between gap-2 bg-indigo-950/90 border-2 border-indigo-400/60 rounded-2xl px-3 py-1.5 shadow-lg shrink-0">
+            <button onclick="confirmReturnToLobby()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-900 border border-indigo-400/50 text-white flex items-center justify-center text-xs" title="タイトルへ戻る">
+                <i class="fa-solid fa-right-from-bracket rotate-180"></i>
+            </button>
 
-                <!-- スコア＆ターンVSバー -->
-                <div class="flex-1 flex items-center justify-between bg-slate-950/90 rounded-xl px-2.5 py-1 border border-slate-800">
-                    <!-- P1 (BLACK) -->
-                    <div id="p1-panel" class="flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/40 transition-all">
-                        <div class="w-5 h-5 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center text-[10px] text-cyan-400">
-                            <i class="fa-solid fa-circle"></i>
-                        </div>
-                        <span id="p1-name" class="text-[10px] font-extrabold text-cyan-300 hidden sm:inline">P1</span>
-                        <span id="p1-score" class="font-num text-base sm:text-lg font-black text-white">2</span>
+            <!-- スコア＆ターン表示 -->
+            <div class="flex-1 flex items-center justify-between bg-slate-950/80 rounded-xl px-2.5 py-1 border border-indigo-500/40">
+                <div id="p1-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/50 transition-all">
+                    <div id="p1-header-disc" class="w-4 h-4 rounded-full border border-white"></div>
+                    <span id="p1-name" class="text-[11px] font-black text-white max-w-[68px] truncate">P1</span>
+                    <span id="p1-score" class="font-num text-base font-black text-yellow-300 ml-0.5">2</span>
+                </div>
+
+                <div class="flex flex-col items-center px-1">
+                    <div id="turn-badge" class="bg-gradient-to-r from-amber-400 to-pink-500 text-slate-950 text-[10px] font-black px-2.5 py-0.5 rounded-full shadow">
+                        TURN
                     </div>
-
-                    <!-- ターン表示バッジ -->
-                    <div class="flex flex-col items-center px-1">
-                        <div id="turn-badge" class="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider">
-                            YOUR TURN
-                        </div>
-                        <div id="room-badge" class="hidden text-[9px] font-bold text-amber-400 mt-0.5">
-                            ID: <span id="active-room-id">----</span>
-                        </div>
-                    </div>
-
-                    <!-- P2 (WHITE) -->
-                    <div id="p2-panel" class="flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 transition-all">
-                        <span id="p2-score" class="font-num text-base sm:text-lg font-black text-white">2</span>
-                        <span id="p2-name" class="text-[10px] font-extrabold text-rose-300 hidden sm:inline">CPU</span>
-                        <div class="w-5 h-5 rounded-full bg-white border-2 border-rose-500 flex items-center justify-center text-[10px] text-rose-500">
-                            <i class="fa-solid fa-circle"></i>
-                        </div>
+                    <div id="room-badge" class="hidden text-[9px] font-bold text-cyan-300 mt-0.5">
+                        ID: <span id="active-room-id">----</span>
                     </div>
                 </div>
 
-                <!-- 図鑑＆サウンドボタン -->
-                <div class="flex items-center gap-1.5">
-                    <button onclick="openRulesModal()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-purple-300 flex items-center justify-center text-sm" title="コマ能力">
-                        <i class="fa-solid fa-layer-group"></i>
-                    </button>
-                    <button id="sound-toggle-game" onclick="toggleSound()" class="btn-pop w-9 h-9 rounded-xl bg-slate-800 border border-slate-600 text-cyan-400 flex items-center justify-center text-sm" title="サウンド">
-                        <i class="fa-solid fa-volume-high"></i>
-                    </button>
+                <div id="p2-panel" class="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 transition-all">
+                    <span id="p2-score" class="font-num text-base font-black text-yellow-300 mr-0.5">2</span>
+                    <span id="p2-name" class="text-[11px] font-black text-white max-w-[68px] truncate">P2</span>
+                    <div id="p2-header-disc" class="w-4 h-4 rounded-full border border-white"></div>
                 </div>
             </div>
 
-            <!-- 8x8 盤面ラッパー -->
-            <div class="board-wrapper flex items-center justify-center relative my-0.5">
-                <div id="board" class="board-grid">
-                    <!-- JSで64セル生成 -->
+            <div class="flex items-center gap-1">
+                <button id="btn-toggle-tabletop" onclick="toggleTabletopLayout()" class="hidden btn-pop w-8 h-8 rounded-xl bg-pink-600 border border-pink-300 text-white items-center justify-center text-xs" title="対面レイアウト切替">
+                    <i class="fa-solid fa-arrows-up-down"></i>
+                </button>
+                <button onclick="openRulesModal()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-900 border border-indigo-400/50 text-yellow-300 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-book-open"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ② 対面2人プレイ用：上部P2デッキ（180度上下反転表示） -->
+        <div id="p2-top-deck-area" class="hidden w-full max-w-[420px] bg-indigo-950/90 border-2 border-pink-400/70 rounded-2xl p-2 shadow-xl rotate-180 shrink-0">
+            <div class="flex items-center justify-between gap-2 mb-1.5">
+                <div class="flex items-center gap-1.5">
+                    <div id="p2-deck-disc" class="w-4 h-4 rounded-full border border-white"></div>
+                    <span id="p2-deck-name" class="text-xs font-black text-pink-200">PLAYER 2</span>
                 </div>
+                <!-- P2 SPゲージ＆スキル -->
+                <div class="flex items-center gap-1.5 flex-1 max-w-[230px]">
+                    <div class="flex-1 h-2.5 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
+                        <div id="sp-bar-p2" class="h-full bg-gradient-to-r from-amber-400 to-pink-500 transition-all" style="width:30%"></div>
+                    </div>
+                    <span id="sp-text-p2" class="font-num text-[10px] font-black text-yellow-300 w-8">30%</span>
+                    <button id="reroll-btn-p2" onclick="rerollHand(2)" class="btn-pop px-2 py-1 rounded-lg font-black text-[10px] bg-cyan-500 text-slate-950 border border-white">
+                        <i class="fa-solid fa-rotate"></i>30
+                    </button>
+                    <button id="ult-btn-p2" onclick="activateUltimate(2)" class="btn-pop px-2 py-1 rounded-lg font-black text-[10px] bg-amber-400 text-slate-950 border border-white">
+                        <i class="fa-solid fa-bolt"></i>100
+                    </button>
+                </div>
+            </div>
+            <div id="hand-container-p2" class="grid grid-cols-3 gap-2 h-20"></div>
+        </div>
+
+        <!-- ③ 中央エリア：左90度回転ヘッダー（対面時）＋ 8x8盤面 ＋ PC横並びデッキ -->
+        <div class="flex-1 w-full flex flex-row items-center justify-center gap-2 sm:gap-4 my-0.5 overflow-hidden">
+            
+            <!-- 対面2人プレイ専用：左に90度回転して表示されるスコア＆操作ヘッダー -->
+            <div id="tabletop-rotated-header" class="hidden flex-col items-center justify-between bg-indigo-950/95 border-2 border-yellow-400/80 rounded-2xl py-2.5 px-1.5 shadow-2xl gap-2 shrink-0">
+                <button onclick="confirmReturnToLobby()" class="btn-pop w-8 h-8 rounded-xl bg-rose-600 border border-white text-white flex items-center justify-center text-xs -rotate-90" title="中断して戻る">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+
+                <!-- 左に90度回転したスコア表示 -->
+                <div class=" -rotate-90 flex items-center gap-2 py-6 px-1 whitespace-nowrap">
+                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-lg border border-cyan-400">
+                        <div id="rot-p1-disc" class="w-3.5 h-3.5 rounded-full border border-white"></div>
+                        <span id="rot-p1-name" class="text-[10px] font-black text-cyan-200 max-w-[55px] truncate">P1</span>
+                        <span id="rot-p1-score" class="font-num text-sm font-black text-yellow-300">2</span>
+                    </div>
+
+                    <span id="rot-turn-label" class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded-full">VS</span>
+
+                    <div class="flex items-center gap-1 bg-slate-900/90 px-2 py-1 rounded-lg border border-pink-400">
+                        <span id="rot-p2-score" class="font-num text-sm font-black text-yellow-300">2</span>
+                        <span id="rot-p2-name" class="text-[10px] font-black text-pink-200 max-w-[55px] truncate">P2</span>
+                        <div id="rot-p2-disc" class="w-3.5 h-3.5 rounded-full border border-white"></div>
+                    </div>
+                </div>
+
+                <button onclick="openRulesModal()" class="btn-pop w-8 h-8 rounded-xl bg-indigo-800 border border-indigo-300 text-yellow-300 flex items-center justify-center text-xs -rotate-90" title="ルール">
+                    <i class="fa-solid fa-question"></i>
+                </button>
+            </div>
+
+            <!-- 8x8 盤面ラッパー -->
+            <div class="board-wrapper flex items-center justify-center relative shrink-0">
+                <div id="board" class="board-grid"></div>
             </div>
 
         </div>
 
-        <!-- 右/下部エリア：SPアクション＆3つの手札デッキ -->
-        <div class="w-full max-w-[430px] lg:w-80 bg-slate-900/95 border-2 border-slate-700/90 rounded-3xl p-3 sm:p-4 shadow-2xl flex flex-col gap-3">
+        <!-- ④ 下部エリア：P1（または現在のプレイヤー）のデッキ＆SPアクション -->
+        <div id="p1-bottom-deck-area" class="w-full max-w-[430px] bg-indigo-950/95 border-2 border-indigo-400/70 rounded-2xl p-2.5 sm:p-3 shadow-2xl flex flex-col gap-2 shrink-0">
             
-            <!-- SPゲージ ＆ アクションボタン群 -->
-            <div class="bg-slate-950/90 p-2.5 rounded-2xl border border-slate-800 flex flex-col gap-2">
-                <!-- ゲージバー -->
-                <div class="flex items-center gap-2">
-                    <div class="w-6 h-6 rounded-lg bg-amber-400/20 border border-amber-400 flex items-center justify-center text-amber-300 text-xs shrink-0">
-                        <i class="fa-solid fa-bolt"></i>
+            <!-- SPゲージ ＆ スキルボタン -->
+            <div class="flex items-center justify-between gap-2 bg-slate-950/85 px-2.5 py-1.5 rounded-xl border border-indigo-500/30">
+                <div class="flex items-center gap-1.5 flex-1">
+                    <div id="p1-deck-disc" class="w-4 h-4 rounded-full border border-white shrink-0"></div>
+                    <span id="p1-deck-name" class="text-[11px] font-black text-cyan-200 truncate max-w-[70px]">PLAYER 1</span>
+                    <div class="flex-1 h-3 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700">
+                        <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-400 via-yellow-300 to-pink-500 rounded-full transition-all duration-300" style="width: 30%"></div>
                     </div>
-                    <div class="flex-1 h-3.5 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700 relative">
-                        <div id="sp-bar" class="h-full bg-gradient-to-r from-amber-500 via-yellow-300 to-rose-500 rounded-full transition-all duration-300" style="width: 25%"></div>
-                    </div>
-                    <span id="sp-text" class="font-num text-xs font-black text-yellow-300 w-11 text-right">25%</span>
+                    <span id="sp-text" class="font-num text-[11px] font-black text-yellow-300 w-9 text-right">30%</span>
                 </div>
 
-                <!-- スキルボタン（新機能：リロール ＆ 必殺サンダー） -->
-                <div class="grid grid-cols-5 gap-2">
-                    <!-- 手札リロール (SP 30%消費) -->
-                    <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed">
-                        <i class="fa-solid fa-Arrows-rotate"></i>
-                        <span>CHANGE</span>
-                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-black/40 font-num">30</span>
+                <div class="flex items-center gap-1.5">
+                    <button id="reroll-btn" onclick="rerollHand()" disabled class="btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border transition-all">
+                        <i class="fa-solid fa-rotate"></i>
+                        <span>手札交換</span>
+                        <span class="text-[9px] px-1 rounded bg-black/30 font-num">30</span>
                     </button>
 
-                    <!-- 必殺サンダー (SP 100%消費) -->
-                    <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed">
-                        <i class="fa-solid fa-bolt-lightning"></i>
-                        <span>THUNDER</span>
-                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-black/40 font-num">100</span>
+                    <button id="ult-btn" onclick="activateUltimate()" disabled class="btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border transition-all">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>必殺サンダー</span>
+                        <span class="text-[9px] px-1 rounded bg-black/30 font-num">100</span>
                     </button>
                 </div>
             </div>
 
             <!-- 3つの手札スロット -->
-            <div class="flex flex-col gap-1.5">
-                <div class="flex items-center justify-between px-1">
-                    <div class="flex items-center gap-1.5 text-[11px] font-black text-slate-300 uppercase tracking-wider">
-                        <i class="fa-solid fa-hand-sparkles text-cyan-400"></i> DECK SLOTS
-                    </div>
-                    <div class="flex items-center gap-1 text-[10px] font-bold text-emerald-400">
-                        <i class="fa-solid fa-plus-circle"></i> AUTO DRAW
-                    </div>
-                </div>
-
-                <div id="hand-container" class="grid grid-cols-3 gap-2.5 h-24 sm:h-28">
-                    <!-- JSで手札3枚を生成 -->
-                </div>
-            </div>
-
+            <div id="hand-container" class="grid grid-cols-3 gap-2 h-20 sm:h-24"></div>
         </div>
 
     </div>
 
     <!-- ==================== モーダル群 ==================== -->
 
-    <!-- 1. バトル中断確認モーダル（新規追加） -->
+    <!-- 1. ニックネーム＆コマカラー設定モーダル（新規追加） -->
+    <div id="modal-player-setup" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-indigo-950 border-4 border-yellow-400 rounded-3xl max-w-md w-full p-5 text-center shadow-2xl max-h-[90dvh] overflow-y-auto">
+            <div class="inline-flex items-center gap-1.5 bg-yellow-400 text-slate-950 text-[10px] font-black px-3 py-0.5 rounded-full mb-1">
+                <i class="fa-solid fa-palette"></i> PLAYER CUSTOMIZE
+            </div>
+            <h3 id="setup-modal-title" class="text-xl font-black text-white">プレイヤー＆コマ色設定</h3>
+
+            <!-- P1 設定 -->
+            <div class="mt-3 bg-indigo-900/70 border-2 border-cyan-400/50 rounded-2xl p-3 text-left">
+                <label class="text-xs font-black text-cyan-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user"></i> <span id="setup-p1-label">プレイヤー1のニックネーム</span>
+                </label>
+                <input id="setup-p1-name" type="text" maxlength="10" value="プレイヤー1" placeholder="ニックネームを入力" class="mt-1.5 w-full bg-slate-950 border-2 border-indigo-400/60 focus:border-yellow-300 rounded-xl py-2 px-3 text-sm font-black text-white outline-none" />
+                
+                <div class="text-xs font-black text-cyan-300 mt-2.5 mb-1.5">オセロゴマのカラーを選択</div>
+                <div id="setup-p1-colors" class="grid grid-cols-6 gap-2"></div>
+            </div>
+
+            <!-- P2 設定 (ローカル2人対戦時 または CPU色選択時) -->
+            <div id="setup-p2-box" class="mt-3 bg-indigo-900/70 border-2 border-pink-400/50 rounded-2xl p-3 text-left">
+                <label class="text-xs font-black text-pink-300 flex items-center gap-1.5">
+                    <i class="fa-solid fa-user-friends"></i> <span id="setup-p2-label">プレイヤー2のニックネーム</span>
+                </label>
+                <input id="setup-p2-name" type="text" maxlength="10" value="プレイヤー2" placeholder="ニックネームを入力" class="mt-1.5 w-full bg-slate-950 border-2 border-indigo-400/60 focus:border-pink-300 rounded-xl py-2 px-3 text-sm font-black text-white outline-none" />
+                
+                <div class="text-xs font-black text-pink-300 mt-2.5 mb-1.5">相手のコマのカラーを選択</div>
+                <div id="setup-p2-colors" class="grid grid-cols-6 gap-2"></div>
+            </div>
+
+            <!-- オンラインゲスト参加時のルームID入力欄 -->
+            <div id="setup-online-guest-box" class="hidden mt-3 bg-indigo-900/70 border-2 border-amber-400 rounded-2xl p-3 text-center">
+                <label class="text-xs font-black text-amber-300 block mb-1">友達から教えてもらった4桁のルームID</label>
+                <input id="setup-join-room-id" type="text" maxlength="6" placeholder="1234" class="font-num w-full bg-slate-950 border-2 border-amber-400 rounded-xl py-2.5 px-4 text-center text-2xl font-black tracking-widest text-yellow-300 uppercase outline-none" />
+            </div>
+
+            <div class="mt-4 flex gap-2.5">
+                <button onclick="closeModal('modal-player-setup')" class="btn-pop flex-1 py-3 bg-slate-800 text-slate-300 font-black rounded-xl text-xs border border-slate-600">
+                    戻る
+                </button>
+                <button onclick="confirmPlayerSetup()" class="btn-pop flex-1 bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 font-black py-3 rounded-xl border-2 border-white text-sm">
+                    バトル開始！
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. オンラインP2Pルーム待機モーダル -->
+    <div id="modal-online-wait" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+        <div class="bg-indigo-950 border-4 border-cyan-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+            <div class="w-14 h-14 rounded-2xl bg-cyan-400/20 border-2 border-cyan-400 text-cyan-300 flex items-center justify-center text-2xl mx-auto mb-3 animate-bounce">
+                <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+            <h3 id="online-wait-title" class="text-xl font-black text-white">対戦ルーム準備中...</h3>
+            <p id="online-wait-desc" class="text-xs text-slate-300 mt-1">友達にこのIDを伝えて「IDで参加する」から入力してもらってください</p>
+
+            <div class="my-4 bg-slate-950 border-2 border-yellow-400 rounded-2xl py-3 px-4">
+                <div class="text-[10px] font-bold text-slate-400">ROOM ID</div>
+                <div id="online-display-room-id" class="font-num text-4xl font-black tracking-widest text-yellow-300 mt-0.5">----</div>
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="copyRoomId()" class="btn-pop flex-1 py-2.5 bg-cyan-500 text-slate-950 font-black rounded-xl text-xs border border-white flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> IDをコピー
+                </button>
+                <button onclick="cancelOnlineWait()" class="btn-pop flex-1 py-2.5 bg-slate-800 text-slate-300 font-black rounded-xl text-xs border border-slate-600">
+                    キャンセル
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. バトル中断確認モーダル -->
     <div id="modal-confirm-quit" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
+        <div class="bg-indigo-950 border-4 border-rose-500 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
             <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400 text-rose-400 flex items-center justify-center text-2xl mx-auto mb-3">
                 <i class="fa-solid fa-triangle-exclamation"></i>
             </div>
             <h3 class="text-xl font-black text-white">バトルを中断しますか？</h3>
             <p class="text-xs text-slate-300 mt-2 leading-relaxed">
-                現在の進行状況はリセットされ、タイトル画面へ戻ります。よろしいですか？
+                現在のバトルを終了してタイトル画面へ戻ります。よろしいですか？
             </p>
             <div class="mt-5 flex gap-2.5">
-                <button onclick="closeModal('modal-confirm-quit')" class="btn-pop flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
+                <button onclick="closeModal('modal-confirm-quit')" class="btn-pop flex-1 py-3 bg-slate-800 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
                     続ける
                 </button>
                 <button onclick="executeReturnToLobby()" class="btn-pop flex-1 bg-gradient-to-r from-rose-500 to-red-600 text-white font-black py-3 rounded-xl border-2 border-rose-300 text-xs">
@@ -543,115 +674,60 @@
         </div>
     </div>
 
-    <!-- 2. クイズHPアプリ招待制限モーダル -->
-    <div id="modal-invite-restrict" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-slate-900 border-4 border-rose-500 rounded-3xl max-w-md w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
-            <div class="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400 text-rose-400 flex items-center justify-center text-2xl mx-auto mb-3">
-                <i class="fa-solid fa-mobile-screen-button"></i>
-            </div>
-            <span class="bg-rose-600 text-white text-[10px] font-black px-3 py-0.5 rounded-full">QUIZ HP APP EXCLUSIVE</span>
-            <h3 class="text-xl font-black mt-2 text-white">ルーム作成は「クイズHPアプリ」限定</h3>
-            <p class="text-xs text-slate-300 mt-2 leading-relaxed">
-                招待ルームの新規作成は公式の<strong class="text-yellow-300">「クイズHPアプリ」</strong>からのみ行えます。招待された方は「ID入力で参加」から入室できます。
-            </p>
-
-            <div class="mt-5 space-y-2">
-                <button onclick="simulateQuizAppHost()" class="btn-pop w-full bg-gradient-to-r from-amber-400 to-yellow-500 text-slate-950 font-black py-3 rounded-xl border-2 border-white text-xs flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-bolt"></i> クイズHPアプリ連携デモでルーム発行
-                </button>
-                <button onclick="closeModal('modal-invite-restrict')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
-                    閉じる
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 3. 招待ID入力モーダル -->
-    <div id="modal-join-id" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-slate-900 border-4 border-amber-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.25s_ease-out]">
-            <div class="w-14 h-14 rounded-2xl bg-amber-400/20 border-2 border-amber-400 text-amber-300 flex items-center justify-center text-2xl mx-auto mb-3">
-                <i class="fa-solid fa-key"></i>
-            </div>
-            <h3 class="text-xl font-black text-white">ROOM ID ENTRY</h3>
-            <p class="text-xs text-slate-400 mt-1">共有されたルームIDを入力してください</p>
-
-            <div class="mt-4">
-                <input id="input-room-id" type="text" maxlength="8" placeholder="QZ777" class="font-num w-full bg-slate-950 border-2 border-amber-400/60 focus:border-amber-300 rounded-2xl py-3 px-4 text-center text-2xl font-black tracking-widest text-yellow-300 uppercase outline-none" />
-                <div class="flex justify-center items-center gap-2 mt-2.5">
-                    <span class="text-[10px] text-slate-400 font-bold">PRESET:</span>
-                    <button onclick="fillDemoId('QZ777')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-0.5 rounded-lg border border-slate-600 font-bold">QZ777</button>
-                    <button onclick="fillDemoId('HP2026')" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-cyan-300 px-2.5 py-0.5 rounded-lg border border-slate-600 font-bold">HP2026</button>
-                </div>
-            </div>
-
-            <div class="mt-5 flex gap-2.5">
-                <button onclick="closeModal('modal-join-id')" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl text-xs">
-                    戻る
-                </button>
-                <button onclick="joinRoomById()" class="btn-pop flex-1 bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-black py-3 rounded-xl border-2 border-yellow-200 text-xs">
-                    JOIN ROOM
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. コマ能力＆ボーナス一覧モーダル（アイコン中心のスマート図鑑） -->
+    <!-- 4. コマ能力＆ルール説明モーダル -->
     <div id="modal-rules" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-        <div class="bg-slate-900 border-4 border-cyan-400 rounded-3xl max-w-md w-full max-h-[84dvh] flex flex-col shadow-2xl overflow-hidden animate-[pop-bounce_0.25s_ease-out]">
-            <div class="bg-gradient-to-r from-cyan-600 to-blue-700 px-4 py-3 flex items-center justify-between border-b-2 border-cyan-300">
-                <h3 class="text-base font-black text-white flex items-center gap-2">
-                    <i class="fa-solid fa-layer-group"></i> PIECE &amp; SKILL GUIDE
+        <div class="bg-indigo-950 border-4 border-yellow-400 rounded-3xl max-w-md w-full max-h-[84dvh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-gradient-to-r from-amber-400 to-pink-500 px-4 py-3 flex items-center justify-between">
+                <h3 class="text-base font-black text-slate-950 flex items-center gap-2">
+                    <i class="fa-solid fa-star"></i> 特殊コマ＆ターゲット予告ガイド
                 </h3>
-                <button onclick="closeModal('modal-rules')" class="w-7 h-7 rounded-full bg-black/30 text-white flex items-center justify-center hover:bg-black/50">
+                <button onclick="closeModal('modal-rules')" class="w-7 h-7 rounded-full bg-black/25 text-white flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
 
-            <div class="p-4 overflow-y-auto space-y-2.5 text-left text-xs text-slate-200">
-                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-cyan-500/40">
+            <div class="p-4 overflow-y-auto space-y-2.5 text-left text-xs text-slate-100">
+                <div class="bg-indigo-900/90 p-3 rounded-2xl border border-yellow-400/50">
+                    <div class="font-black text-yellow-300 text-sm mb-1"><i class="fa-solid fa-crosshairs mr-1"></i> どこが変わるか一目でわかる！</div>
+                    <p class="text-[11px] leading-relaxed text-slate-200">
+                        手札のコマを盤面にドラッグすると、通常のオセロで挟めるマスは<span class="text-cyan-300 font-bold">青枠</span>、矢印やボムの特殊能力で巻き込めるマスは<span class="text-rose-400 font-bold">赤色のロックオン照準</span>で光ります！置いた瞬間も一度ターゲットが光ってからドカンと裏返ります。
+                    </p>
+                </div>
+
+                <div class="flex items-center gap-3 bg-indigo-900/60 p-2.5 rounded-xl border border-cyan-400/40">
                     <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-cyan-400 flex items-center justify-center text-cyan-400 text-base shrink-0">
                         <i class="fa-solid fa-arrow-right"></i>
                     </div>
                     <div>
-                        <div class="font-black text-cyan-300">ARROW LASER <span class="text-[10px] bg-cyan-950 px-1.5 py-0.5 rounded ml-1">RARE</span></div>
-                        <div class="text-[11px] text-slate-300">矢印の方向の端まで、全てのコマを一気に自分の色に変える</div>
+                        <div class="font-black text-cyan-300">アローレーザー (1方向 / 2方向 / 十字)</div>
+                        <div class="text-[11px] text-slate-300">置いたマスから矢印の方向の端まで、相手のコマをすべて自分の色に変えます！</div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-amber-400/50">
-                    <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center text-amber-400 text-base shrink-0">
-                        <i class="fa-solid fa-arrows-left-right"></i>
-                    </div>
-                    <div>
-                        <div class="font-black text-amber-300">TWIN / CROSS LASER <span class="text-[10px] bg-amber-950 px-1.5 py-0.5 rounded ml-1">S-RARE</span></div>
-                        <div class="text-[11px] text-slate-300">直線2方向、または十字4方向の全コマを一気に奪取する</div>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-rose-400/50">
+                <div class="flex items-center gap-3 bg-indigo-900/60 p-2.5 rounded-xl border border-rose-400/50">
                     <div class="w-10 h-10 rounded-full bg-slate-900 border-2 border-rose-400 flex items-center justify-center text-rose-400 text-base shrink-0">
                         <i class="fa-solid fa-burst"></i>
                     </div>
                     <div>
-                        <div class="font-black text-rose-300">BLAST BOMB <span class="text-[10px] bg-rose-950 px-1.5 py-0.5 rounded ml-1">S-RARE</span></div>
-                        <div class="text-[11px] text-slate-300">配置した周囲8マスのコマをすべて自分の色に変換する</div>
+                        <div class="font-black text-rose-300">ブラストボム (周囲8マス爆発)</div>
+                        <div class="text-[11px] text-slate-300">置いたマスの周り8マスにある相手のコマをすべて爆発で自分の色に変えます！</div>
                     </div>
                 </div>
 
-                <div class="flex items-center gap-3 bg-slate-800/80 p-2.5 rounded-xl border border-emerald-400/50">
+                <div class="flex items-center gap-3 bg-indigo-900/60 p-2.5 rounded-xl border border-emerald-400/50">
                     <div class="w-10 h-10 rounded-full bg-emerald-950 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 text-base shrink-0">
                         <i class="fa-solid fa-gem"></i>
                     </div>
                     <div>
-                        <div class="font-black text-emerald-300">BOARD BONUS CAPSULE <span class="text-[10px] bg-emerald-950 px-1.5 py-0.5 rounded ml-1">NEW</span></div>
-                        <div class="text-[11px] text-slate-300">盤面の光るアイテム上に置くと、SP大チャージやレア手札進化が発生！</div>
+                        <div class="font-black text-emerald-300">ボーナスカプセル＆必殺サンダー</div>
+                        <div class="text-[11px] text-slate-300">盤面のカプセル上に置くとSP急上昇やレアコマ確定補充！SP100%で相手のコマ3つを雷撃で奪えます！</div>
                     </div>
                 </div>
             </div>
 
-            <div class="p-3 bg-slate-950 border-t border-slate-800">
-                <button onclick="closeModal('modal-rules')" class="btn-pop w-full py-2.5 bg-cyan-500 text-slate-950 font-black rounded-xl text-xs">
-                    CLOSE
+            <div class="p-3 bg-slate-950 border-t border-indigo-800">
+                <button onclick="closeModal('modal-rules')" class="btn-pop w-full py-2.5 bg-yellow-400 text-slate-950 font-black rounded-xl text-xs">
+                    わかった！
                 </button>
             </div>
         </div>
@@ -659,31 +735,31 @@
 
     <!-- 5. リザルト（勝敗結果）モーダル -->
     <div id="modal-result" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden items-center justify-center p-4">
-        <div class="bg-slate-900 border-4 border-yellow-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl animate-[pop-bounce_0.35s_ease-out]">
-            <div id="result-icon-wrap" class="w-16 h-16 rounded-2xl bg-yellow-400/20 border-2 border-yellow-400 text-yellow-300 flex items-center justify-center text-3xl mx-auto mb-2 shadow-[0_0_25px_rgba(250,204,21,0.5)]">
+        <div class="bg-indigo-950 border-4 border-yellow-400 rounded-3xl max-w-sm w-full p-6 text-center shadow-2xl">
+            <div class="w-16 h-16 rounded-2xl bg-yellow-400/20 border-2 border-yellow-400 text-yellow-300 flex items-center justify-center text-3xl mx-auto mb-2">
                 <i id="result-icon" class="fa-solid fa-trophy"></i>
             </div>
-            <h2 id="result-title" class="font-num text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-amber-400 to-orange-500">
+            <h2 id="result-title" class="font-num text-3xl font-black text-yellow-300">
                 VICTORY!
             </h2>
 
-            <div class="grid grid-cols-2 gap-3 my-5 bg-slate-950 p-4 rounded-2xl border border-slate-800">
-                <div class="flex flex-col items-center p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/40">
-                    <span id="res-p1-name" class="text-[11px] font-bold text-cyan-300">P1</span>
+            <div class="grid grid-cols-2 gap-3 my-5 bg-slate-950 p-4 rounded-2xl border border-indigo-800">
+                <div class="flex flex-col items-center p-2 rounded-xl bg-indigo-900/50 border border-cyan-400/40">
+                    <span id="res-p1-name" class="text-xs font-black text-cyan-300">P1</span>
                     <span id="res-p1-score" class="font-num text-3xl font-black text-white mt-1">34</span>
                 </div>
-                <div class="flex flex-col items-center p-2 rounded-xl bg-rose-950/40 border border-rose-500/40">
-                    <span id="res-p2-name" class="text-[11px] font-bold text-rose-300">CPU</span>
+                <div class="flex flex-col items-center p-2 rounded-xl bg-indigo-900/50 border border-pink-400/40">
+                    <span id="res-p2-name" class="text-xs font-black text-pink-300">P2</span>
                     <span id="res-p2-score" class="font-num text-3xl font-black text-white mt-1">30</span>
                 </div>
             </div>
 
             <div class="flex gap-2.5">
-                <button onclick="executeReturnToLobby()" class="btn-pop flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
-                    TITLE
+                <button onclick="executeReturnToLobby()" class="btn-pop flex-1 py-3 bg-slate-800 text-slate-200 font-black rounded-xl text-xs border border-slate-600">
+                    タイトルへ
                 </button>
-                <button onclick="rematchGame()" class="btn-pop flex-1 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3 rounded-xl border-2 border-emerald-200 text-xs">
-                    REMATCH
+                <button onclick="rematchGame()" class="btn-pop flex-1 bg-gradient-to-r from-emerald-400 to-teal-500 text-slate-950 font-black py-3 rounded-xl border-2 border-white text-xs">
+                    もういちど戦う
                 </button>
             </div>
         </div>
@@ -716,8 +792,8 @@
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(440, now);
-                    osc.frequency.exponentialRampToValueAtTime(720, now + 0.07);
+                    osc.frequency.setValueAtTime(480, now);
+                    osc.frequency.exponentialRampToValueAtTime(760, now + 0.07);
                     gain.gain.setValueAtTime(0.14, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.07);
                     osc.connect(gain);
@@ -728,38 +804,52 @@
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(320, now);
-                    osc.frequency.exponentialRampToValueAtTime(130, now + 0.1);
+                    osc.frequency.setValueAtTime(340, now);
+                    osc.frequency.exponentialRampToValueAtTime(140, now + 0.1);
                     gain.gain.setValueAtTime(0.24, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start(now);
                     osc.stop(now + 0.1);
+                } else if (type === 'lockon') {
+                    // 特殊効果発動前の「ため」チャージ音
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.42);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.linearRampToValueAtTime(0.2, now + 0.38);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.45);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.45);
                 } else if (type === 'flip') {
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.type = 'sine';
-                    osc.frequency.setValueAtTime(540 + Math.random() * 240, now);
-                    osc.frequency.exponentialRampToValueAtTime(920, now + 0.08);
-                    gain.gain.setValueAtTime(0.11, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.frequency.setValueAtTime(580 + Math.random() * 220, now);
+                    osc.frequency.exponentialRampToValueAtTime(960, now + 0.09);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.09);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start(now);
-                    osc.stop(now + 0.08);
+                    osc.stop(now + 0.09);
                 } else if (type === 'laser') {
                     const osc = audioCtx.createOscillator();
                     const gain = audioCtx.createGain();
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(960, now);
-                    osc.frequency.exponentialRampToValueAtTime(190, now + 0.34);
+                    osc.frequency.setValueAtTime(920, now);
+                    osc.frequency.exponentialRampToValueAtTime(160, now + 0.36);
                     gain.gain.setValueAtTime(0.18, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.34);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.36);
                     osc.connect(gain);
                     gain.connect(audioCtx.destination);
                     osc.start(now);
-                    osc.stop(now + 0.34);
+                    osc.stop(now + 0.36);
                 } else if (type === 'bonus') {
                     [587.33, 880, 1174.66].forEach((freq, idx) => {
                         const osc = audioCtx.createOscillator();
@@ -806,15 +896,14 @@
         function toggleSound() {
             soundEnabled = !soundEnabled;
             const iconHtml = soundEnabled
-                ? '<i class="fa-solid fa-volume-high text-cyan-400"></i>'
+                ? '<i class="fa-solid fa-volume-high text-cyan-300"></i>'
                 : '<i class="fa-solid fa-volume-xmark text-rose-400"></i>';
             document.getElementById('sound-toggle-lobby').innerHTML = iconHtml;
-            document.getElementById('sound-toggle-game').innerHTML = iconHtml;
-            showToast(soundEnabled ? 'SOUND ON' : 'SOUND OFF');
+            showToast(soundEnabled ? 'サウンド ON' : 'サウンド OFF');
         }
 
         /* ============================================================================
-           2. キャンバスパーティクル演出システム
+           2. キャンバスパーティクル演出
         ============================================================================ */
         const fxCanvas = document.getElementById('fx-canvas');
         const fxCtx = fxCanvas.getContext('2d');
@@ -838,7 +927,7 @@
                     size: 3 + Math.random() * 4,
                     color: colorHex,
                     alpha: 1,
-                    decay: 0.025 + Math.random() * 0.02
+                    decay: 0.024 + Math.random() * 0.02
                 });
             }
         }
@@ -876,43 +965,86 @@
         }
 
         /* ============================================================================
-           3. 特殊コマ定義（絵文字ゼロ・すべてFontAwesomeアイコン）
+           3. 選べる6種類のポップなオセロゴマカラー＆特殊コマ定義
         ============================================================================ */
+        const COLOR_THEMES = {
+            cyan: {
+                id: 'cyan', label: 'ソーダブルー', hex: '#38bdf8',
+                bg: 'radial-gradient(circle at 32% 28%, #bae6fd, #0284c7 68%, #0c4a6e 100%)',
+                border: '#e0f2fe', shadow: '#0369a1', iconColor: '#ffffff'
+            },
+            pink: {
+                id: 'pink', label: 'ベリーピンク', hex: '#f43f5e',
+                bg: 'radial-gradient(circle at 32% 28%, #fecdd3, #e11d48 68%, #881337 100%)',
+                border: '#ffe4e6', shadow: '#9f1239', iconColor: '#ffffff'
+            },
+            yellow: {
+                id: 'yellow', label: 'レモンイエロー', hex: '#facc15',
+                bg: 'radial-gradient(circle at 32% 28%, #fef08a, #eab308 68%, #854d0e 100%)',
+                border: '#fef9c3', shadow: '#a16207', iconColor: '#1e293b'
+            },
+            mint: {
+                id: 'mint', label: 'ミントグリーン', hex: '#10b981',
+                bg: 'radial-gradient(circle at 32% 28%, #a7f3d0, #059669 68%, #064e3b 100%)',
+                border: '#d1fae5', shadow: '#047857', iconColor: '#ffffff'
+            },
+            purple: {
+                id: 'purple', label: 'グレープ', hex: '#a855f7',
+                bg: 'radial-gradient(circle at 32% 28%, #e9d5ff, #7e22ce 68%, #3b0764 100%)',
+                border: '#f3e8ff', shadow: '#581c87', iconColor: '#ffffff'
+            },
+            obsidian: {
+                id: 'obsidian', label: 'クラシック黒', hex: '#475569',
+                bg: 'radial-gradient(circle at 32% 28%, #64748b, #0f172a 70%, #020617 100%)',
+                border: '#94a3b8', shadow: '#020617', iconColor: '#38bdf8'
+            }
+        };
+
+        let playerConfig = {
+            1: { name: 'プレイヤー1', themeId: 'cyan' },
+            2: { name: 'プレイヤー2', themeId: 'pink' }
+        };
+
+        function getFaceInlineStyle(playerNum) {
+            const theme = COLOR_THEMES[playerConfig[playerNum]?.themeId] || COLOR_THEMES.cyan;
+            return `background: ${theme.bg}; border: 2px solid ${theme.border}; box-shadow: 0 3px 0 ${theme.shadow}, 0 5px 8px rgba(0,0,0,0.45), inset 0 2px 3px rgba(255,255,255,0.45); color: ${theme.iconColor};`;
+        }
+
         const PIECE_TYPES = {
             NORMAL: {
-                id: 'NORMAL', name: 'NORMAL', iconClass: '', badge: 'STD',
-                weight: 66, rarity: 'normal', dirs: []
+                id: 'NORMAL', name: 'ノーマル', iconClass: '', badge: 'STD',
+                weight: 64, rarity: 'normal', dirs: []
             },
             ARROW_U: {
-                id: 'ARROW_U', name: 'UP LASER', iconClass: 'fa-solid fa-arrow-up', badge: '1-WAY',
-                weight: 5, rarity: 'rare', dirs: [[-1, 0]]
+                id: 'ARROW_U', name: '上レーザー', iconClass: 'fa-solid fa-arrow-up', badge: '↑一列',
+                weight: 5.5, rarity: 'rare', dirs: [[-1, 0]]
             },
             ARROW_D: {
-                id: 'ARROW_D', name: 'DOWN LASER', iconClass: 'fa-solid fa-arrow-down', badge: '1-WAY',
-                weight: 5, rarity: 'rare', dirs: [[1, 0]]
+                id: 'ARROW_D', name: '下レーザー', iconClass: 'fa-solid fa-arrow-down', badge: '↓一列',
+                weight: 5.5, rarity: 'rare', dirs: [[1, 0]]
             },
             ARROW_L: {
-                id: 'ARROW_L', name: 'LEFT LASER', iconClass: 'fa-solid fa-arrow-left', badge: '1-WAY',
-                weight: 5, rarity: 'rare', dirs: [[0, -1]]
+                id: 'ARROW_L', name: '左レーザー', iconClass: 'fa-solid fa-arrow-left', badge: '←一列',
+                weight: 5.5, rarity: 'rare', dirs: [[0, -1]]
             },
             ARROW_R: {
-                id: 'ARROW_R', name: 'RIGHT LASER', iconClass: 'fa-solid fa-arrow-right', badge: '1-WAY',
-                weight: 5, rarity: 'rare', dirs: [[0, 1]]
+                id: 'ARROW_R', name: '右レーザー', iconClass: 'fa-solid fa-arrow-right', badge: '→一列',
+                weight: 5.5, rarity: 'rare', dirs: [[0, 1]]
             },
             LINE_H: {
-                id: 'LINE_H', name: 'H-LASER', iconClass: 'fa-solid fa-arrows-left-right', badge: '2-WAY',
+                id: 'LINE_H', name: '横Wレーザー', iconClass: 'fa-solid fa-arrows-left-right', badge: '←→両端',
                 weight: 3.5, rarity: 'sr', dirs: [[0, -1], [0, 1]]
             },
             LINE_V: {
-                id: 'LINE_V', name: 'V-LASER', iconClass: 'fa-solid fa-arrows-up-down', badge: '2-WAY',
+                id: 'LINE_V', name: '縦Wレーザー', iconClass: 'fa-solid fa-arrows-up-down', badge: '↑↓両端',
                 weight: 3.5, rarity: 'sr', dirs: [[-1, 0], [1, 0]]
             },
             BOMB: {
-                id: 'BOMB', name: 'BLAST', iconClass: 'fa-solid fa-burst', badge: 'AREA',
+                id: 'BOMB', name: 'ブラストボム', iconClass: 'fa-solid fa-burst', badge: '周囲8マス',
                 weight: 4.5, rarity: 'sr', dirs: 'BOMB'
             },
             CROSS: {
-                id: 'CROSS', name: 'CROSS', iconClass: 'fa-solid fa-up-down-left-right', badge: '4-WAY',
+                id: 'CROSS', name: '十字レーザー', iconClass: 'fa-solid fa-up-down-left-right', badge: '十字4方向',
                 weight: 2.5, rarity: 'sr', dirs: [[-1, 0], [1, 0], [0, -1], [0, 1]]
             }
         };
@@ -932,7 +1064,269 @@
         }
 
         /* ============================================================================
-           4. ゲームステータス管理 ＆ 新機能「盤面ボーナスカプセル」
+           4. プレイヤーカスタマイズ＆P2Pオンライン通信（PeerJS）
+        ============================================================================ */
+        let pendingMode = 'cpu';
+        let peer = null;
+        let conn = null;
+        let myOnlineRole = null; // 1 (Host) or 2 (Guest)
+
+        function openSetupModal(mode) {
+            initAudio();
+            playSE('pickup');
+            pendingMode = mode;
+
+            const p2Box = document.getElementById('setup-p2-box');
+            const guestBox = document.getElementById('setup-online-guest-box');
+            const p1Input = document.getElementById('setup-p1-name');
+            const p2Input = document.getElementById('setup-p2-name');
+
+            if (mode === 'cpu') {
+                document.getElementById('setup-modal-title').textContent = 'VS CPU プレイヤー設定';
+                document.getElementById('setup-p1-label').textContent = 'あなたのニックネーム';
+                document.getElementById('setup-p2-label').textContent = 'CPUの名前とカラー';
+                p1Input.value = playerConfig[1].name === 'プレイヤー1' ? 'あなた' : playerConfig[1].name;
+                p2Input.value = 'CPUボット';
+                p2Box.classList.remove('hidden');
+                guestBox.classList.add('hidden');
+            } else if (mode === 'local') {
+                document.getElementById('setup-modal-title').textContent = '1台でふたり対戦 設定';
+                document.getElementById('setup-p1-label').textContent = '下側プレイヤー (P1) の名前';
+                document.getElementById('setup-p2-label').textContent = '上側プレイヤー (P2) の名前';
+                if (p2Input.value === 'CPUボット') p2Input.value = 'プレイヤー2';
+                p2Box.classList.remove('hidden');
+                guestBox.classList.add('hidden');
+            } else if (mode === 'online_host') {
+                document.getElementById('setup-modal-title').textContent = 'オンライン部屋作成 (ホスト)';
+                document.getElementById('setup-p1-label').textContent = 'あなたのニックネーム';
+                p2Box.classList.add('hidden');
+                guestBox.classList.add('hidden');
+            } else if (mode === 'online_guest') {
+                document.getElementById('setup-modal-title').textContent = 'IDを入力して参加 (ゲスト)';
+                document.getElementById('setup-p1-label').textContent = 'あなたのニックネーム';
+                p2Box.classList.add('hidden');
+                guestBox.classList.remove('hidden');
+            }
+
+            renderColorPickers();
+            openModal('modal-player-setup');
+        }
+
+        function renderColorPickers() {
+            const p1Wrap = document.getElementById('setup-p1-colors');
+            const p2Wrap = document.getElementById('setup-p2-colors');
+            p1Wrap.innerHTML = '';
+            p2Wrap.innerHTML = '';
+
+            Object.values(COLOR_THEMES).forEach(theme => {
+                // P1用ボタン
+                const btn1 = document.createElement('button');
+                const isSel1 = playerConfig[1].themeId === theme.id;
+                btn1.className = `h-9 rounded-xl border-2 transition-transform flex items-center justify-center ${isSel1 ? 'scale-110 border-white ring-2 ring-yellow-300' : 'border-transparent opacity-70 hover:opacity-100'}`;
+                btn1.style.background = theme.bg;
+                btn1.innerHTML = isSel1 ? '<i class="fa-solid fa-check text-xs drop-shadow"></i>' : '';
+                btn1.onclick = () => {
+                    if (playerConfig[2].themeId === theme.id && (pendingMode === 'cpu' || pendingMode === 'local')) {
+                        showToast('相手と同じ色は選べません');
+                        return;
+                    }
+                    playerConfig[1].themeId = theme.id;
+                    playSE('pickup');
+                    renderColorPickers();
+                };
+                p1Wrap.appendChild(btn1);
+
+                // P2用ボタン
+                const btn2 = document.createElement('button');
+                const isSel2 = playerConfig[2].themeId === theme.id;
+                btn2.className = `h-9 rounded-xl border-2 transition-transform flex items-center justify-center ${isSel2 ? 'scale-110 border-white ring-2 ring-yellow-300' : 'border-transparent opacity-70 hover:opacity-100'}`;
+                btn2.style.background = theme.bg;
+                btn2.innerHTML = isSel2 ? '<i class="fa-solid fa-check text-xs drop-shadow"></i>' : '';
+                btn2.onclick = () => {
+                    if (playerConfig[1].themeId === theme.id) {
+                        showToast('P1と同じ色は選べません');
+                        return;
+                    }
+                    playerConfig[2].themeId = theme.id;
+                    playSE('pickup');
+                    renderColorPickers();
+                };
+                p2Wrap.appendChild(btn2);
+            });
+        }
+
+        function confirmPlayerSetup() {
+            const p1Name = document.getElementById('setup-p1-name').value.trim() || 'プレイヤー1';
+            const p2Name = document.getElementById('setup-p2-name').value.trim() || 'プレイヤー2';
+            playerConfig[1].name = p1Name;
+
+            if (pendingMode === 'cpu' || pendingMode === 'local') {
+                playerConfig[2].name = p2Name;
+                closeModal('modal-player-setup');
+                startGame(pendingMode);
+            } else if (pendingMode === 'online_host') {
+                closeModal('modal-player-setup');
+                startOnlineHost();
+            } else if (pendingMode === 'online_guest') {
+                const code = document.getElementById('setup-join-room-id').value.trim().toUpperCase();
+                if (code.length < 3) {
+                    showToast('ルームIDを入力してください');
+                    return;
+                }
+                // ゲスト側の入力内容は一時保持し接続後にホストへ送信
+                playerConfig[2].name = p1Name;
+                playerConfig[2].themeId = playerConfig[1].themeId;
+                closeModal('modal-player-setup');
+                startOnlineGuest(code);
+            }
+        }
+
+        /* ==================== PeerJS リアルタイム2端末通信 ==================== */
+        function cleanupPeer() {
+            if (conn) {
+                try { conn.close(); } catch (e) {}
+                conn = null;
+            }
+            if (peer) {
+                try { peer.destroy(); } catch (e) {}
+                peer = null;
+            }
+        }
+
+        function startOnlineHost() {
+            cleanupPeer();
+            const roomCodeNum = String(Math.floor(1000 + Math.random() * 9000));
+            roomCode = roomCodeNum;
+            myOnlineRole = 1;
+
+            document.getElementById('online-wait-title').textContent = '対戦ルーム待機中...';
+            document.getElementById('online-wait-desc').textContent = 'もう1台の端末で「IDで参加する」から下記の4桁IDを入力してください';
+            document.getElementById('online-display-room-id').textContent = roomCodeNum;
+            openModal('modal-online-wait');
+
+            const fullPeerId = `othello-boost-pop-${roomCodeNum}`;
+            peer = new Peer(fullPeerId);
+
+            peer.on('open', () => {
+                showToast(`ルーム [${roomCodeNum}] を作成しました`);
+            });
+
+            peer.on('connection', (incomingConn) => {
+                conn = incomingConn;
+                setupPeerConnectionHandlers();
+            });
+
+            peer.on('error', () => {
+                showToast('通信エラーが発生しました。再度お試しください');
+            });
+        }
+
+        function startOnlineGuest(targetRoomCode) {
+            cleanupPeer();
+            roomCode = targetRoomCode;
+            myOnlineRole = 2;
+
+            document.getElementById('online-wait-title').textContent = 'ルームへ接続中...';
+            document.getElementById('online-wait-desc').textContent = 'ホストの端末とリアルタイム通信を確立しています';
+            document.getElementById('online-display-room-id').textContent = targetRoomCode;
+            openModal('modal-online-wait');
+
+            peer = new Peer();
+            peer.on('open', () => {
+                conn = peer.connect(`othello-boost-pop-${targetRoomCode}`, { reliable: true });
+                setupPeerConnectionHandlers();
+            });
+
+            peer.on('error', () => {
+                closeModal('modal-online-wait');
+                showToast('指定されたIDの部屋が見つかりませんでした');
+            });
+        }
+
+        function setupPeerConnectionHandlers() {
+            conn.on('open', () => {
+                if (myOnlineRole === 2) {
+                    // ゲストから自分の名前と希望カラーをホストへ送る
+                    conn.send({
+                        type: 'GUEST_HELLO',
+                        guestName: playerConfig[2].name,
+                        guestThemeId: playerConfig[2].themeId
+                    });
+                }
+            });
+
+            conn.on('data', async (msg) => {
+                if (!msg || !msg.type) return;
+
+                if (msg.type === 'GUEST_HELLO' && myOnlineRole === 1) {
+                    playerConfig[2].name = msg.guestName || 'ゲスト';
+                    let gTheme = msg.guestThemeId || 'pink';
+                    if (gTheme === playerConfig[1].themeId) {
+                        gTheme = gTheme === 'pink' ? 'cyan' : 'pink';
+                    }
+                    playerConfig[2].themeId = gTheme;
+
+                    closeModal('modal-online-wait');
+                    startGame('online', roomCode);
+
+                    // ホストが生成した初期盤面・手札・ボーナスをゲストへ完全同期
+                    conn.send({
+                        type: 'INIT_MATCH',
+                        playerConfig,
+                        board,
+                        bonusGrid,
+                        hands,
+                        spGauge,
+                        currentTurn
+                    });
+                } else if (msg.type === 'INIT_MATCH' && myOnlineRole === 2) {
+                    playerConfig = msg.playerConfig;
+                    closeModal('modal-online-wait');
+                    startGame('online', roomCode, msg);
+                } else if (msg.type === 'ACTION_MOVE') {
+                    // 相手端末が打った手を受信して同じアニメーションで再生
+                    hands[msg.color][msg.handIndex] = msg.usedPiece;
+                    await executeMove(msg.r, msg.c, msg.color, msg.handIndex, msg.nextDrawnPiece, true);
+                } else if (msg.type === 'ACTION_REROLL') {
+                    spGauge[msg.player] = msg.newSp;
+                    hands[msg.player] = msg.newHand;
+                    playSE('bonus');
+                    renderHandAndSP();
+                    showToast(`${playerConfig[msg.player].name}が手札を交換！`);
+                } else if (msg.type === 'ACTION_ULT') {
+                    await activateUltimate(msg.player, msg.targets, true);
+                } else if (msg.type === 'ACTION_REMATCH') {
+                    if (myOnlineRole === 2) {
+                        playerConfig = msg.playerConfig;
+                        closeModal('modal-result');
+                        startGame('online', roomCode, msg);
+                    }
+                }
+            });
+
+            conn.on('close', () => {
+                showToast('対戦相手との通信が切断されました');
+            });
+        }
+
+        function copyRoomId() {
+            const codeText = document.getElementById('online-display-room-id').textContent;
+            const temp = document.createElement('textarea');
+            temp.value = codeText;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            temp.remove();
+            showToast(`ID [${codeText}] をコピーしました！`);
+        }
+
+        function cancelOnlineWait() {
+            cleanupPeer();
+            closeModal('modal-online-wait');
+        }
+
+        /* ============================================================================
+           5. ゲームステータス管理 ＆ 対面テーブルトップモード
         ============================================================================ */
         const BLACK = 1;
         const WHITE = 2;
@@ -942,10 +1336,11 @@
             [1, -1],  [1, 0],  [1, 1]
         ];
 
-        let gameMode = 'cpu';
+        let gameMode = 'cpu'; // 'cpu' | 'local' | 'online'
         let roomCode = null;
+        let isTabletopMode = false;
         let board = [];
-        let bonusGrid = []; // null or 'SP' | 'UPGRADE'
+        let bonusGrid = [];
         let currentTurn = BLACK;
         let isAnimating = false;
         let hands = { [BLACK]: [], [WHITE]: [] };
@@ -968,7 +1363,6 @@
                 }
             }
             candidates.sort(() => Math.random() - 0.5);
-            // SPカプセル3個、レア進化カプセル2個を盤面にランダム配置
             for (let i = 0; i < 3; i++) {
                 const [r, c] = candidates[i];
                 bonusGrid[r][c] = 'SP';
@@ -979,49 +1373,95 @@
             }
         }
 
-        /* ============================================================================
-           5. ゲーム開始・中断確認・画面遷移
-        ============================================================================ */
-        function startGame(mode, customRoomId = null) {
+        function applyLayoutMode() {
+            const topHeader = document.getElementById('standard-top-header');
+            const p2TopDeck = document.getElementById('p2-top-deck-area');
+            const rotatedHeader = document.getElementById('tabletop-rotated-header');
+            const toggleBtn = document.getElementById('btn-toggle-tabletop');
+
+            if (gameMode === 'local') {
+                toggleBtn.classList.remove('hidden');
+                toggleBtn.classList.add('flex');
+            } else {
+                toggleBtn.classList.add('hidden');
+                toggleBtn.classList.remove('flex');
+            }
+
+            if (gameMode === 'local' && isTabletopMode) {
+                document.body.classList.add('tabletop-active');
+                topHeader.classList.add('hidden');
+                p2TopDeck.classList.remove('hidden');
+                rotatedHeader.classList.remove('hidden');
+                rotatedHeader.classList.add('flex');
+            } else {
+                document.body.classList.remove('tabletop-active');
+                topHeader.classList.remove('hidden');
+                p2TopDeck.classList.add('hidden');
+                rotatedHeader.classList.add('hidden');
+                rotatedHeader.classList.remove('flex');
+            }
+        }
+
+        function toggleTabletopLayout() {
+            if (gameMode !== 'local') return;
+            isTabletopMode = !isTabletopMode;
+            applyLayoutMode();
+            renderAll();
+            showToast(isTabletopMode ? '対面テーブルトップ表示 ON' : '通常表示 ON');
+        }
+
+        function startGame(mode, customRoomId = null, syncedState = null) {
             initAudio();
             playSE('pickup');
             gameMode = mode;
             roomCode = customRoomId;
 
-            const p1NameEl = document.getElementById('p1-name');
-            const p2NameEl = document.getElementById('p2-name');
-            const roomBadge = document.getElementById('room-badge');
+            // 1台で2人対戦のときは自動的に上下反転＋左90度回転ヘッダーの対面モードを有効化
+            isTabletopMode = (mode === 'local');
+            applyLayoutMode();
 
-            if (mode === 'cpu') {
-                p1NameEl.textContent = 'YOU';
-                p2NameEl.textContent = 'CPU';
-                roomBadge.classList.add('hidden');
-            } else if (mode === 'local') {
-                p1NameEl.textContent = 'P1';
-                p2NameEl.textContent = 'P2';
-                roomBadge.classList.add('hidden');
-            } else if (mode === 'online') {
-                p1NameEl.textContent = 'YOU';
-                p2NameEl.textContent = 'GUEST';
-                document.getElementById('active-room-id').textContent = customRoomId;
-                roomBadge.classList.remove('hidden');
+            if (syncedState) {
+                board = syncedState.board;
+                bonusGrid = syncedState.bonusGrid;
+                hands = syncedState.hands;
+                spGauge = syncedState.spGauge;
+                currentTurn = syncedState.currentTurn;
+            } else {
+                board = Array.from({ length: 8 }, () => Array(8).fill(null));
+                board[3][3] = { color: WHITE, typeId: 'NORMAL' };
+                board[3][4] = { color: BLACK, typeId: 'NORMAL' };
+                board[4][3] = { color: BLACK, typeId: 'NORMAL' };
+                board[4][4] = { color: WHITE, typeId: 'NORMAL' };
+
+                spawnBoardBonuses();
+
+                hands[BLACK] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
+                hands[WHITE] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
+
+                spGauge[BLACK] = 30;
+                spGauge[WHITE] = 30;
+                currentTurn = BLACK;
             }
 
-            board = Array.from({ length: 8 }, () => Array(8).fill(null));
-            board[3][3] = { color: WHITE, typeId: 'NORMAL' };
-            board[3][4] = { color: BLACK, typeId: 'NORMAL' };
-            board[4][3] = { color: BLACK, typeId: 'NORMAL' };
-            board[4][4] = { color: WHITE, typeId: 'NORMAL' };
+            // ヘッダーの名前＆コマ色バッジ反映
+            document.getElementById('p1-name').textContent = playerConfig[1].name;
+            document.getElementById('p2-name').textContent = playerConfig[2].name;
+            document.getElementById('rot-p1-name').textContent = playerConfig[1].name;
+            document.getElementById('rot-p2-name').textContent = playerConfig[2].name;
 
-            spawnBoardBonuses();
+            document.getElementById('p1-header-disc').style.background = COLOR_THEMES[playerConfig[1].themeId].bg;
+            document.getElementById('p2-header-disc').style.background = COLOR_THEMES[playerConfig[2].themeId].bg;
+            document.getElementById('rot-p1-disc').style.background = COLOR_THEMES[playerConfig[1].themeId].bg;
+            document.getElementById('rot-p2-disc').style.background = COLOR_THEMES[playerConfig[2].themeId].bg;
 
-            hands[BLACK] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
-            hands[WHITE] = [drawRandomPiece(true), drawRandomPiece(), drawRandomPiece()];
+            const roomBadge = document.getElementById('room-badge');
+            if (mode === 'online' && customRoomId) {
+                document.getElementById('active-room-id').textContent = customRoomId;
+                roomBadge.classList.remove('hidden');
+            } else {
+                roomBadge.classList.add('hidden');
+            }
 
-            spGauge[BLACK] = 30;
-            spGauge[WHITE] = 30;
-
-            currentTurn = BLACK;
             isAnimating = false;
 
             document.getElementById('screen-lobby').classList.add('hidden');
@@ -1030,19 +1470,46 @@
 
             buildBoardDOM();
             renderAll();
-
-            showToast(customRoomId ? `ROOM [${customRoomId}] CONNECTED` : 'BATTLE START!');
+            showTurnAnnouncement(currentTurn);
         }
 
-        // タイトルへ戻る際の確認ポップアップ表示
+        function showTurnAnnouncement(turnColor) {
+            const overlay = document.getElementById('turn-announce-overlay');
+            const box = document.getElementById('turn-announce-box');
+            const disc = document.getElementById('turn-announce-disc');
+            const text = document.getElementById('turn-announce-text');
+
+            const pConf = playerConfig[turnColor];
+            const theme = COLOR_THEMES[pConf.themeId] || COLOR_THEMES.cyan;
+
+            disc.style.background = theme.bg;
+            box.style.background = `linear-gradient(135deg, ${theme.hex}dd, #1e1b4b)`;
+            text.textContent = `${pConf.name} のターンです！`;
+
+            overlay.classList.remove('hidden');
+            overlay.classList.add('flex');
+
+            box.classList.remove('turn-banner-anim');
+            void box.offsetWidth;
+            box.classList.add('turn-banner-anim');
+
+            clearTimeout(window._turnBannerTimer);
+            window._turnBannerTimer = setTimeout(() => {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }, 1150);
+        }
+
         function confirmReturnToLobby() {
             playSE('pickup');
             openModal('modal-confirm-quit');
         }
 
         function executeReturnToLobby() {
+            cleanupPeer();
             closeModal('modal-confirm-quit');
             closeModal('modal-result');
+            document.body.classList.remove('tabletop-active');
             document.getElementById('screen-game').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('flex');
             document.getElementById('screen-lobby').classList.remove('hidden');
@@ -1050,7 +1517,24 @@
 
         function rematchGame() {
             closeModal('modal-result');
-            startGame(gameMode, roomCode);
+            if (gameMode === 'online') {
+                if (myOnlineRole === 1 && conn) {
+                    startGame('online', roomCode);
+                    conn.send({
+                        type: 'ACTION_REMATCH',
+                        playerConfig,
+                        board,
+                        bonusGrid,
+                        hands,
+                        spGauge,
+                        currentTurn
+                    });
+                } else {
+                    showToast('ホストが再戦を開始するのを待っています...');
+                }
+            } else {
+                startGame(gameMode, roomCode);
+            }
         }
 
         /* ============================================================================
@@ -1123,7 +1607,7 @@
         }
 
         /* ============================================================================
-           7. 盤面・手札・SPボタン描画
+           7. 本物の3D両面コマ描画 ＆ 盤面・手札レンダリング
         ============================================================================ */
         function buildBoardDOM() {
             const boardEl = document.getElementById('board');
@@ -1139,14 +1623,74 @@
             }
         }
 
-        function renderAll(animatedCoords = [], newPlacedCoord = null) {
+        function isMyControllableTurn(playerColor = currentTurn) {
+            if (isAnimating) return false;
+            if (gameMode === 'cpu') return currentTurn === BLACK && playerColor === BLACK;
+            if (gameMode === 'local') return currentTurn === playerColor;
+            if (gameMode === 'online') return currentTurn === myOnlineRole && playerColor === myOnlineRole;
+            return false;
+        }
+
+        // 両面3Dコマ要素を生成（flipFromColorが指定されている場合は、表面＝元の色、裏面＝新しい色で生成し、直後に180度回転させる）
+        function create3DPieceElement(currentColor, typeId, isNewPop = false, flipFromColor = null) {
+            const wrap = document.createElement('div');
+            wrap.className = `piece-3d-wrap ${isNewPop ? 'piece-pop-in' : ''}`;
+
+            const inner = document.createElement('div');
+            inner.className = 'piece-3d-inner';
+
+            const pType = PIECE_TYPES[typeId] || PIECE_TYPES.NORMAL;
+            const iconHtml = pType.iconClass ? `<i class="${pType.iconClass} text-xs sm:text-sm pointer-events-none"></i>` : '';
+
+            const frontFace = document.createElement('div');
+            frontFace.className = 'piece-face front';
+            // 裏返るアニメーション時は、最初に見える表面を「裏返る前の色(flipFromColor)」にする
+            const frontColor = flipFromColor ? flipFromColor : currentColor;
+            frontFace.style.cssText = getFaceInlineStyle(frontColor);
+            frontFace.innerHTML = iconHtml;
+
+            const backFace = document.createElement('div');
+            backFace.className = 'piece-face back';
+            backFace.style.cssText = getFaceInlineStyle(currentColor);
+            backFace.innerHTML = iconHtml;
+
+            inner.appendChild(frontFace);
+            inner.appendChild(backFace);
+            wrap.appendChild(inner);
+
+            if (flipFromColor) {
+                // 次フレームで180度回転クラスを付与し、元の色→新しい色へリアルに裏返る
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        inner.classList.add('do-flip');
+                    });
+                });
+            }
+
+            return wrap;
+        }
+
+        function renderAll(animatedFlips = [], newPlacedCoord = null) {
             const validMoves = getAllValidMoves(currentTurn);
             const validSet = new Set(validMoves.map(m => `${m.r},${m.c}`));
-            const animSet = new Set(animatedCoords.map(([r, c]) => `${r},${c}`));
+
+            // animatedFlips は { r, c, fromColor } または [r, c]
+            const flipMap = new Map();
+            animatedFlips.forEach(item => {
+                if (Array.isArray(item)) {
+                    const [r, c] = item;
+                    const prevCol = board[r][c]?.color === BLACK ? WHITE : BLACK;
+                    flipMap.set(`${r},${c}`, prevCol);
+                } else if (item && typeof item.r === 'number') {
+                    flipMap.set(`${item.r},${item.c}`, item.fromColor);
+                }
+            });
 
             const cells = document.querySelectorAll('.board-cell');
-            let blackCount = 0;
-            let whiteCount = 0;
+            let p1Count = 0;
+            let p2Count = 0;
+
+            const showHints = isMyControllableTurn(currentTurn);
 
             cells.forEach(cell => {
                 const r = parseInt(cell.dataset.r);
@@ -1154,128 +1698,147 @@
                 const data = board[r][c];
                 const bonus = bonusGrid[r][c];
 
-                cell.classList.remove('valid-hint', 'drag-over-valid', 'effect-target');
+                cell.classList.remove('valid-hint', 'drag-over-valid', 'effect-target', 'special-lockon');
 
-                const isHumanTurn = (gameMode === 'local') || (currentTurn === BLACK);
-                if (!data && validSet.has(`${r},${c}`) && isHumanTurn && !isAnimating) {
+                if (!data && validSet.has(`${r},${c}`) && showHints) {
                     cell.classList.add('valid-hint');
                 }
 
                 cell.innerHTML = '';
 
-                // 空きマスでボーナスカプセルがある場合
                 if (!data && bonus) {
                     const token = document.createElement('div');
                     if (bonus === 'SP') {
-                        token.className = 'bonus-token bg-amber-400/25 border border-amber-300 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.6)]';
+                        token.className = 'bonus-token bg-amber-400/30 border-2 border-amber-300 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.7)]';
                         token.innerHTML = '<i class="fa-solid fa-bolt"></i>';
                     } else {
-                        token.className = 'bonus-token bg-fuchsia-500/25 border border-fuchsia-300 text-fuchsia-300 shadow-[0_0_10px_rgba(232,121,249,0.6)]';
+                        token.className = 'bonus-token bg-fuchsia-500/30 border-2 border-fuchsia-300 text-fuchsia-200 shadow-[0_0_10px_rgba(232,121,249,0.7)]';
                         token.innerHTML = '<i class="fa-solid fa-gem"></i>';
                     }
                     cell.appendChild(token);
                 }
 
                 if (data) {
-                    if (data.color === BLACK) blackCount++;
-                    else whiteCount++;
+                    if (data.color === BLACK) p1Count++;
+                    else p2Count++;
 
-                    const pieceEl = document.createElement('div');
-                    const colorClass = data.color === BLACK ? 'black' : 'white';
                     const isNew = newPlacedCoord && newPlacedCoord[0] === r && newPlacedCoord[1] === c;
-                    const isFlipped = animSet.has(`${r},${c}`);
+                    const prevColor = flipMap.get(`${r},${c}`) || null;
 
-                    pieceEl.className = `piece ${colorClass} ${isNew ? 'pop-in' : ''} ${isFlipped ? 'flipping' : ''}`;
-
-                    const pType = PIECE_TYPES[data.typeId] || PIECE_TYPES.NORMAL;
-                    if (pType.iconClass) {
-                        pieceEl.innerHTML = `<i class="${pType.iconClass} text-xs sm:text-sm pointer-events-none"></i>`;
-                    }
+                    const pieceEl = create3DPieceElement(data.color, data.typeId, isNew, prevColor);
                     cell.appendChild(pieceEl);
                 }
             });
 
-            document.getElementById('p1-score').textContent = blackCount;
-            document.getElementById('p2-score').textContent = whiteCount;
+            // スコア更新（通常ヘッダー＆左90度回転ヘッダー両方）
+            document.getElementById('p1-score').textContent = p1Count;
+            document.getElementById('p2-score').textContent = p2Count;
+            document.getElementById('rot-p1-score').textContent = p1Count;
+            document.getElementById('rot-p2-score').textContent = p2Count;
 
-            const p1Panel = document.getElementById('p1-panel');
-            const p2Panel = document.getElementById('p2-panel');
             const turnBadge = document.getElementById('turn-badge');
-
-            if (currentTurn === BLACK) {
-                p1Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-cyan-400 bg-cyan-950/60 shadow-[0_0_12px_rgba(56,189,248,0.45)] transition-all';
-                p2Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 opacity-55 transition-all';
-                turnBadge.className = 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider';
-                turnBadge.textContent = gameMode === 'local' ? 'P1 TURN' : 'YOUR TURN';
-            } else {
-                p1Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-transparent bg-slate-900/40 opacity-55 transition-all';
-                p2Panel.className = 'flex items-center gap-2 px-2 py-0.5 rounded-lg border-2 border-rose-400 bg-rose-950/60 shadow-[0_0_12px_rgba(244,63,94,0.45)] transition-all';
-                turnBadge.className = 'bg-gradient-to-r from-rose-500 to-pink-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full shadow uppercase tracking-wider';
-                turnBadge.textContent = gameMode === 'local' ? 'P2 TURN' : 'ENEMY TURN';
-            }
+            const rotTurnLabel = document.getElementById('rot-turn-label');
+            const activeName = playerConfig[currentTurn].name;
+            turnBadge.textContent = `${activeName}の番`;
+            rotTurnLabel.textContent = `${activeName}の番`;
 
             renderHandAndSP();
         }
 
         function renderHandAndSP() {
-            const activePlayer = (gameMode === 'local') ? currentTurn : BLACK;
-            const playerHand = hands[activePlayer];
-            const sp = spGauge[activePlayer];
-            const canControl = !isAnimating && (gameMode === 'local' || currentTurn === BLACK);
+            // 下部デッキに表示するプレイヤーを決定
+            let bottomPlayer = BLACK;
+            if (gameMode === 'online') {
+                bottomPlayer = myOnlineRole || BLACK;
+            } else if (gameMode === 'local' && !isTabletopMode) {
+                bottomPlayer = currentTurn;
+            }
 
-            document.getElementById('sp-text').textContent = `${sp}%`;
-            document.getElementById('sp-bar').style.width = `${sp}%`;
+            renderPlayerDeckUI(bottomPlayer, {
+                discId: 'p1-deck-disc',
+                nameId: 'p1-deck-name',
+                spBarId: 'sp-bar',
+                spTextId: 'sp-text',
+                rerollBtnId: 'reroll-btn',
+                ultBtnId: 'ult-btn',
+                handContainerId: 'hand-container'
+            });
 
-            // リロールボタン (SP 30%以上で使用可能)
-            const rerollBtn = document.getElementById('reroll-btn');
+            // 対面テーブルトップモード時は上部反転デッキにP2を描画
+            if (gameMode === 'local' && isTabletopMode) {
+                renderPlayerDeckUI(WHITE, {
+                    discId: 'p2-deck-disc',
+                    nameId: 'p2-deck-name',
+                    spBarId: 'sp-bar-p2',
+                    spTextId: 'sp-text-p2',
+                    rerollBtnId: 'reroll-btn-p2',
+                    ultBtnId: 'ult-btn-p2',
+                    handContainerId: 'hand-container-p2'
+                });
+            }
+        }
+
+        function renderPlayerDeckUI(playerNum, domIds) {
+            const pConf = playerConfig[playerNum];
+            const theme = COLOR_THEMES[pConf.themeId] || COLOR_THEMES.cyan;
+            const playerHand = hands[playerNum];
+            const sp = spGauge[playerNum];
+            const canControl = isMyControllableTurn(playerNum);
+
+            const discEl = document.getElementById(domIds.discId);
+            const nameEl = document.getElementById(domIds.nameId);
+            if (discEl) discEl.style.background = theme.bg;
+            if (nameEl) nameEl.textContent = pConf.name;
+
+            document.getElementById(domIds.spTextId).textContent = `${sp}%`;
+            document.getElementById(domIds.spBarId).style.width = `${sp}%`;
+
+            const rerollBtn = document.getElementById(domIds.rerollBtnId);
             if (sp >= 30 && canControl) {
                 rerollBtn.disabled = false;
-                rerollBtn.className = 'btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-cyan-200 cursor-pointer';
+                rerollBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border-2 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-950 border-white cursor-pointer';
             } else {
                 rerollBtn.disabled = true;
-                rerollBtn.className = 'btn-pop col-span-2 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+                rerollBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
             }
 
-            // 必殺サンダーボタン (SP 100%で使用可能)
-            const ultBtn = document.getElementById('ult-btn');
+            const ultBtn = document.getElementById(domIds.ultBtnId);
             if (sp >= 100 && canControl) {
                 ultBtn.disabled = false;
-                ultBtn.className = 'btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-slate-950 border-white shadow-[0_0_18px_rgba(250,204,21,0.85)] animate-pulse cursor-pointer';
+                ultBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border-2 bg-gradient-to-r from-amber-300 via-yellow-300 to-pink-400 text-slate-950 border-white shadow-[0_0_16px_rgba(250,204,21,0.9)] animate-pulse cursor-pointer';
             } else {
                 ultBtn.disabled = true;
-                ultBtn.className = 'btn-pop col-span-3 py-2 px-2 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 border-2 transition-all bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
+                ultBtn.className = 'btn-pop py-1.5 px-2.5 rounded-xl font-black text-[11px] flex items-center gap-1 border bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed';
             }
 
-            const container = document.getElementById('hand-container');
+            const container = document.getElementById(domIds.handContainerId);
             container.innerHTML = '';
 
             playerHand.forEach((piece, idx) => {
                 const card = document.createElement('div');
-                let rarityClass = 'border-slate-600 bg-slate-800/90';
-                if (piece.rarity === 'rare') rarityClass = 'rarity-rare bg-sky-950/85';
-                if (piece.rarity === 'sr') rarityClass = 'rarity-sr bg-amber-950/85';
+                let rarityClass = 'border-indigo-400/50 bg-indigo-900/80';
+                if (piece.rarity === 'rare') rarityClass = 'rarity-rare bg-sky-950/90';
+                if (piece.rarity === 'sr') rarityClass = 'rarity-sr bg-amber-950/90';
 
-                card.className = `hand-card rounded-2xl border-2 ${rarityClass} p-2 flex flex-col items-center justify-between relative select-none ${canControl ? '' : 'opacity-50 pointer-events-none'}`;
+                card.className = `hand-card rounded-2xl border-2 ${rarityClass} p-1.5 flex flex-col items-center justify-between relative select-none ${canControl ? '' : 'opacity-45 pointer-events-none'}`;
                 card.dataset.index = idx;
 
-                let badgeColor = 'bg-slate-700 text-slate-300';
-                if (piece.rarity === 'rare') badgeColor = 'bg-cyan-400 text-slate-950';
-                if (piece.rarity === 'sr') badgeColor = 'bg-gradient-to-r from-yellow-300 to-amber-500 text-slate-950';
-
-                const discColorClass = activePlayer === BLACK ? 'black' : 'white';
+                let badgeColor = 'bg-slate-700 text-slate-200';
+                if (piece.rarity === 'rare') badgeColor = 'bg-cyan-300 text-slate-950';
+                if (piece.rarity === 'sr') badgeColor = 'bg-gradient-to-r from-yellow-300 to-amber-400 text-slate-950';
 
                 card.innerHTML = `
                     <span class="font-num text-[9px] font-black px-2 py-0.5 rounded-full ${badgeColor} leading-none">${piece.badge}</span>
-                    <div class="w-11 h-11 sm:w-12 sm:h-12 my-0.5 flex items-center justify-center">
-                        <div class="piece ${discColorClass} w-full h-full flex items-center justify-center">
-                            ${piece.iconClass ? `<i class="${piece.iconClass} text-base sm:text-lg"></i>` : ''}
+                    <div class="w-10 h-10 sm:w-11 sm:h-11 my-0.5 flex items-center justify-center">
+                        <div class="w-full h-full rounded-full flex items-center justify-center" style="${getFaceInlineStyle(playerNum)}">
+                            ${piece.iconClass ? `<i class="${piece.iconClass} text-sm sm:text-base"></i>` : ''}
                         </div>
                     </div>
-                    <span class="font-num text-[10px] font-black text-white tracking-wider">${piece.name}</span>
+                    <span class="text-[10px] font-black text-white tracking-tight">${piece.name}</span>
                 `;
 
                 if (canControl) {
-                    card.addEventListener('pointerdown', (e) => onDragStart(e, idx, piece, activePlayer, card));
+                    card.addEventListener('pointerdown', (e) => onDragStart(e, idx, piece, playerNum, card));
                 }
 
                 container.appendChild(card);
@@ -1283,35 +1846,39 @@
         }
 
         /* ============================================================================
-           8. 新機能：手札リロール（SP 30%消費で手札3枚をリフレッシュ＆1枚以上レア確定）
+           8. 手札リロール
         ============================================================================ */
-        function rerollHand() {
-            const activePlayer = (gameMode === 'local') ? currentTurn : BLACK;
-            if (isAnimating || spGauge[activePlayer] < 30) return;
+        function rerollHand(targetPlayer = null) {
+            const activePlayer = targetPlayer || ((gameMode === 'online') ? myOnlineRole : currentTurn);
+            if (!isMyControllableTurn(activePlayer) || spGauge[activePlayer] < 30) return;
 
             spGauge[activePlayer] -= 30;
             playSE('bonus');
 
-            // 最低1枚は特殊コマ確定で3枚引き直す
             hands[activePlayer] = [
                 drawRandomPiece(false, true),
                 drawRandomPiece(),
                 drawRandomPiece()
             ];
 
-            const handEl = document.getElementById('hand-container');
-            const rect = handEl.getBoundingClientRect();
-            spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, '#38bdf8', 24);
+            if (gameMode === 'online' && conn) {
+                conn.send({
+                    type: 'ACTION_REROLL',
+                    player: activePlayer,
+                    newSp: spGauge[activePlayer],
+                    newHand: hands[activePlayer]
+                });
+            }
 
             renderHandAndSP();
-            showToast('DECK RELOADED!');
+            showToast('手札をリフレッシュしました！');
         }
 
         /* ============================================================================
-           9. ドラッグ＆ドロップ制御
+           9. ドラッグ＆ドロップ制御（通常挟みと特殊効果ターゲットを区別してハイライト）
         ============================================================================ */
         function onDragStart(e, handIndex, piece, color, cardEl) {
-            if (isAnimating) return;
+            if (!isMyControllableTurn(color)) return;
             e.preventDefault();
             initAudio();
             playSE('pickup');
@@ -1325,9 +1892,8 @@
             cardEl.classList.add('dragging-source');
 
             const ghost = document.getElementById('drag-ghost');
-            const discColorClass = color === BLACK ? 'black' : 'white';
             ghost.innerHTML = `
-                <div class="piece ${discColorClass} w-full h-full flex items-center justify-center">
+                <div class="w-full h-full rounded-full flex items-center justify-center" style="${getFaceInlineStyle(color)}">
                     ${piece.iconClass ? `<i class="${piece.iconClass} text-xl"></i>` : ''}
                 </div>
             `;
@@ -1350,7 +1916,7 @@
             updateGhostPosition(e.clientX, e.clientY);
 
             document.querySelectorAll('.board-cell').forEach(c => {
-                c.classList.remove('drag-over-valid', 'effect-target');
+                c.classList.remove('drag-over-valid', 'effect-target', 'special-lockon');
             });
 
             const targetEl = document.elementFromPoint(e.clientX, e.clientY);
@@ -1365,11 +1931,17 @@
                     dragState.hoveredCell = { r, c };
                     cellEl.classList.add('drag-over-valid');
 
-                    const extraFlips = getSpecialEffectFlips(r, c, dragState.color, dragState.piece);
-                    const allTargets = [...stdFlips, ...extraFlips];
-                    allTargets.forEach(([tr, tc]) => {
+                    // 通常オセロで返るコマ（青枠）
+                    stdFlips.forEach(([tr, tc]) => {
                         const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
                         if (tCell) tCell.classList.add('effect-target');
+                    });
+
+                    // ボムや矢印で追加で返るコマ（赤色ロックオン照準！）
+                    const extraFlips = getSpecialEffectFlips(r, c, dragState.color, dragState.piece);
+                    extraFlips.forEach(([tr, tc]) => {
+                        const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                        if (tCell) tCell.classList.add('special-lockon');
                     });
                     return;
                 }
@@ -1388,23 +1960,24 @@
             if (dragState.cardEl) dragState.cardEl.classList.remove('dragging-source');
 
             document.querySelectorAll('.board-cell').forEach(c => {
-                c.classList.remove('drag-over-valid', 'effect-target');
+                c.classList.remove('drag-over-valid', 'effect-target', 'special-lockon');
             });
 
             const target = dragState.hoveredCell;
             const hIdx = dragState.handIndex;
+            const pColor = dragState.color;
             dragState.active = false;
             dragState.hoveredCell = null;
 
             if (target) {
-                executeMove(target.r, target.c, currentTurn, hIdx);
+                executeMove(target.r, target.c, pColor, hIdx);
             }
         }
 
         /* ============================================================================
-           10. コマ配置・コンボ演出・ボーナスカプセル取得・ターン進行
+           10. コマ配置・特殊効果の「ため（ターゲット予告）」演出・3D裏返り
         ============================================================================ */
-        async function executeMove(r, c, color, handIndex) {
+        async function executeMove(r, c, color, handIndex, forcedNextPiece = null, isRemoteMove = false) {
             if (isAnimating) return;
             isAnimating = true;
 
@@ -1412,65 +1985,118 @@
             const stdFlips = getStandardFlips(r, c, color);
             const extraFlips = getSpecialEffectFlips(r, c, color, usedPiece);
 
-            const flipMap = new Map();
-            stdFlips.forEach(([fr, fc]) => flipMap.set(`${fr},${fc}`, [fr, fc]));
-            extraFlips.forEach(([fr, fc]) => flipMap.set(`${fr},${fc}`, [fr, fc]));
-            const totalFlips = Array.from(flipMap.values());
+            const pickedBonus = bonusGrid[r][c];
+            let nextDrawnPiece = forcedNextPiece;
+            if (!nextDrawnPiece) {
+                nextDrawnPiece = (pickedBonus === 'UPGRADE')
+                    ? drawRandomPiece(false, true)
+                    : drawRandomPiece();
+            }
 
+            // オンライン対戦時は自分の手を即座に相手へ送信
+            if (gameMode === 'online' && !isRemoteMove && conn) {
+                conn.send({
+                    type: 'ACTION_MOVE',
+                    r, c, color, handIndex,
+                    usedPiece,
+                    nextDrawnPiece
+                });
+            }
+
+            // 1. まず置いたマスにだけ新しいコマを配置し、手札を補充
             board[r][c] = { color, typeId: usedPiece.id };
+            bonusGrid[r][c] = null;
+            hands[color][handIndex] = nextDrawnPiece;
             playSE('place');
 
-            // 盤面ボーナスカプセル判定
-            const pickedBonus = bonusGrid[r][c];
-            bonusGrid[r][c] = null;
-
-            // 手札補充（UPGRADEカプセルを踏んだ場合はレア特殊コマ確定補充）
             if (pickedBonus === 'UPGRADE') {
-                hands[color][handIndex] = drawRandomPiece(false, true);
                 playSE('bonus');
-                showToast('BONUS! SPECIAL PIECE ACQUIRED!');
-            } else {
-                hands[color][handIndex] = drawRandomPiece();
-            }
-
-            if (pickedBonus === 'SP') {
+                showToast('ボーナス獲得！レア特殊コマが補充されました！');
+            } else if (pickedBonus === 'SP') {
                 spGauge[color] = Math.min(100, spGauge[color] + 35);
                 playSE('bonus');
-                showToast('BONUS! SP +35% CHARGED!');
+                showToast('ボーナス獲得！SPゲージ +35%！');
             }
 
-            // 特殊コマエフェクト＆シェイク
+            renderAll([], [r, c]);
+
+            // 2. 特殊コマ（ボム・矢印）の場合は、あえて「ため」の時間を作ってどこが自分の色に変わるかを視覚的にロックオン表示！
             if (usedPiece.id !== 'NORMAL') {
+                playSE('lockon');
+                showSkillChargeBanner(r, c, usedPiece);
+
+                // 効果範囲のセルを赤くロックオン点滅させる
+                extraFlips.forEach(([tr, tc]) => {
+                    const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                    if (tCell) tCell.classList.add('special-lockon');
+                });
+                stdFlips.forEach(([tr, tc]) => {
+                    const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                    if (tCell) tCell.classList.add('effect-target');
+                });
+
+                // しっかり視覚的にわかるよう 620ms の「ため」を作る
+                await sleep(620);
+
                 playSE('laser');
                 triggerScreenShake();
                 showVisualSkillEffect(r, c, usedPiece);
+            } else {
+                await sleep(160);
             }
 
-            totalFlips.forEach(([fr, fc]) => {
+            // 3. 裏返る前の色を記録してから、新しい色へ変更し、両面3D回転アニメーションを実行！
+            const flipMap = new Map();
+            [...stdFlips, ...extraFlips].forEach(([fr, fc]) => {
+                const key = `${fr},${fc}`;
+                if (!flipMap.has(key) && board[fr][fc]) {
+                    flipMap.set(key, { r: fr, c: fc, fromColor: board[fr][fc].color });
+                }
+            });
+            const flipList = Array.from(flipMap.values());
+
+            flipList.forEach(({ r: fr, c: fc }) => {
                 board[fr][fc].color = color;
             });
 
-            // セル座標でパーティクル＆コンボポップアップ発火
             const placedCell = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
             if (placedCell) {
                 const rect = placedCell.getBoundingClientRect();
-                const cx = rect.left + rect.width / 2;
-                const cy = rect.top + rect.height / 2;
-                spawnParticles(cx, cy, color === BLACK ? '#38bdf8' : '#f43f5e', 16 + totalFlips.length * 2);
+                const themeHex = COLOR_THEMES[playerConfig[color].themeId]?.hex || '#38bdf8';
+                spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, themeHex, 16 + flipList.length * 2);
 
-                if (totalFlips.length >= 4) {
-                    showComboPopup(r, c, totalFlips.length);
+                if (flipList.length >= 4) {
+                    showComboPopup(r, c, flipList.length);
                 }
             }
 
-            const gainSp = Math.min(45, 12 + totalFlips.length * 6);
+            const gainSp = Math.min(45, 12 + flipList.length * 6);
             spGauge[color] = Math.min(100, spGauge[color] + gainSp);
 
-            renderAll(totalFlips, [r, c]);
-            setTimeout(() => playSE('flip'), 110);
+            renderAll(flipList);
+            playSE('flip');
 
-            await sleep(540);
+            await sleep(620);
             await advanceTurn();
+        }
+
+        function showSkillChargeBanner(r, c, piece) {
+            const boardEl = document.getElementById('board');
+            const cellEl = document.querySelector(`.board-cell[data-r="${r}"][data-c="${c}"]`);
+            if (!boardEl || !cellEl) return;
+
+            const boardRect = boardEl.getBoundingClientRect();
+            const cellRect = cellEl.getBoundingClientRect();
+            const x = cellRect.left - boardRect.left + cellRect.width / 2;
+            const y = cellRect.top - boardRect.top;
+
+            const badge = document.createElement('div');
+            badge.className = 'combo-float font-black text-xs sm:text-sm px-3 py-1 rounded-full bg-rose-600 text-yellow-200 border-2 border-yellow-300 shadow-2xl whitespace-nowrap';
+            badge.style.left = `${x}px`;
+            badge.style.top = `${y}px`;
+            badge.innerHTML = `<i class="${piece.iconClass} mr-1"></i>${piece.name} 発動！`;
+            boardEl.appendChild(badge);
+            setTimeout(() => badge.remove(), 950);
         }
 
         function showComboPopup(r, c, count) {
@@ -1484,12 +2110,12 @@
             const y = cellRect.top - boardRect.top;
 
             const badge = document.createElement('div');
-            badge.className = 'combo-float font-num font-black text-sm sm:text-base px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-400 to-rose-500 text-slate-950 border-2 border-white shadow-xl whitespace-nowrap';
+            badge.className = 'combo-float font-num font-black text-sm sm:text-base px-3 py-0.5 rounded-full bg-gradient-to-r from-yellow-300 to-pink-500 text-slate-950 border-2 border-white shadow-xl whitespace-nowrap';
             badge.style.left = `${x}px`;
             badge.style.top = `${y}px`;
-            badge.innerHTML = `<i class="fa-solid fa-fire mr-1"></i>+${count} BURST!`;
+            badge.innerHTML = `<i class="fa-solid fa-fire mr-1"></i>${count}枚 ひっくり返した！`;
             boardEl.appendChild(badge);
-            setTimeout(() => badge.remove(), 950);
+            setTimeout(() => badge.remove(), 1000);
         }
 
         function showVisualSkillEffect(r, c, piece) {
@@ -1505,20 +2131,20 @@
             if (piece.dirs === 'BOMB') {
                 const shock = document.createElement('div');
                 shock.className = 'beam-effect';
-                shock.style.width = `${cellRect.width * 3.2}px`;
-                shock.style.height = `${cellRect.height * 3.2}px`;
-                shock.style.left = `${centerX - cellRect.width * 1.6}px`;
-                shock.style.top = `${centerY - cellRect.height * 1.6}px`;
+                shock.style.width = `${cellRect.width * 3.3}px`;
+                shock.style.height = `${cellRect.height * 3.3}px`;
+                shock.style.left = `${centerX - cellRect.width * 1.65}px`;
+                shock.style.top = `${centerY - cellRect.height * 1.65}px`;
                 shock.style.borderRadius = '50%';
                 boardEl.appendChild(shock);
-                setTimeout(() => shock.remove(), 500);
+                setTimeout(() => shock.remove(), 550);
             } else if (Array.isArray(piece.dirs)) {
                 piece.dirs.forEach(([dr, dc]) => {
                     const beam = document.createElement('div');
                     beam.className = 'beam-effect';
                     if (dr !== 0) {
-                        beam.style.width = '16px';
-                        beam.style.left = `${centerX - 8}px`;
+                        beam.style.width = '18px';
+                        beam.style.left = `${centerX - 9}px`;
                         if (dr < 0) {
                             beam.style.top = '0px';
                             beam.style.height = `${centerY}px`;
@@ -1527,8 +2153,8 @@
                             beam.style.height = `${boardRect.height - centerY}px`;
                         }
                     } else {
-                        beam.style.height = '16px';
-                        beam.style.top = `${centerY - 8}px`;
+                        beam.style.height = '18px';
+                        beam.style.top = `${centerY - 9}px`;
                         if (dc < 0) {
                             beam.style.left = '0px';
                             beam.style.width = `${centerX}px`;
@@ -1538,7 +2164,7 @@
                         }
                     }
                     boardEl.appendChild(beam);
-                    setTimeout(() => beam.remove(), 500);
+                    setTimeout(() => beam.remove(), 550);
                 });
             }
         }
@@ -1555,11 +2181,12 @@
             }
 
             if (nextMoves.length === 0) {
-                showToast('NO VALID MOVES - PASS!');
-                await sleep(850);
+                showToast(`${playerConfig[nextColor].name}は置ける場所がないためパス！`);
+                await sleep(950);
                 isAnimating = false;
                 renderAll();
-                if (gameMode !== 'local' && currentTurn === WHITE) {
+                showTurnAnnouncement(currentTurn);
+                if (gameMode === 'cpu' && currentTurn === WHITE) {
                     await executeCpuTurn();
                 }
                 return;
@@ -1568,8 +2195,9 @@
             currentTurn = nextColor;
             isAnimating = false;
             renderAll();
+            showTurnAnnouncement(currentTurn);
 
-            if (gameMode !== 'local' && currentTurn === WHITE) {
+            if (gameMode === 'cpu' && currentTurn === WHITE) {
                 await executeCpuTurn();
             }
         }
@@ -1577,48 +2205,73 @@
         /* ============================================================================
            11. 必殺技（THUNDER STORM）
         ============================================================================ */
-        async function activateUltimate(playerColor = currentTurn) {
-            if (isAnimating || spGauge[playerColor] < 100) return;
-            isAnimating = true;
-            spGauge[playerColor] = 0;
+        async function activateUltimate(playerColor = null, forcedTargets = null, isRemote = false) {
+            const actor = playerColor || ((gameMode === 'online') ? myOnlineRole : currentTurn);
+            if (!isRemote && (!isMyControllableTurn(actor) || spGauge[actor] < 100)) return;
 
-            const oppColor = playerColor === BLACK ? WHITE : BLACK;
-            let oppCoords = [];
-            for (let r = 0; r < 8; r++) {
-                for (let c = 0; c < 8; c++) {
-                    if (board[r][c] && board[r][c].color === oppColor) {
-                        oppCoords.push([r, c]);
+            isAnimating = true;
+            spGauge[actor] = 0;
+
+            const oppColor = actor === BLACK ? WHITE : BLACK;
+            let targets = forcedTargets;
+
+            if (!targets) {
+                let oppCoords = [];
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        if (board[r][c] && board[r][c].color === oppColor) {
+                            oppCoords.push([r, c]);
+                        }
                     }
                 }
+                oppCoords.sort(() => Math.random() - 0.5);
+                targets = oppCoords.slice(0, Math.min(3, Math.max(1, oppCoords.length - 1)));
+            }
+
+            if (gameMode === 'online' && !isRemote && conn) {
+                conn.send({
+                    type: 'ACTION_ULT',
+                    player: actor,
+                    targets
+                });
             }
 
             playSE('ult');
             const cutin = document.getElementById('cutin-overlay');
             const cutinTitle = document.getElementById('cutin-title');
-            cutinTitle.textContent = playerColor === BLACK ? 'THUNDER STORM' : 'METEOR STRIKE';
+            cutinTitle.textContent = `${playerConfig[actor].name} の必殺サンダー！`;
             cutin.classList.remove('hidden');
 
-            await sleep(1400);
+            await sleep(1250);
             cutin.classList.add('hidden');
 
-            oppCoords.sort(() => Math.random() - 0.5);
-            const targets = oppCoords.slice(0, Math.min(3, Math.max(1, oppCoords.length - 1)));
-
+            // 雷撃ターゲットも一度ロックオン表示してから裏返す
             targets.forEach(([tr, tc]) => {
-                board[tr][tc].color = playerColor;
+                const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
+                if (tCell) tCell.classList.add('special-lockon');
+            });
+            playSE('lockon');
+            await sleep(500);
+
+            const flipObjects = [];
+            targets.forEach(([tr, tc]) => {
+                if (board[tr][tc]) {
+                    flipObjects.push({ r: tr, c: tc, fromColor: board[tr][tc].color });
+                    board[tr][tc].color = actor;
+                }
                 const tCell = document.querySelector(`.board-cell[data-r="${tr}"][data-c="${tc}"]`);
                 if (tCell) {
                     const rect = tCell.getBoundingClientRect();
-                    spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, '#facc15', 22);
+                    spawnParticles(rect.left + rect.width / 2, rect.top + rect.height / 2, '#facc15', 24);
                 }
             });
 
             playSE('laser');
             triggerScreenShake();
-            renderAll(targets);
-            showToast('OVERDRIVE! 3 PIECES CONVERTED!');
+            renderAll(flipObjects);
+            showToast('必殺サンダー！相手のコマを奪いました！');
 
-            await sleep(480);
+            await sleep(550);
             isAnimating = false;
             renderAll();
         }
@@ -1628,13 +2281,13 @@
         ============================================================================ */
         async function executeCpuTurn() {
             isAnimating = true;
-            await sleep(680);
+            await sleep(850);
 
             if (spGauge[WHITE] >= 100) {
                 isAnimating = false;
-                await activateUltimate(WHITE);
+                await activateUltimate(WHITE, null, true);
                 isAnimating = true;
-                await sleep(450);
+                await sleep(500);
             }
 
             const validMoves = getAllValidMoves(WHITE);
@@ -1690,8 +2343,8 @@
             }
 
             playSE('win');
-            document.getElementById('res-p1-name').textContent = document.getElementById('p1-name').textContent;
-            document.getElementById('res-p2-name').textContent = document.getElementById('p2-name').textContent;
+            document.getElementById('res-p1-name').textContent = playerConfig[1].name;
+            document.getElementById('res-p2-name').textContent = playerConfig[2].name;
             document.getElementById('res-p1-score').textContent = b;
             document.getElementById('res-p2-score').textContent = w;
 
@@ -1700,21 +2353,22 @@
 
             if (b > w) {
                 iconEl.className = 'fa-solid fa-trophy';
-                titleEl.textContent = gameMode === 'local' ? 'P1 VICTORY!' : 'VICTORY!';
+                titleEl.textContent = `${playerConfig[1].name} の勝利！`;
                 spawnParticles(window.innerWidth / 2, window.innerHeight / 2, '#facc15', 45);
             } else if (w > b) {
-                iconEl.className = gameMode === 'local' ? 'fa-solid fa-crown' : 'fa-solid fa-skull';
-                titleEl.textContent = gameMode === 'local' ? 'P2 VICTORY!' : 'DEFEAT...';
+                iconEl.className = 'fa-solid fa-crown';
+                titleEl.textContent = `${playerConfig[2].name} の勝利！`;
+                spawnParticles(window.innerWidth / 2, window.innerHeight / 2, '#f43f5e', 45);
             } else {
                 iconEl.className = 'fa-solid fa-scale-balanced';
-                titleEl.textContent = 'DRAW GAME';
+                titleEl.textContent = '引き分け！';
             }
 
             openModal('modal-result');
         }
 
         /* ============================================================================
-           14. モーダル＆ルーム招待制御
+           14. ユーティリティ・モーダル制御
         ============================================================================ */
         function openModal(id) {
             const el = document.getElementById(id);
@@ -1729,31 +2383,6 @@
         }
 
         function openRulesModal() { openModal('modal-rules'); }
-        function openInviteRestrictionModal() { openModal('modal-invite-restrict'); }
-        function openJoinModal() {
-            openModal('modal-join-id');
-            setTimeout(() => document.getElementById('input-room-id').focus(), 100);
-        }
-
-        function fillDemoId(code) {
-            document.getElementById('input-room-id').value = code;
-        }
-
-        function joinRoomById() {
-            const raw = document.getElementById('input-room-id').value.trim().toUpperCase();
-            if (raw.length < 3) {
-                showToast('ENTER VALID ROOM ID');
-                return;
-            }
-            closeModal('modal-join-id');
-            startGame('online', raw);
-        }
-
-        function simulateQuizAppHost() {
-            closeModal('modal-invite-restrict');
-            const generatedId = 'QZ' + Math.floor(100 + Math.random() * 900);
-            startGame('online', generatedId);
-        }
 
         function showToast(msg) {
             const toast = document.getElementById('toast-msg');
@@ -1764,21 +2393,12 @@
             window._toastTimer = setTimeout(() => {
                 toast.classList.remove('opacity-100', 'translate-y-0');
                 toast.classList.add('opacity-0', '-translate-y-4');
-            }, 2200);
+            }, 2400);
         }
 
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
-
-        window.onload = () => {
-            const params = new URLSearchParams(window.location.search);
-            const roomParam = params.get('room');
-            if (roomParam) {
-                document.getElementById('input-room-id').value = roomParam.toUpperCase();
-                openJoinModal();
-            }
-        };
     </script>
 </body>
 </html>
